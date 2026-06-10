@@ -1,0 +1,28 @@
+repos:
+  - repo: local
+    hooks:
+      - id: black
+        name: black (format)
+        language: system
+        entry: python -m black
+        types: [python]
+
+      - id: ruff-fix
+        name: ruff (auto-fix)
+        language: system
+        entry: python -m ruff check --fix
+        types: [python]
+
+      - id: ruff-check
+        name: ruff (check)
+        language: system
+        entry: python -m ruff check
+        types: [python]
+
+      - id: mypy
+        name: mypy (type check)
+        language: system
+        entry: python -m mypy
+        args: [iva, main.py]
+        pass_filenames: false
+        types: [python]
