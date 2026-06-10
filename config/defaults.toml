@@ -1,0 +1,11 @@
+[application]
+name = "Industrial Vibration Analyzer"
+version = "0.1.0"
+
+[paths]
+examples_dir = "data/examples"
+synthetic_dir = "data/synthetic"
+results_dir = "data/results"
+
+[logging]
+level = "INFO"

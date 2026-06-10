@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# IVA project — generated results and reports
+data/results/
+reports/
+
+# IDE project files
+.idea/
+.vscode/
+
+# OS
+Thumbs.db
