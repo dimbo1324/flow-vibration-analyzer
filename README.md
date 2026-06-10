@@ -68,6 +68,55 @@ python -m ruff check .
 python -m mypy iva main.py
 ```
 
+## Developer Tooling
+
+### Format code
+
+```bash
+python scripts/format_code.py
+```
+
+Runs `black` and `ruff --fix` across the whole repository.
+
+### Full quality check
+
+```bash
+python scripts/check_project.py
+```
+
+Runs smoke test, compile check, pytest, black, ruff, and mypy in sequence.
+Exits with a non-zero code on the first failure.
+
+### Pre-commit hooks
+
+Install once after cloning:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Run manually against all files:
+
+```bash
+pre-commit run --all-files
+```
+
+Hooks run automatically before every `git commit` and enforce formatting,
+linting and type checking without manual intervention.
+
+### Makefile (Unix / Git Bash)
+
+```
+make format      # format_code.py
+make check       # check_project.py
+make test        # pytest
+make typecheck   # mypy iva main.py
+make lint        # ruff check .
+```
+
+On Windows, use the Python scripts directly.
+
 ## Project Structure
 
 ```
@@ -104,8 +153,13 @@ introduction to the project, its engineering context and design goals.
 
 ## Development Status
 
-**Stage 1 — Project Foundation and Documentation Baseline.**
+**Stage 2 complete — Architecture and Data Models.**
 
-The repository contains the folder structure, configuration files, requirements and documentation
-references. No analysis pipeline, UI, charts or reports are implemented at this stage. Those will
-be added in Stages 2–10 according to the development roadmap.
+- Stage 1: repository foundation, configuration, documentation baseline.
+- Stage 2: full domain model layer in `iva/core/models/` — frozen dataclasses, enumerations,
+  exception hierarchy, minimal infrastructure logger, 48 passing unit tests.
+- Stage 2.5: code quality infrastructure — `.editorconfig`, pre-commit hooks, cross-platform
+  scripts, GitHub Actions CI.
+
+No analysis pipeline, UI, charts or reports are implemented yet. Those will
+be added in Stages 3–10 according to the development roadmap.
