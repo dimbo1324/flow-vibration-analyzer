@@ -1,0 +1,8 @@
+-r requirements.txt
+
+# Development and quality tools
+black
+ruff
+mypy
+pytest
+pytest-cov
