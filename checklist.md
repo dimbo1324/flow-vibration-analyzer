@@ -145,7 +145,7 @@ iva/
 
 ```
 [+] Этап 1   Основа проекта и документация
-[ ] Этап 2   Архитектура и модели данных (core/models/)
+[+] Этап 2   Архитектура и модели данных (core/models/)
 [ ] Этап 3   Инфраструктура: импорт файлов и синтетические данные
 [ ] Этап 4   Предобработка сигнала (core/signal/)
 [ ] Этап 5   Спектральный анализ (core/spectrum/)
@@ -271,49 +271,49 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 #### 2.1 Python-пакеты
 
-- [ ] Создать `iva/__init__.py` — делает `iva` Python-пакетом.
-- [ ] Создать `iva/core/__init__.py`.
-- [ ] Создать `iva/core/models/__init__.py` — экспортирует все модели.
-- [ ] Создать `iva/infrastructure/__init__.py`.
-- [ ] Создать `iva/app/__init__.py`.
-- [ ] Создать `iva/ui/__init__.py`.
+- [+] Создать `iva/__init__.py` — делает `iva` Python-пакетом.
+- [+] Создать `iva/core/__init__.py`.
+- [+] Создать `iva/core/models/__init__.py` — экспортирует все модели.
+- [+] Создать `iva/infrastructure/__init__.py`.
+- [+] Создать `iva/app/__init__.py`.
+- [+] Создать `iva/ui/__init__.py`.
 
 #### 2.2 Перечисления (Enums)
 
 Создать `core/models/enums.py` со следующими перечислениями:
 
-- [ ] `SignalRole` — роли сигнала: `ACCELERATION_X`, `ACCELERATION_Y`, `ACCELERATION_Z`, `PRESSURE`, `VELOCITY`.
-- [ ] `WindowType` — типы окон: `HANN`, `HAMMING`, `RECTANGULAR`.
-- [ ] `PeakInterpretation` — классификация пика: `VORTEX_SHEDDING`, `HARMONIC`, `STRUCTURAL`, `UNKNOWN`.
-- [ ] `GeometryType` — конфигурация: `SINGLE_CYLINDER`, `TANDEM`.
-- [ ] `RiskLevel` — уровень риска: `SAFE`, `WATCH`, `CRITICAL`.
+- [+] `SignalRole` — роли сигнала: `ACCELERATION_X`, `ACCELERATION_Y`, `ACCELERATION_Z`, `PRESSURE`, `VELOCITY`.
+- [+] `WindowType` — типы окон: `HANN`, `HAMMING`, `RECTANGULAR`.
+- [+] `PeakInterpretation` — классификация пика: `VORTEX_SHEDDING`, `HARMONIC`, `STRUCTURAL`, `UNKNOWN`.
+- [+] `GeometryType` — конфигурация: `SINGLE_CYLINDER`, `TANDEM`.
+- [+] `RiskLevel` — уровень риска: `SAFE`, `WATCH`, `CRITICAL`.
 
 #### 2.3 Модели входных данных
 
 Создать `core/models/signal_data.py`:
 
-- [ ] Класс `RawFileData` (frozen dataclass) — результат чтения файла «как есть».
+- [+] Класс `RawFileData` (frozen dataclass) — результат чтения файла «как есть».
   Поля: `file_path`, `file_format`, `column_names`, `column_dtypes`, `row_count`, `file_size_bytes`, `data`, `read_timestamp`.
-- [ ] Класс `ColumnRoleAssignment` (frozen dataclass) — назначение ролей колонкам.
+- [+] Класс `ColumnRoleAssignment` (frozen dataclass) — назначение ролей колонкам.
   Поля: `time_column`, `primary_signal_column`, `signal_role`, `additional_columns`, `sampling_rate_hz`, `sensor_conversion_factor`.
-- [ ] Класс `ValidatedSignalData` (frozen dataclass) — данные после проверки качества.
+- [+] Класс `ValidatedSignalData` (frozen dataclass) — данные после проверки качества.
   Поля: `time_array`, `signal_array`, `sampling_rate_hz`, `duration_seconds`, `sample_count`, `signal_role`, `physical_unit`, `missing_fraction`, `outlier_fraction`, `warnings`.
-- [ ] Класс `ProcessedSignalData` (frozen dataclass) — данные после предобработки.
+- [+] Класс `ProcessedSignalData` (frozen dataclass) — данные после предобработки.
   Поля: `time_array`, `signal_cleaned`, `signal_filtered`, `preprocessing_log`, `applied_settings`.
 
 #### 2.4 Модели настроек
 
 Создать `core/models/settings.py`:
 
-- [ ] Класс `PreprocessingSettings` — настройки предобработки. Все поля со значениями по умолчанию из `docs/10_data_models_and_schemas.md`.
-- [ ] Класс `SpectralSettings` — настройки спектрального анализа. Все поля со значениями по умолчанию.
-- [ ] Класс `AnalysisSettings` — объединяет `PreprocessingSettings`, `SpectralSettings` и `FlowParameters`.
+- [+] Класс `PreprocessingSettings` — настройки предобработки. Все поля со значениями по умолчанию из `docs/10_data_models_and_schemas.md`.
+- [+] Класс `SpectralSettings` — настройки спектрального анализа. Все поля со значениями по умолчанию.
+- [+] Класс `AnalysisSettings` — объединяет `PreprocessingSettings`, `SpectralSettings` и `FlowParameters`.
 
 #### 2.5 Модели физических параметров
 
 Создать `core/models/flow_parameters.py`:
 
-- [ ] Класс `FlowParameters` (frozen dataclass) — параметры течения и геометрии.
+- [+] Класс `FlowParameters` (frozen dataclass) — параметры течения и геометрии.
   Поля: `cylinder_diameter_m`, `mean_flow_velocity_ms`, `fluid_density_kgm3`, `dynamic_viscosity_pas`, `natural_frequency_hz`, `damping_ratio`, `cylinder_spacing_m`, `geometry_type`.
   > Все поля со значениями `None` по умолчанию, кроме обязательных.
 
@@ -321,51 +321,51 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `core/models/analysis_result.py`:
 
-- [ ] Класс `SpectralPeak` (frozen dataclass) — один пик в спектре.
+- [+] Класс `SpectralPeak` (frozen dataclass) — один пик в спектре.
   Поля: `frequency_hz`, `amplitude`, `width_hz_3db`, `interpretation`, `confidence`.
-- [ ] Класс `SpectrumResult` (frozen dataclass) — результат спектрального анализа.
+- [+] Класс `SpectrumResult` (frozen dataclass) — результат спектрального анализа.
   Поля: `frequencies`, `psd_values`, `dominant_peak`, `all_peaks`, `rms_total`, `rms_in_band`, `rms_trend`, `applied_settings`.
-- [ ] Класс `PhysicsResult` (frozen dataclass) — физические коэффициенты.
+- [+] Класс `PhysicsResult` (frozen dataclass) — физические коэффициенты.
   Поля: `reynolds_number`, `strouhal_number`, `calculated_shedding_frequency_hz`, `velocity_ratio`, `frequency_ratio`, `kinematic_viscosity_m2s`.
-- [ ] Класс `RiskAssessment` (frozen dataclass) — оценка риска резонанса.
+- [+] Класс `RiskAssessment` (frozen dataclass) — оценка риска резонанса.
   Поля: `risk_level`, `dominant_frequency_deviation`, `recommendation_text`, `contributing_factors`.
-- [ ] Класс `ValidationResult` (frozen dataclass) — сравнение эксперимент vs CFD.
+- [+] Класс `ValidationResult` (frozen dataclass) — сравнение эксперимент vs CFD.
   Поля: `coordinate_array`, `experiment_array`, `cfd_array`, `rmse`, `mae`, `mape`, `pearson_r`, `is_mape_valid`.
-- [ ] Класс `AnalysisResult` (frozen dataclass) — главный объект сеанса.
+- [+] Класс `AnalysisResult` (frozen dataclass) — главный объект сеанса.
   Поля: `session_id`, `completed_at`, `source_file_path`, `source_file_md5`, `validated_data`, `processed_data`, `spectrum`, `physics`, `risk`, `validation`, `warnings`.
 
 #### 2.7 Иерархия исключений
 
 Создать `core/models/exceptions.py`:
 
-- [ ] Базовый класс `IVAError(Exception)` с полями `user_message`, `technical_details`, `recovery_hint`.
-- [ ] `FileReadError(IVAError)` — ошибка чтения файла.
-- [ ] `FileNotFoundError(FileReadError)` — файл не найден.
-- [ ] `UnsupportedFormatError(FileReadError)` — формат не поддерживается.
-- [ ] `FileCorruptedError(FileReadError)` — файл повреждён.
-- [ ] `ValidationError(IVAError)` — данные не прошли проверку.
-- [ ] `NonMonotonicTimeAxisError(ValidationError)` — немонотонная временна́я ось.
-- [ ] `EmptySignalError(ValidationError)` — сигнал пустой или нулевой.
-- [ ] `InsufficientDataError(ValidationError)` — слишком мало данных.
-- [ ] `ProcessingError(IVAError)` — ошибка расчёта.
-- [ ] `FilterConfigurationError(ProcessingError)` — неверные параметры фильтра.
-- [ ] `PhysicsInputError(IVAError)` — недопустимые физические параметры.
-- [ ] `ExportError(IVAError)` — ошибка при сохранении файла.
+- [+] Базовый класс `IVAError(Exception)` с полями `user_message`, `technical_details`, `recovery_hint`.
+- [+] `FileReadError(IVAError)` — ошибка чтения файла.
+- [+] `FileNotFoundError(FileReadError)` — файл не найден (реализован как IVAFileNotFoundError).
+- [+] `UnsupportedFormatError(FileReadError)` — формат не поддерживается.
+- [+] `FileCorruptedError(FileReadError)` — файл повреждён.
+- [+] `ValidationError(IVAError)` — данные не прошли проверку.
+- [+] `NonMonotonicTimeAxisError(ValidationError)` — немонотонная временна́я ось.
+- [+] `EmptySignalError(ValidationError)` — сигнал пустой или нулевой.
+- [+] `InsufficientDataError(ValidationError)` — слишком мало данных.
+- [+] `ProcessingError(IVAError)` — ошибка расчёта.
+- [+] `FilterConfigurationError(ProcessingError)` — неверные параметры фильтра.
+- [+] `PhysicsInputError(IVAError)` — недопустимые физические параметры.
+- [+] `ExportError(IVAError)` — ошибка при сохранении файла.
 
 #### 2.8 Тесты моделей
 
-- [ ] Создать `tests/unit/core/models/test_enums.py` — проверить, что все перечисления содержат ожидаемые значения.
-- [ ] Создать `tests/unit/core/models/test_settings.py` — проверить значения по умолчанию.
-- [ ] Создать `tests/unit/core/models/test_exceptions.py` — проверить иерархию и поля исключений.
-- [ ] Убедиться, что ни одна модель не импортирует из `ui/`, `app/` или `infrastructure/`.
-- [ ] Запустить `mypy core/models/` — убедиться, что аннотации типов корректны.
+- [+] Создать `tests/unit/core/models/test_enums.py` — проверить, что все перечисления содержат ожидаемые значения.
+- [+] Создать `tests/unit/core/models/test_settings.py` — проверить значения по умолчанию.
+- [+] Создать `tests/unit/core/models/test_exceptions.py` — проверить иерархию и поля исключений.
+- [+] Убедиться, что ни одна модель не импортирует из `ui/`, `app/` или `infrastructure/`.
+- [+] Запустить `mypy core/models/` — убедиться, что аннотации типов корректны.
 
 #### Критерии завершения этапа 2
 
-- [ ] Все модели созданы и аннотированы типами.
-- [ ] Иерархия исключений создана.
-- [ ] Ни одна модель не зависит от PySide6.
-- [ ] Тесты моделей проходят.
+- [+] Все модели созданы и аннотированы типами.
+- [+] Иерархия исключений создана.
+- [+] Ни одна модель не зависит от PySide6.
+- [+] Тесты моделей проходят.
 
 ---
 
