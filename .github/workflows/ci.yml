@@ -32,7 +32,9 @@ jobs:
           python -m pip install -r requirements-dev.txt
 
       - name: Smoke test
-        run: python main.py
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -c "import iva.ui.main_window; print('IVA main_window import OK')"
 
       - name: CLI help
         run: python -m iva.cli.main --help
@@ -41,6 +43,8 @@ jobs:
         run: python -m compileall main.py iva tests scripts -q
 
       - name: pytest
+        env:
+          QT_QPA_PLATFORM: offscreen
         run: python -m pytest
 
       - name: black (format check)
@@ -51,6 +55,9 @@ jobs:
 
       - name: mypy (core models)
         run: python -m mypy iva/core/models
+
+      - name: mypy (ui package)
+        run: python -m mypy iva/ui
 
       - name: mypy (full package)
         run: python -m mypy iva main.py
