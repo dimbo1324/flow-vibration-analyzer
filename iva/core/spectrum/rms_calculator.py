@@ -7,10 +7,20 @@ All operations are vectorised — no Python loops over array elements.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+# Trapezoidal integrator resolved once at import time.  NumPy >= 2.0 exposes
+# ``np.trapezoid``; older versions (>= 1.26, per requirements.txt) expose only
+# ``np.trapz``.  The attribute name is chosen dynamically and fetched via
+# ``getattr`` with a *non-literal* name so that (a) ruff's B009 rule does not
+# rewrite it into a static attribute access, and (b) mypy does not raise
+# attr-defined for whichever name is absent from the installed NumPy's stubs.
+_TRAPEZOID_ATTR = "trapezoid" if hasattr(np, "trapezoid") else "trapz"
+_trapezoid: Callable[..., np.floating] = getattr(np, _TRAPEZOID_ATTR)
 
 
 def calculate_total_rms(signal: np.ndarray) -> float:
@@ -62,10 +72,7 @@ def calculate_band_rms(
     band_psd = psd_values[mask]
 
     # Parseval: variance = integral(PSD, df)
-    try:
-        band_power = float(np.trapezoid(band_psd, band_freq))
-    except AttributeError:
-        band_power = float(np.trapz(band_psd, band_freq))  # NumPy < 2.0 fallback
+    band_power = float(_trapezoid(band_psd, band_freq))
 
     band_rms = float(np.sqrt(max(band_power, 0.0)))
     logger.debug(

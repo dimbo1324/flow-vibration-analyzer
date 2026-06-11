@@ -81,6 +81,35 @@ def test_read_excel_file_not_found():
         read_excel("/nonexistent/file.xlsx")
 
 
+def test_read_excel_preserves_literal_none_string():
+    """A cell whose text is literally 'None' is kept, while blank cells become NA.
+
+    Regression test: an earlier implementation stringified every column and then
+    replaced the string 'None' with NA, which destroyed legitimate textual
+    'None' values.  The reader must distinguish a real 'None' string from an
+    empty cell.
+    """
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["label", "signal"])
+    ws.append(["None", 1.0])  # literal text "None" — must be preserved
+    ws.append([None, 2.0])  # genuinely empty cell — must become NA
+    fd, name = tempfile.mkstemp(suffix=".xlsx")
+    import os
+
+    os.close(fd)
+    p = Path(name)
+    wb.save(p)
+    wb.close()
+    try:
+        result = read_excel(str(p))
+        labels = result.data["label"]
+        assert labels.iloc[0] == "None", "literal 'None' string must be preserved"
+        assert labels.isna().iloc[1], "empty cell must be NA, not the string 'None'"
+    finally:
+        p.unlink(missing_ok=True)
+
+
 def test_read_excel_read_only_mode():
     """openpyxl is called with read_only=True (security requirement).
 

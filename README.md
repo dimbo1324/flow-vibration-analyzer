@@ -25,6 +25,13 @@ implemented yet.
 - Git
 - A virtual environment is strongly recommended
 
+### Supported runtime
+
+The test suite and type checks are exercised in CI on Python 3.11, 3.12 and
+3.13. The scientific stack is supported across NumPy 1.26–2.x and pandas 2.x
+(the code is verified to run under NumPy 2 and pandas 2/3). Newer major
+versions of NumPy/pandas are covered by the Python 3.13 CI lane.
+
 ## Installation
 
 Create and activate a virtual environment:

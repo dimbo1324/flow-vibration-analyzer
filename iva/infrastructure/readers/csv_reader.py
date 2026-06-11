@@ -108,6 +108,17 @@ def read_csv(file_path: str) -> RawFileData:
             technical_details=str(exc),
         ) from exc
 
+    # ``errors="replace"`` substitutes undecodable bytes with U+FFFD rather than
+    # failing.  If any appear, the detected encoding is likely wrong; warn so the
+    # silent substitution does not masquerade as clean data.
+    if "�" in raw_text:
+        logger.warning(
+            "CSV reader: replacement characters were introduced while decoding "
+            "'%s' with encoding '%s'; the file encoding may be incorrect.",
+            path.name,
+            encoding,
+        )
+
     cleaned_text = _strip_comments(raw_text)
 
     # Use the first 8 KB as a sample for dialect detection.

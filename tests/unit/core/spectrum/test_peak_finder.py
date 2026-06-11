@@ -92,13 +92,64 @@ def test_find_peaks_returns_spectral_peak_objects():
 # ---------------------------------------------------------------------------
 
 
-def test_interpret_peaks_none_physics_all_unknown():
-    """Without physics result all peaks remain UNKNOWN."""
+def test_interpret_peaks_none_physics_single_peak_unknown():
+    """A lone peak with no physics context stays UNKNOWN (no harmonic relation)."""
     freqs, psd = _psd(40.0)
     peaks = find_peaks(freqs, psd, SETTINGS)
     interpreted = interpret_peaks(peaks, physics_result=None)
     for p in interpreted:
         assert p.interpretation == PeakInterpretation.UNKNOWN
+
+
+def test_interpret_peaks_harmonic_without_physics():
+    """Harmonics are classified even when no physics result is supplied.
+
+    Per Algorithm 7 rule 2, the harmonic relationship depends only on the
+    detected peaks, not on any physics context.
+    """
+    n = int(FS * 10)
+    t = np.linspace(0.0, 10.0, n, endpoint=False)
+    signal = (
+        np.sin(2.0 * np.pi * 40.0 * t)
+        + 0.5 * np.sin(2.0 * np.pi * 80.0 * t)
+        + 0.3 * np.sin(2.0 * np.pi * 120.0 * t)
+    )
+    freqs, psd = calculate_psd(signal, FS, SETTINGS)
+    peaks = find_peaks(freqs, psd, SETTINGS)
+    interpreted = interpret_peaks(peaks, physics_result=None)
+    harmonic_freqs = [
+        p.frequency_hz for p in interpreted if p.interpretation == PeakInterpretation.HARMONIC
+    ]
+    assert any(
+        79.0 <= f <= 81.0 for f in harmonic_freqs
+    ), f"80 Hz not HARMONIC without physics; harmonics: {harmonic_freqs}"
+    assert any(
+        119.0 <= f <= 121.0 for f in harmonic_freqs
+    ), f"120 Hz not HARMONIC without physics; harmonics: {harmonic_freqs}"
+
+
+def test_interpret_peaks_fundamental_not_harmonic():
+    """The strongest (fundamental) peak is never itself classified HARMONIC."""
+    n = int(FS * 10)
+    t = np.linspace(0.0, 10.0, n, endpoint=False)
+    signal = np.sin(2.0 * np.pi * 40.0 * t) + 0.5 * np.sin(2.0 * np.pi * 80.0 * t)
+    freqs, psd = calculate_psd(signal, FS, SETTINGS)
+    peaks = find_peaks(freqs, psd, SETTINGS)
+    interpreted = interpret_peaks(peaks, physics_result=None)
+    fundamental = min(interpreted, key=lambda p: abs(p.frequency_hz - 40.0))
+    assert fundamental.interpretation != PeakInterpretation.HARMONIC
+
+
+def test_find_peaks_default_settings_keeps_dominant_peak():
+    """With default SpectralSettings (peak_min_width_hz=0.5) the real 40 Hz peak survives."""
+    default_settings = SpectralSettings()
+    n = int(FS * 10)
+    t = np.linspace(0.0, 10.0, n, endpoint=False)
+    signal = np.sin(2.0 * np.pi * 40.0 * t)
+    freqs, psd = calculate_psd(signal, FS, default_settings)
+    peaks = find_peaks(freqs, psd, default_settings)
+    assert len(peaks) >= 1
+    assert 39.0 <= peaks[0].frequency_hz <= 41.0
 
 
 def test_interpret_peaks_harmonic_detected():

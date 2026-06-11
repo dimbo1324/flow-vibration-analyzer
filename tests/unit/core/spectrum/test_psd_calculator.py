@@ -54,6 +54,16 @@ def test_psd_signal_shorter_than_nperseg_raises():
         calculate_psd(short_signal, FS, SETTINGS)
 
 
+def test_psd_signal_length_equals_nperseg_ok():
+    """A signal exactly nperseg long is accepted (the guard is strictly < nperseg)."""
+    n = SETTINGS.segment_length_samples
+    t = np.linspace(0.0, n / FS, n, endpoint=False)
+    signal = np.sin(2.0 * np.pi * 40.0 * t)
+    freqs, psd = calculate_psd(signal, FS, SETTINGS)
+    assert len(freqs) == n // 2 + 1
+    assert np.all(psd >= 0.0)
+
+
 def test_psd_non_negative():
     """PSD values are all non-negative."""
     signal = _sine(40.0, duration=5.0)

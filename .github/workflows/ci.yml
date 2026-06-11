@@ -13,7 +13,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        # 3.11/3.12 cover the declared minimum target; 3.13 exercises the
+        # NumPy 2.x / pandas 2.x era so newer-major behaviour is tested in CI.
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
