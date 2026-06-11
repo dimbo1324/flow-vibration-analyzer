@@ -146,8 +146,8 @@ iva/
 ```
 [+] Этап 1   Основа проекта и документация
 [+] Этап 2   Архитектура и модели данных (core/models/)
-[ ] Этап 3   Инфраструктура: импорт файлов и синтетические данные
-[ ] Этап 4   Предобработка сигнала (core/signal/)
+[+] Этап 3   Инфраструктура: импорт файлов и синтетические данные
+[+] Этап 4   Предобработка сигнала (core/signal/)
 [ ] Этап 5   Спектральный анализ (core/spectrum/)
 [ ] Этап 6   Физические расчёты и оценка риска (core/physics/)
 [ ] Этап 7   Координирующий слой и CLI (app/ + CLI)
@@ -522,7 +522,7 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `core/signal/preprocessor.py`:
 
-- [ ] Функция `remove_mean(signal: np.ndarray) -> np.ndarray`.
+- [+] Функция `remove_mean(signal: np.ndarray) -> np.ndarray`.
   - Вычитает `np.mean(signal)` из каждого элемента.
   - Логирует `INFO`: «Постоянная составляющая удалена, смещение было {:.4f}».
   - Сложность O(n), без Python-циклов.
@@ -531,7 +531,7 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 В `core/signal/preprocessor.py` добавить:
 
-- [ ] Функция `fill_gaps(signal, time_array, max_gap_seconds, sampling_rate_hz) -> np.ndarray`.
+- [+] Функция `fill_gaps(signal, time_array, max_gap_seconds, sampling_rate_hz) -> np.ndarray`.
   - Находить непрерывные промежутки NaN.
   - Промежутки ≤ `max_gap_seconds`: линейная интерполяция (scipy.interpolate).
   - Промежутки > `max_gap_seconds`: заполнять нулями.
@@ -541,11 +541,11 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `core/signal/outlier_detector.py`:
 
-- [ ] Функция `detect_outliers(signal, window_samples, threshold_sigma) -> np.ndarray` (булев массив).
+- [+] Функция `detect_outliers(signal, window_samples, threshold_sigma) -> np.ndarray` (булев массив).
   - Алгоритм из docs/11_algorithms.md (алгоритм 2): скользящая медиана + MAD.
   - Коэффициент MAD: 1.4826.
   - Без Python-циклов — использовать векторизованные операции NumPy.
-- [ ] Функция `replace_outliers(signal, outlier_mask) -> np.ndarray`.
+- [+] Функция `replace_outliers(signal, outlier_mask) -> np.ndarray`.
   - Заменять выбросы линейной интерполяцией между соседними «чистыми» точками.
   - Логировать `INFO` с количеством заменённых точек.
 
@@ -553,46 +553,46 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `core/signal/filter.py`:
 
-- [ ] Функция `apply_bandpass_filter(signal, sampling_rate_hz, low_hz, high_hz, order) -> np.ndarray`.
+- [+] Функция `apply_bandpass_filter(signal, sampling_rate_hz, low_hz, high_hz, order) -> np.ndarray`.
   - Использовать `scipy.signal.butter` + `scipy.signal.filtfilt`.
   - `filtfilt` обязателен (нулевой фазовый сдвиг — см. docs/11_algorithms.md алгоритм 4).
   - Проверять: `0 < low_hz < high_hz < sampling_rate_hz / 2`, иначе `FilterConfigurationError`.
   - Логировать `DEBUG` параметры фильтра.
-- [ ] Функция `apply_lowpass_filter(signal, sampling_rate_hz, cutoff_hz, order) -> np.ndarray`.
-- [ ] Функция `apply_highpass_filter(signal, sampling_rate_hz, cutoff_hz, order) -> np.ndarray`.
+- [+] Функция `apply_lowpass_filter(signal, sampling_rate_hz, cutoff_hz, order) -> np.ndarray`.
+- [+] Функция `apply_highpass_filter(signal, sampling_rate_hz, cutoff_hz, order) -> np.ndarray`.
 
 #### 4.5 Главная функция предобработки
 
 В `core/signal/preprocessor.py` добавить:
 
-- [ ] Функция `preprocess_signal(data: ValidatedSignalData, settings: PreprocessingSettings) -> ProcessedSignalData`.
+- [+] Функция `preprocess_signal(data: ValidatedSignalData, settings: PreprocessingSettings) -> ProcessedSignalData`.
   - Вызывать операции в фиксированном порядке: remove_mean → detect_outliers/replace → fill_gaps → apply_bandpass_filter.
   - Каждую применённую операцию добавлять в `preprocessing_log`.
   - Возвращать `ProcessedSignalData` с обеими версиями сигнала.
 
 #### 4.6 Тесты
 
-- [ ] Создать `tests/unit/core/signal/test_preprocessor.py`.
-  - [ ] Тест: `remove_mean` — после применения `|np.mean(result)| < 1e-10`.
-  - [ ] Тест: `fill_gaps` — пропуски длиной ≤ порога заполнены, нет NaN.
-  - [ ] Тест: `fill_gaps` — пропуски длиннее порога заменены нулями.
-- [ ] Создать `tests/unit/core/signal/test_outlier_detector.py`.
-  - [ ] Тест: известные выбросы обнаруживаются.
-  - [ ] Тест: чистый сигнал не содержит ложных выбросов.
-  - [ ] Тест: чистый сигнал с нулевой амплитудой не вызывает деления на ноль.
-- [ ] Создать `tests/unit/core/signal/test_filter.py`.
-  - [ ] Тест: синусоида вне полосы пропускания подавляется до < 1% амплитуды.
-  - [ ] Тест: синусоида в полосе пропускания проходит с амплитудой > 90%.
-  - [ ] Тест: `low_hz > nyquist` → `FilterConfigurationError`.
-  - [ ] Тест: `low_hz >= high_hz` → `FilterConfigurationError`.
-  - [ ] Тест: применение `filtfilt` не сдвигает фазу (RMS разности < 0.01).
+- [+] Создать `tests/unit/core/signal/test_preprocessor.py`.
+  - [+] Тест: `remove_mean` — после применения `|np.mean(result)| < 1e-10`.
+  - [+] Тест: `fill_gaps` — пропуски длиной ≤ порога заполнены, нет NaN.
+  - [+] Тест: `fill_gaps` — пропуски длиннее порога заменены нулями.
+- [+] Создать `tests/unit/core/signal/test_outlier_detector.py`.
+  - [+] Тест: известные выбросы обнаруживаются.
+  - [+] Тест: чистый сигнал не содержит ложных выбросов.
+  - [+] Тест: чистый сигнал с нулевой амплитудой не вызывает деления на ноль.
+- [+] Создать `tests/unit/core/signal/test_filter.py`.
+  - [+] Тест: синусоида вне полосы пропускания подавляется до < 1% амплитуды.
+  - [+] Тест: синусоида в полосе пропускания проходит с амплитудой > 90%.
+  - [+] Тест: `low_hz > nyquist` → `FilterConfigurationError`.
+  - [+] Тест: `low_hz >= high_hz` → `FilterConfigurationError`.
+  - [+] Тест: применение `filtfilt` не сдвигает фазу (RMS разности < 0.01).
 
 #### Критерии завершения этапа 4
 
-- [ ] Все четыре операции предобработки реализованы.
-- [ ] Порядок операций в конвейере соблюдён.
-- [ ] Нет Python-циклов в расчётных функциях (только NumPy/SciPy).
-- [ ] Все тесты проходят, включая граничные случаи.
+- [+] Все четыре операции предобработки реализованы.
+- [+] Порядок операций в конвейере соблюдён.
+- [+] Нет Python-циклов в расчётных функциях (только NumPy/SciPy).
+- [+] Все тесты проходят, включая граничные случаи.
 
 ---
 

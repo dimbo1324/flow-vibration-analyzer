@@ -153,7 +153,7 @@ introduction to the project, its engineering context and design goals.
 
 ## Development Status
 
-**Stage 3 complete — File Import and Synthetic Data.**
+**Stage 4 complete — Signal Preprocessing.**
 
 - Stage 1: repository foundation, configuration, documentation baseline.
 - Stage 2: full domain model layer in `iva/core/models/` — frozen dataclasses, enumerations,
@@ -162,6 +162,9 @@ introduction to the project, its engineering context and design goals.
   scripts, GitHub Actions CI.
 - Stage 3: file readers (CSV, Parquet, Excel), data quality validator, enhanced logger with
   daily rotation and 30-day retention, synthetic signal generator.
+- Stage 4: signal preprocessing pipeline in `iva/core/signal/` — mean removal, MAD-based outlier
+  detection and replacement, gap filling, Butterworth bandpass/lowpass/highpass filters
+  (`filtfilt` zero-phase), `preprocess_signal()` pipeline orchestrator. 36 unit tests.
 
 **Supported input formats:** `.csv`, `.parquet`, `.xlsx`
 
@@ -171,5 +174,5 @@ To regenerate the demo data files:
 python scripts/generate_synthetic_data.py
 ```
 
-No analysis pipeline, UI, charts or reports are implemented yet. Those will
-be added in Stages 4–10 according to the development roadmap.
+No spectral analysis, UI, charts or reports are implemented yet. Those will
+be added in Stages 5–10 according to the development roadmap.
