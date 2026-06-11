@@ -1,13 +1,16 @@
 """Daily-rotating file logger for the Industrial Vibration Analyzer.
 
-Each call to ``get_logger`` returns a stdlib Logger configured with a handler
-that writes to a date-based file under the user's Documents folder.
+Each call to ``get_logger`` returns a stdlib Logger for the given name.
+File logging is *not* configured at import time; call
+``configure_file_logging()`` once at application startup to attach a
+FileHandler.
 
-Log directory resolution order (production default):
-    1. Environment variable ``IVA_LOG_DIR`` if set (useful for tests/CI so
-       no permanent files are written into the real user Documents folder).
-    2. ``%USERPROFILE%/Documents/IVA/logs`` on Windows.
-    3. ``~/Documents/IVA/logs`` as a cross-platform fallback.
+Log directory resolution order (used by ``configure_file_logging`` when
+*log_dir* is not supplied explicitly):
+    1. ``get_logs_dir()`` from ``iva.infrastructure.diagnostics.output_paths``
+       which itself checks ``IVA_OUT_DIR`` (useful for tests/CI so no
+       permanent files are written into real user directories).
+    2. Falls back to ``<project_root>/out/logs/`` by default.
 
 Log format::
 
@@ -15,52 +18,47 @@ Log format::
 
 Example log file path::
 
-    C:/Users/engineer/Documents/IVA/logs/iva_2025-06-11.log
+    out/logs/iva_2025-06-11.log
 
-Retention: log files matching ``iva_*.log`` older than 30 days are removed
-whenever a new handler is set up.  Deletion errors are silently ignored so
-that a locked or read-only file cannot crash the application.
+Retention: log files matching ``iva_*.log`` older than *keep_days* days are
+removed when ``configure_file_logging`` is called.  Deletion errors are
+silently ignored so that a locked or read-only file cannot crash the
+application.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 from datetime import date, timedelta
 from pathlib import Path
 
-__all__ = ["get_logger"]
+__all__ = ["get_logger", "configure_file_logging", "_cleanup_old_logs"]
 
 _LOG_FORMAT = "%(asctime)s.%(msecs)03d  %(levelname)-8s  %(name)s  %(message)s"
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 _RETENTION_DAYS = 30
 
+# Root logger name for the IVA application.
+_IVA_ROOT = "iva"
 
-def _get_log_dir() -> Path:
-    """Return the resolved log directory path.
+# Per Python logging best-practice for libraries: add a NullHandler to the
+# package root logger so that log records from ``iva.*`` do not propagate to
+# the root logger's default stderr StreamHandler when no file logging has been
+# configured.  This prevents tracebacks logged with ``exc_info=True`` from
+# leaking to stderr in CLI and test contexts.
+logging.getLogger(_IVA_ROOT).addHandler(logging.NullHandler())
 
-    Checks ``IVA_LOG_DIR`` first so that tests can redirect logs without
-    touching the production Documents folder.
+
+def _cleanup_old_logs(log_dir: Path, keep_days: int = 30) -> None:
+    """Delete ``iva_*.log`` files older than *keep_days* days.
+
+    Only files matching the ``iva_YYYY-MM-DD.log`` pattern are touched.
+    Other files (including unrelated ``.log`` files) are left untouched.
+    Deletion failures are silently ignored.
     """
-    env_override = os.environ.get("IVA_LOG_DIR")
-    if env_override:
-        return Path(env_override)
-
-    userprofile = os.environ.get("USERPROFILE")
-    if userprofile:
-        base = Path(userprofile)
-    else:
-        base = Path.home()
-
-    return base / "Documents" / "IVA" / "logs"
-
-
-def _purge_old_logs(log_dir: Path) -> None:
-    """Delete ``iva_*.log`` files older than ``_RETENTION_DAYS`` days."""
-    cutoff = date.today() - timedelta(days=_RETENTION_DAYS)
+    cutoff = date.today() - timedelta(days=keep_days)
     try:
         for log_file in log_dir.glob("iva_*.log"):
-            # Extract YYYY-MM-DD from filename like iva_2025-01-01.log
             stem = log_file.stem  # e.g. "iva_2025-01-01"
             date_part = stem[4:]  # drop "iva_"
             try:
@@ -76,12 +74,75 @@ def _purge_old_logs(log_dir: Path) -> None:
         pass
 
 
-def get_logger(name: str) -> logging.Logger:
-    """Return a Logger writing to today's date-based log file.
+def configure_file_logging(
+    log_dir: Path | None = None,
+    log_level: int = logging.DEBUG,
+) -> None:
+    """Attach a date-based FileHandler to the ``iva`` root logger.
 
-    If the logger for *name* already has a FileHandler pointing at today's
-    log file, it is returned as-is to avoid duplicate handlers being added
-    on repeated calls.
+    Safe to call multiple times; a second call with the *same* log directory
+    is a no-op (deduplication by resolved file path).  A call with a
+    *different* log directory adds a new handler for that directory.
+
+    Args:
+        log_dir: Directory in which to create ``iva_YYYY-MM-DD.log``.
+            Defaults to ``get_logs_dir()`` (``out/logs/`` by default,
+            overridable via the ``IVA_OUT_DIR`` env var).
+        log_level: Minimum level for the file handler.  Defaults to DEBUG.
+    """
+    if log_dir is None:
+        # Import here to avoid a circular import at module level and to allow
+        # the env var to be set after this module is first imported.
+        from iva.infrastructure.diagnostics.output_paths import get_logs_dir
+
+        log_dir = get_logs_dir()
+
+    today_str = date.today().isoformat()
+    log_file = log_dir / f"iva_{today_str}.log"
+
+    root_logger = logging.getLogger(_IVA_ROOT)
+
+    # Deduplication: skip if a FileHandler for this exact file already exists.
+    resolved = log_file.resolve()
+    for handler in root_logger.handlers:
+        if isinstance(handler, logging.FileHandler):
+            if Path(handler.baseFilename).resolve() == resolved:
+                return
+
+    # Ensure the directory exists.
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        if not root_logger.handlers:
+            root_logger.addHandler(logging.NullHandler())
+        return
+
+    _cleanup_old_logs(log_dir, keep_days=_RETENTION_DAYS)
+
+    formatter = logging.Formatter(fmt=_LOG_FORMAT, datefmt=_DATE_FORMAT)
+    try:
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    except OSError:
+        if not root_logger.handlers:
+            root_logger.addHandler(logging.NullHandler())
+        return
+
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(log_level)
+
+    root_logger.addHandler(file_handler)
+    root_logger.setLevel(log_level)
+    # Prevent duplicate output if the root logging logger has handlers.
+    root_logger.propagate = False
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Return a stdlib Logger for the given *name*.
+
+    This function does *not* configure any handlers — call
+    ``configure_file_logging()`` at application startup to set up file
+    output.  In tests, pass a ``tmp_path``-based directory to
+    ``configure_file_logging`` to avoid writing to permanent locations.
 
     Args:
         name: Qualified logger name, typically ``__name__`` of the caller.
@@ -89,46 +150,4 @@ def get_logger(name: str) -> logging.Logger:
     Returns:
         A stdlib :class:`logging.Logger` instance.
     """
-    logger = logging.getLogger(name)
-
-    # Only configure if not already done at DEBUG level with a file handler.
-    today_str = date.today().isoformat()
-    log_dir = _get_log_dir()
-    log_file = log_dir / f"iva_{today_str}.log"
-
-    # Check whether this exact file handler already exists to prevent
-    # duplicate handler accumulation across multiple get_logger() calls.
-    for handler in logger.handlers:
-        if isinstance(handler, logging.FileHandler):
-            if Path(handler.baseFilename).resolve() == log_file.resolve():
-                return logger
-
-    # Create the log directory (and any intermediate directories).
-    try:
-        log_dir.mkdir(parents=True, exist_ok=True)
-    except OSError:
-        # Cannot create log dir — fall back to a NullHandler silently.
-        if not logger.handlers:
-            logger.addHandler(logging.NullHandler())
-        return logger
-
-    _purge_old_logs(log_dir)
-
-    formatter = logging.Formatter(fmt=_LOG_FORMAT, datefmt=_DATE_FORMAT)
-    try:
-        file_handler = logging.FileHandler(log_file, encoding="utf-8")
-    except OSError:
-        if not logger.handlers:
-            logger.addHandler(logging.NullHandler())
-        return logger
-
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging.DEBUG)
-
-    logger.addHandler(file_handler)
-    logger.setLevel(logging.DEBUG)
-    # Prevent messages from propagating to the root logger's handlers
-    # (avoids duplicate output if root logger has its own handlers).
-    logger.propagate = False
-
-    return logger
+    return logging.getLogger(name)

@@ -224,6 +224,9 @@ __marimo__/
 data/results/
 reports/
 
+# IVA runtime output directory (logs, diagnostics, workflow runs, test results)
+out/
+
 # IDE project files
 .idea/
 .vscode/
