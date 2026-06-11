@@ -31,6 +31,10 @@ def main() -> int:
     apply_dark_theme(app)
     window = MainWindow()
     window.show()
+    if "--smoke-test" in sys.argv:
+        app.processEvents()
+        window.close()
+        return 0
     return app.exec()
 
 
