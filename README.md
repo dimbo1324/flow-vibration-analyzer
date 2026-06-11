@@ -153,7 +153,7 @@ introduction to the project, its engineering context and design goals.
 
 ## Development Status
 
-**Stage 4 complete — Signal Preprocessing.**
+**Stage 5 complete — Spectral Analysis.**
 
 - Stage 1: repository foundation, configuration, documentation baseline.
 - Stage 2: full domain model layer in `iva/core/models/` — frozen dataclasses, enumerations,
@@ -165,6 +165,9 @@ introduction to the project, its engineering context and design goals.
 - Stage 4: signal preprocessing pipeline in `iva/core/signal/` — mean removal, MAD-based outlier
   detection and replacement, gap filling, Butterworth bandpass/lowpass/highpass filters
   (`filtfilt` zero-phase), `preprocess_signal()` pipeline orchestrator. 36 unit tests.
+- Stage 5: spectral analysis in `iva/core/spectrum/` — Welch PSD (`scaling='density'`), peak
+  detection in dB domain with -3 dB width, peak interpretation (VORTEX_SHEDDING / HARMONIC /
+  STRUCTURAL / UNKNOWN), total/band/sliding-window RMS. 29 unit tests.
 
 **Supported input formats:** `.csv`, `.parquet`, `.xlsx`
 
@@ -174,5 +177,5 @@ To regenerate the demo data files:
 python scripts/generate_synthetic_data.py
 ```
 
-No spectral analysis, UI, charts or reports are implemented yet. Those will
-be added in Stages 5–10 according to the development roadmap.
+No physics calculations, UI, charts or reports are implemented yet. Those will
+be added in Stages 6–10 according to the development roadmap.

@@ -148,7 +148,7 @@ iva/
 [+] Этап 2   Архитектура и модели данных (core/models/)
 [+] Этап 3   Инфраструктура: импорт файлов и синтетические данные
 [+] Этап 4   Предобработка сигнала (core/signal/)
-[ ] Этап 5   Спектральный анализ (core/spectrum/)
+[+] Этап 5   Спектральный анализ (core/spectrum/)
 [ ] Этап 6   Физические расчёты и оценка риска (core/physics/)
 [ ] Этап 7   Координирующий слой и CLI (app/ + CLI)
 [ ] Этап 8   Desktop-интерфейс PySide6 (ui/)
@@ -620,7 +620,7 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `core/spectrum/psd_calculator.py`:
 
-- [ ] Функция `calculate_psd(signal, sampling_rate_hz, settings: SpectralSettings) -> tuple[np.ndarray, np.ndarray]`.
+- [+] Функция `calculate_psd(signal, sampling_rate_hz, settings: SpectralSettings) -> tuple[np.ndarray, np.ndarray]`.
   - Использовать `scipy.signal.welch`.
   - Параметр `scaling='density'` (единицы: [физ. ед.]²/Гц).
   - Вычислять и логировать `DEBUG`: частотное разрешение `Δf = fs / nperseg`.
@@ -631,13 +631,13 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `core/spectrum/peak_finder.py`:
 
-- [ ] Функция `find_peaks(frequencies, psd_values, settings: SpectralSettings) -> list[SpectralPeak]`.
+- [+] Функция `find_peaks(frequencies, psd_values, settings: SpectralSettings) -> list[SpectralPeak]`.
   - Алгоритм из docs/11_algorithms.md (алгоритм 6).
   - Переводить PSD в логарифмический масштаб (дБ) для поиска порога.
   - Фильтровать пики по минимальной ширине `settings.peak_min_width_hz`.
   - Вычислять ширину на уровне -3 дБ для каждого пика.
   - Возвращать список `SpectralPeak`, отсортированный по амплитуде (по убыванию).
-- [ ] Функция `interpret_peaks(peaks, physics_result) -> list[SpectralPeak]`.
+- [+] Функция `interpret_peaks(peaks, physics_result) -> list[SpectralPeak]`.
   - Алгоритм из docs/11_algorithms.md (алгоритм 7).
   - Классифицировать каждый пик: `VORTEX_SHEDDING` / `HARMONIC` / `STRUCTURAL` / `UNKNOWN`.
   - Если `physics_result is None` — все пики классифицировать как `UNKNOWN`.
@@ -646,36 +646,36 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `core/spectrum/rms_calculator.py`:
 
-- [ ] Функция `calculate_total_rms(signal: np.ndarray) -> float`.
+- [+] Функция `calculate_total_rms(signal: np.ndarray) -> float`.
   - Формула: `sqrt(mean(signal**2))`. Без Python-циклов.
-- [ ] Функция `calculate_band_rms(frequencies, psd_values, low_hz, high_hz) -> float`.
+- [+] Функция `calculate_band_rms(frequencies, psd_values, low_hz, high_hz) -> float`.
   - Интегрировать PSD в заданной полосе (теорема Парсеваля).
   - Взять корень из результата.
-- [ ] Функция `calculate_rms_trend(signal, sampling_rate_hz, window_seconds) -> np.ndarray`.
+- [+] Функция `calculate_rms_trend(signal, sampling_rate_hz, window_seconds) -> np.ndarray`.
   - Алгоритм из docs/11_algorithms.md (алгоритм 8).
   - Использовать `np.convolve` — без Python-цикла.
 
 #### 5.4 Тесты
 
-- [ ] Создать `tests/unit/core/spectrum/test_psd_calculator.py`.
-  - [ ] Тест: синусоида 40 Гц → доминирующий пик в диапазоне 39.0–41.0 Гц.
-  - [ ] Тест: частотное разрешение `Δf = fs / nperseg` вычисляется правильно.
-  - [ ] Тест: сигнал короче `nperseg` → `InsufficientDataError`.
-- [ ] Создать `tests/unit/core/spectrum/test_peak_finder.py`.
-  - [ ] Тест: синусоида с двумя частотами → найдено два пика.
-  - [ ] Тест: чистый шум → пики ниже порога, список пуст или минимален.
-  - [ ] Тест: сигнал с гармониками 40 Гц → найдены пики на 80 Гц и 120 Гц, помечены как `HARMONIC`.
-- [ ] Создать `tests/unit/core/spectrum/test_rms_calculator.py`.
-  - [ ] Тест: RMS синусоиды с амплитудой A = `A / sqrt(2)` (аналитическое решение).
-  - [ ] Тест: скользящий RMS имеет правильную длину массива.
+- [+] Создать `tests/unit/core/spectrum/test_psd_calculator.py`.
+  - [+] Тест: синусоида 40 Гц → доминирующий пик в диапазоне 39.0–41.0 Гц.
+  - [+] Тест: частотное разрешение `Δf = fs / nperseg` вычисляется правильно.
+  - [+] Тест: сигнал короче `nperseg` → `InsufficientDataError`.
+- [+] Создать `tests/unit/core/spectrum/test_peak_finder.py`.
+  - [+] Тест: синусоида с двумя частотами → найдено два пика.
+  - [+] Тест: чистый шум → пики ниже порога, список пуст или минимален.
+  - [+] Тест: сигнал с гармониками 40 Гц → найдены пики на 80 Гц и 120 Гц, помечены как `HARMONIC`.
+- [+] Создать `tests/unit/core/spectrum/test_rms_calculator.py`.
+  - [+] Тест: RMS синусоиды с амплитудой A = `A / sqrt(2)` (аналитическое решение).
+  - [+] Тест: скользящий RMS имеет правильную длину массива.
 
 #### Критерии завершения этапа 5
 
-- [ ] PSD методом Уэлча вычисляется корректно.
-- [ ] Синтетический сигнал 40 Гц: доминирующий пик в диапазоне 39–41 Гц.
-- [ ] Гармоники обнаруживаются и классифицируются.
-- [ ] RMS вычисляется по аналитическому решению с погрешностью < 0.1%.
-- [ ] Все тесты проходят.
+- [+] PSD методом Уэлча вычисляется корректно.
+- [+] Синтетический сигнал 40 Гц: доминирующий пик в диапазоне 39–41 Гц.
+- [+] Гармоники обнаруживаются и классифицируются.
+- [+] RMS вычисляется по аналитическому решению с погрешностью < 0.1%.
+- [+] Все тесты проходят.
 
 ---
 
