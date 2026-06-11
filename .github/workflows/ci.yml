@@ -31,10 +31,50 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
-      - name: Smoke test
+      - name: Install Linux Qt runtime dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libegl1 \
+            libgl1 \
+            libgl1-mesa-dri \
+            libopengl0 \
+            libegl-mesa0 \
+            libxkbcommon-x11-0 \
+            libxcb-cursor0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-xfixes0 \
+            libxcb-xinerama0 \
+            libxcb1 \
+            libx11-6 \
+            libx11-xcb1 \
+            libxext6 \
+            libxrender1 \
+            libxi6 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxrandr2 \
+            libxtst6 \
+            libdbus-1-3 \
+            libfontconfig1 \
+            libfreetype6 \
+            libnss3 \
+            libxss1
+
+      - name: Verify PySide6 UI imports
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -c "import iva.ui.main_window; print('IVA main_window import OK')"
+          QT_OPENGL: software
+          MPLBACKEND: Agg
+        run: |
+          python -c "from PySide6.QtWidgets import QApplication; print('PySide6 QtWidgets import OK')"
+          python -c "import iva.ui.main_window; print('IVA main_window import OK')"
 
       - name: CLI help
         run: python -m iva.cli.main --help
@@ -45,6 +85,8 @@ jobs:
       - name: pytest
         env:
           QT_QPA_PLATFORM: offscreen
+          QT_OPENGL: software
+          MPLBACKEND: Agg
         run: python -m pytest
 
       - name: black (format check)
