@@ -1,0 +1,27 @@
+# Strouhal number lookup tables for flow-induced vibration calculations.
+#
+# These values represent a conservative engineering baseline derived from
+# Blevins-style data and dissertation experimental results.  They are NOT
+# intended as final physical truth and should be validated against specific
+# experimental conditions before use in safety-critical applications.
+#
+# Single-cylinder values follow the well-known plateau behaviour:
+#   St ≈ 0.18–0.21 for Re = 1 000–100 000 (subcritical/laminar-wake regime).
+#
+# Tandem-cylinder values come from dissertation PIV/LDV measurements for
+# L/D spacing ratios 1.5–4.0 at the same Re range.
+
+[single_cylinder]
+reynolds  = [1000, 5000, 10000, 50000, 100000, 500000]
+strouhal  = [0.18, 0.19,  0.20,  0.21,   0.21,   0.20]
+
+[tandem]
+reynolds       = [5000, 10000, 50000, 100000]
+spacing_ratios = [1.5, 2.0, 3.0, 4.0]
+# strouhal[i][j] = St at reynolds[i], spacing_ratios[j]
+strouhal = [
+  [0.14, 0.16, 0.18, 0.19],
+  [0.15, 0.17, 0.19, 0.20],
+  [0.16, 0.18, 0.20, 0.21],
+  [0.16, 0.18, 0.20, 0.21],
+]
