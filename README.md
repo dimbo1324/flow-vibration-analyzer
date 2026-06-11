@@ -13,8 +13,9 @@ IVA automates the standard analysis workflow: data import, signal preprocessing,
 physical coefficient calculation (Reynolds number, Strouhal number, vortex shedding frequency),
 resonance risk assessment, comparison with CFD results, and structured report generation.
 
-The current Stage 9 application includes the complete analysis pipeline, desktop visualisation,
-PDF/HTML reporting, versioned project sessions, and experiment-versus-CFD profile comparison.
+IVA v1.0.0 includes the complete analysis pipeline, desktop visualisation, PDF/HTML reporting,
+versioned project sessions, experiment-versus-CFD profile comparison, and a full Windows installer
+build toolchain.
 
 ## Requirements
 
@@ -232,10 +233,9 @@ python -m iva.cli.main --help
 python -m iva.cli.main analyze --help
 ```
 
-Stage 9 GUI features include PDF/HTML/CSV/JSON export on the Report page,
+GUI features include PDF/HTML/CSV/JSON export on the Report page,
 `.vibproj` save/open actions, zoom/pan/reset and PNG chart controls, and a
 Profiles page that compares `coordinate,value` experiment and CFD CSV files.
-Installer and release packaging are intentionally deferred to Stage 10.
 
 ## Desktop GUI
 
@@ -251,23 +251,55 @@ The CLI remains fully available and independent of the GUI:
 python -m iva.cli.main analyze --help
 ```
 
+## Running Quality Checks
+
+PowerShell scripts for Windows (run from repository root):
+
+```powershell
+# Run all lint checks (black, ruff, mypy)
+.\scripts\lint.ps1
+
+# Run tests with coverage (excludes performance tests)
+.\scripts\test.ps1
+
+# Run lint + tests together
+.\scripts\quality.ps1
+```
+
+## Building the Windows Installer
+
+Requires PyInstaller and (for the installer) Inno Setup 6 on Windows:
+
+```bash
+# Check build environment
+python scripts/build_installer.py --check-only
+
+# Full build: run tests, build PyInstaller exe, build Inno Setup installer
+python scripts/build_installer.py
+
+# Skip tests (for debugging the build process only)
+python scripts/build_installer.py --skip-tests
+```
+
+The installer is produced at `dist/release/IVA_Setup_1.0.0.exe`.
+
 ## Development Status
 
-**Stage 9 complete — Reports, Sessions, and Advanced Visualisation.**
+**v1.0.0 — first public release.**
 
 - Stage 1: repository foundation, configuration, documentation baseline.
 - Stage 2: full domain model layer in `iva/core/models/` — frozen dataclasses, enumerations,
-  exception hierarchy, minimal infrastructure logger, 84 passing unit tests.
+  exception hierarchy, minimal infrastructure logger.
 - Stage 2.5: code quality infrastructure — `.editorconfig`, pre-commit hooks, cross-platform
   scripts, GitHub Actions CI.
 - Stage 3: file readers (CSV, Parquet, Excel), data quality validator, enhanced logger with
   daily rotation and 30-day retention, synthetic signal generator.
 - Stage 4: signal preprocessing pipeline in `iva/core/signal/` — mean removal, MAD-based outlier
   detection and replacement, gap filling, Butterworth bandpass/lowpass/highpass filters
-  (`filtfilt` zero-phase), `preprocess_signal()` pipeline orchestrator. 36 unit tests.
+  (`filtfilt` zero-phase), `preprocess_signal()` pipeline orchestrator.
 - Stage 5: spectral analysis in `iva/core/spectrum/` — Welch PSD (`scaling='density'`), peak
   detection in dB domain with -3 dB width, peak interpretation (VORTEX_SHEDDING / HARMONIC /
-  STRUCTURAL / UNKNOWN), total/band/sliding-window RMS. 29 unit tests.
+  STRUCTURAL / UNKNOWN), total/band/sliding-window RMS.
 - Stage 6: physics and risk — Reynolds number, Strouhal number (Blevins table + tandem),
   vortex shedding frequency, velocity/frequency ratios, three-level lock-in risk assessment
   with Russian engineering recommendations.
@@ -275,6 +307,13 @@ python -m iva.cli.main analyze --help
   `run_pipeline()` orchestrator, `AnalysisSession` state container, `AnalysisRunner`,
   `settings_manager` (TOML + JSON config), CSV/JSON/HTML result exporters, integration tests,
   architecture boundary tests, `config/example_config.json`.
+- Stage 8: PySide6 desktop GUI — seven workflow pages with dark engineering theme, QThread
+  background analysis, zoom/pan charts, error banner, drag-and-drop import.
+- Stage 9: reports and sessions — PDF/HTML report generation, `.vibproj` session persistence,
+  experiment vs. CFD profile comparison.
+- Stage 10: quality, performance, build — 98% core test coverage, 60k-row performance test,
+  edge-case and system scenario tests, PyInstaller spec, Inno Setup script, PowerShell
+  quality scripts, version 1.0.0.
 
 **Supported input formats:** `.csv`, `.parquet`, `.xlsx`
 

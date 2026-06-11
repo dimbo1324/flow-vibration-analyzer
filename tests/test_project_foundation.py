@@ -9,13 +9,13 @@ import pytest
 def test_version_is_correct() -> None:
     from iva.__version__ import __version__
 
-    assert __version__ == "0.1.0"
+    assert __version__ == "1.0.0"
 
 
 def test_iva_package_exposes_version() -> None:
     import iva
 
-    assert iva.__version__ == "0.1.0"
+    assert iva.__version__ == "1.0.0"
 
 
 def test_main_runs_without_exception(monkeypatch: pytest.MonkeyPatch) -> None:

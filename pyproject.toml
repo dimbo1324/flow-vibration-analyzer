@@ -1,6 +1,6 @@
 [project]
 name = "industrial-vibration-analyzer"
-version = "0.1.0"
+version = "1.0.0"
 description = "Engineering desktop application for analysis of flow-induced vibrations in heat exchanger equipment."
 requires-python = ">=3.11"
 
@@ -25,3 +25,14 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "performance: performance tests — deselect with '-m not performance'",
+]
+
+[tool.coverage.run]
+source = ["iva"]
+omit = ["iva/ui/*"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
