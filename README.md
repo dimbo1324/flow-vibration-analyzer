@@ -153,13 +153,23 @@ introduction to the project, its engineering context and design goals.
 
 ## Development Status
 
-**Stage 2 complete — Architecture and Data Models.**
+**Stage 3 complete — File Import and Synthetic Data.**
 
 - Stage 1: repository foundation, configuration, documentation baseline.
 - Stage 2: full domain model layer in `iva/core/models/` — frozen dataclasses, enumerations,
-  exception hierarchy, minimal infrastructure logger, 48 passing unit tests.
+  exception hierarchy, minimal infrastructure logger, 84 passing unit tests.
 - Stage 2.5: code quality infrastructure — `.editorconfig`, pre-commit hooks, cross-platform
   scripts, GitHub Actions CI.
+- Stage 3: file readers (CSV, Parquet, Excel), data quality validator, enhanced logger with
+  daily rotation and 30-day retention, synthetic signal generator.
+
+**Supported input formats:** `.csv`, `.parquet`, `.xlsx`
+
+To regenerate the demo data files:
+
+```bash
+python scripts/generate_synthetic_data.py
+```
 
 No analysis pipeline, UI, charts or reports are implemented yet. Those will
-be added in Stages 3–10 according to the development roadmap.
+be added in Stages 4–10 according to the development roadmap.

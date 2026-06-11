@@ -1,4 +1,4 @@
-# INDUSTRIAL VIBRATION ANALYZER
+﻿# INDUSTRIAL VIBRATION ANALYZER
 # Чек-лист разработки проекта — версия 2.0
 
 <!--
@@ -395,104 +395,104 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `infrastructure/logging/app_logger.py`:
 
-- [ ] Реализовать функцию `get_logger(name: str) -> logging.Logger`.
-- [ ] Настроить запись в файл `%USERPROFILE%/Documents/IVA/logs/iva_{дата}.log`.
-- [ ] Формат строки журнала: `%(asctime)s.%(msecs)03d  %(levelname)-8s  %(name)s  %(message)s`.
-- [ ] Ротация по дате: новый файл каждый день.
-- [ ] Удалять файлы старше 30 дней при запуске.
+- [+] Реализовать функцию `get_logger(name: str) -> logging.Logger`.
+- [+] Настроить запись в файл `%USERPROFILE%/Documents/IVA/logs/iva_{дата}.log`.
+- [+] Формат строки журнала: `%(asctime)s.%(msecs)03d  %(levelname)-8s  %(name)s  %(message)s`.
+- [+] Ротация по дате: новый файл каждый день.
+- [+] Удалять файлы старше 30 дней при запуске.
 
 #### 3.2 Ридер CSV
 
 Создать `infrastructure/readers/csv_reader.py`:
 
-- [ ] Функция `read_csv(file_path: str) -> RawFileData`.
-- [ ] Автоматически определять разделитель (запятая, точка с запятой, табуляция).
-- [ ] Автоматически определять кодировку (UTF-8, CP1251, Latin-1).
-- [ ] Автоматически определять, есть ли строка с заголовками.
-- [ ] Пропускать строки-комментарии, начинающиеся с `#`.
-- [ ] При успешном чтении: логировать `INFO` с именем файла и количеством строк.
-- [ ] Все исключения Python (`OSError`, `UnicodeDecodeError`, и т.д.) оборачивать в `FileReadError`.
-- [ ] При `FileNotFoundError` Python — поднимать `FileNotFoundError(IVA)` с понятным `user_message`.
+- [+] Функция `read_csv(file_path: str) -> RawFileData`.
+- [+] Автоматически определять разделитель (запятая, точка с запятой, табуляция).
+- [+] Автоматически определять кодировку (UTF-8, CP1251, Latin-1).
+- [+] Автоматически определять, есть ли строка с заголовками.
+- [+] Пропускать строки-комментарии, начинающиеся с `#`.
+- [+] При успешном чтении: логировать `INFO` с именем файла и количеством строк.
+- [+] Все исключения Python (`OSError`, `UnicodeDecodeError`, и т.д.) оборачивать в `FileReadError`.
+- [+] При `FileNotFoundError` Python — поднимать `FileNotFoundError(IVA)` с понятным `user_message`.
 
 #### 3.3 Ридер Parquet
 
 Создать `infrastructure/readers/parquet_reader.py`:
 
-- [ ] Функция `read_parquet(file_path: str) -> RawFileData`.
-- [ ] Использовать `pyarrow` или `pandas` для чтения.
-- [ ] Все исключения оборачивать в `FileReadError`.
-- [ ] При размере файла > 100 МБ логировать предупреждение `WARNING`.
+- [+] Функция `read_parquet(file_path: str) -> RawFileData`.
+- [+] Использовать `pyarrow` или `pandas` для чтения.
+- [+] Все исключения оборачивать в `FileReadError`.
+- [+] При размере файла > 100 МБ логировать предупреждение `WARNING`.
 
 #### 3.4 Ридер Excel
 
 Создать `infrastructure/readers/excel_reader.py`:
 
-- [ ] Функция `read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData`.
-- [ ] Читать через `openpyxl` в режиме `read_only=True` (отключает макросы).
-- [ ] Если файл содержит несколько листов — читать первый лист по умолчанию.
-- [ ] Все исключения оборачивать в `FileReadError`.
+- [+] Функция `read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData`.
+- [+] Читать через `openpyxl` в режиме `read_only=True` (отключает макросы).
+- [+] Если файл содержит несколько листов — читать первый лист по умолчанию.
+- [+] Все исключения оборачивать в `FileReadError`.
   > Режим read_only обязателен по соображениям безопасности (docs/18_security_and_data_privacy.md).
 
 #### 3.5 Фабрика ридеров
 
 Создать `infrastructure/readers/__init__.py`:
 
-- [ ] Функция `read_file(file_path: str) -> RawFileData`.
-- [ ] Определять формат по расширению файла (`.csv` → csv_reader, `.parquet` → parquet_reader, `.xlsx` → excel_reader).
-- [ ] При неизвестном расширении поднимать `UnsupportedFormatError`.
+- [+] Функция `read_file(file_path: str) -> RawFileData`.
+- [+] Определять формат по расширению файла (`.csv` → csv_reader, `.parquet` → parquet_reader, `.xlsx` → excel_reader).
+- [+] При неизвестном расширении поднимать `UnsupportedFormatError`.
 
 #### 3.6 Валидация данных
 
 Создать `infrastructure/validators/data_quality_checker.py`:
 
-- [ ] Функция `check_data_quality(raw_data: RawFileData, assignment: ColumnRoleAssignment) -> ValidatedSignalData`.
-- [ ] Проверять: временна́я ось монотонно возрастает.
-- [ ] Проверять: интервал дискретизации постоянен (допуск 0,01%).
-- [ ] Вычислять: долю пропущенных значений.
-- [ ] Оценивать: долю выбросов по правилу 4σ.
-- [ ] Проверять: длительность записи ≥ 5 секунд.
-- [ ] При критических ошибках поднимать `ValidationError`.
-- [ ] При некритических проблемах добавлять `ValidationWarning` в список.
-- [ ] Логировать каждую проверку на уровне `DEBUG`.
+- [+] Функция `check_data_quality(raw_data: RawFileData, assignment: ColumnRoleAssignment) -> ValidatedSignalData`.
+- [+] Проверять: временна́я ось монотонно возрастает.
+- [+] Проверять: интервал дискретизации постоянен (допуск 0,01%).
+- [+] Вычислять: долю пропущенных значений.
+- [+] Оценивать: долю выбросов по правилу 4σ.
+- [+] Проверять: длительность записи ≥ 5 секунд.
+- [+] При критических ошибках поднимать `ValidationError`.
+- [+] При некритических проблемах добавлять `ValidationWarning` в список.
+- [+] Логировать каждую проверку на уровне `DEBUG`.
 
 #### 3.7 Синтетические данные
 
 Создать `scripts/generate_synthetic_data.py`:
 
-- [ ] Функция `generate_clean_sine(frequency_hz, duration_s, sampling_rate_hz, amplitude)` — чистая синусоида.
-- [ ] Функция `generate_noisy_sine(frequency_hz, snr_db, ...)` — синусоида с гауссовым шумом.
-- [ ] Функция `generate_with_harmonics(fundamental_hz, n_harmonics, ...)` — основной тон + гармоники.
-- [ ] Функция `generate_with_outliers(base_signal, n_outliers, ...)` — сигнал с несколькими выбросами.
-- [ ] Функция `generate_with_gaps(base_signal, gap_fraction, ...)` — сигнал с пропусками (NaN).
-- [ ] Функция `generate_risk_scenario(shedding_hz, natural_hz, ...)` — сигнал близко к резонансу.
-- [ ] При запуске скрипта сохранять файлы в `data/synthetic/`.
-- [ ] Создать `data/examples/` с 3–4 готовыми демонстрационными файлами.
-- [ ] Добавить `data/examples/README.md` с описанием каждого файла.
+- [+] Функция `generate_clean_sine(frequency_hz, duration_s, sampling_rate_hz, amplitude)` — чистая синусоида.
+- [+] Функция `generate_noisy_sine(frequency_hz, snr_db, ...)` — синусоида с гауссовым шумом.
+- [+] Функция `generate_with_harmonics(fundamental_hz, n_harmonics, ...)` — основной тон + гармоники.
+- [+] Функция `generate_with_outliers(base_signal, n_outliers, ...)` — сигнал с несколькими выбросами.
+- [+] Функция `generate_with_gaps(base_signal, gap_fraction, ...)` — сигнал с пропусками (NaN).
+- [+] Функция `generate_risk_scenario(shedding_hz, natural_hz, ...)` — сигнал близко к резонансу.
+- [+] При запуске скрипта сохранять файлы в `data/synthetic/`.
+- [+] Создать `data/examples/` с 3–4 готовыми демонстрационными файлами.
+- [+] Добавить `data/examples/README.md` с описанием каждого файла.
 
 #### 3.8 Тесты
 
-- [ ] Создать `tests/unit/infrastructure/test_csv_reader.py`.
-  - [ ] Тест: корректный CSV читается без ошибок.
-  - [ ] Тест: CSV без временно́й колонки → понятное предупреждение.
-  - [ ] Тест: CSV с нечисловым сигналом → `ValidationError`.
-  - [ ] Тест: несуществующий файл → `FileNotFoundError(IVA)`.
-- [ ] Создать `tests/unit/infrastructure/test_data_quality_checker.py`.
-  - [ ] Тест: немонотонная временна́я ось → `NonMonotonicTimeAxisError`.
-  - [ ] Тест: более 30% пропусков → предупреждение в списке.
-  - [ ] Тест: нулевой сигнал → `EmptySignalError`.
-  - [ ] Тест: запись < 5 секунд → `InsufficientDataError`.
-- [ ] Создать `tests/unit/scripts/test_generate_synthetic_data.py`.
-  - [ ] Тест: генератор создаёт массив правильной длины.
-  - [ ] Тест: частота дискретизации соответствует заданной.
+- [+] Создать `tests/unit/infrastructure/test_csv_reader.py`.
+  - [+] Тест: корректный CSV читается без ошибок.
+  - [+] Тест: CSV без временно́й колонки → понятное предупреждение.
+  - [+] Тест: CSV с нечисловым сигналом → `ValidationError`.
+  - [+] Тест: несуществующий файл → `FileNotFoundError(IVA)`.
+- [+] Создать `tests/unit/infrastructure/test_data_quality_checker.py`.
+  - [+] Тест: немонотонная временна́я ось → `NonMonotonicTimeAxisError`.
+  - [+] Тест: более 30% пропусков → предупреждение в списке.
+  - [+] Тест: нулевой сигнал → `EmptySignalError`.
+  - [+] Тест: запись < 5 секунд → `InsufficientDataError`.
+- [+] Создать `tests/unit/scripts/test_generate_synthetic_data.py`.
+  - [+] Тест: генератор создаёт массив правильной длины.
+  - [+] Тест: частота дискретизации соответствует заданной.
 
 #### Критерии завершения этапа 3
 
-- [ ] CSV, Parquet и Excel читаются без ошибок на корректных файлах.
-- [ ] Некорректные файлы дают понятные исключения `IVAError`.
-- [ ] Валидатор находит пропуски, выбросы, немонотонную ось.
-- [ ] Синтетические данные генерируются.
-- [ ] Демонстрационные файлы добавлены в `data/examples/`.
-- [ ] Все тесты проходят.
+- [+] CSV, Parquet и Excel читаются без ошибок на корректных файлах.
+- [+] Некорректные файлы дают понятные исключения `IVAError`.
+- [+] Валидатор находит пропуски, выбросы, немонотонную ось.
+- [+] Синтетические данные генерируются.
+- [+] Демонстрационные файлы добавлены в `data/examples/`.
+- [+] Все тесты проходят.
 
 ---
 
