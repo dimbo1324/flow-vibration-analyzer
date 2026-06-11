@@ -227,9 +227,23 @@ python -m iva.cli.main --help
 python -m iva.cli.main analyze --help
 ```
 
+## Desktop GUI
+
+Launch the full desktop application:
+
+```bash
+python main.py
+```
+
+The CLI remains fully available and independent of the GUI:
+
+```bash
+python -m iva.cli.main analyze --help
+```
+
 ## Development Status
 
-**Stage 7 complete — Application Coordination Layer and CLI.**
+**Stage 8 complete — PySide6 Desktop Interface.**
 
 - Stage 1: repository foundation, configuration, documentation baseline.
 - Stage 2: full domain model layer in `iva/core/models/` — frozen dataclasses, enumerations,
