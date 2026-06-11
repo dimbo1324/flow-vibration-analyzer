@@ -149,7 +149,7 @@ iva/
 [+] Этап 3   Инфраструктура: импорт файлов и синтетические данные
 [+] Этап 4   Предобработка сигнала (core/signal/)
 [+] Этап 5   Спектральный анализ (core/spectrum/)
-[ ] Этап 6   Физические расчёты и оценка риска (core/physics/)
+[+] Этап 6   Физические расчёты и оценка риска (core/physics/)
 [ ] Этап 7   Координирующий слой и CLI (app/ + CLI)
 [ ] Этап 8   Desktop-интерфейс PySide6 (ui/)
 [ ] Этап 9   Графики, отчёты, сессии, сравнение с CFD
@@ -703,7 +703,7 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `core/physics/reynolds_calculator.py`:
 
-- [ ] Функция `calculate(V, D, rho, mu) -> float`.
+- [+] Функция `calculate(V, D, rho, mu) -> float`.
   - Формула: `Re = rho * V * D / mu`.
   - Кинематическую вязкость вычислять как `nu = mu / rho`.
   - Проверять: `D > 0`, `rho > 0`, `mu > 0`, иначе `PhysicsInputError`.
@@ -713,7 +713,7 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `core/physics/strouhal_calculator.py`:
 
-- [ ] Функция `get_strouhal_number(re, geometry_type, spacing_ratio=None) -> float`.
+- [+] Функция `get_strouhal_number(re, geometry_type, spacing_ratio=None) -> float`.
   - Алгоритм из docs/11_algorithms.md (алгоритм 9).
   - Для `SINGLE_CYLINDER`: кусочно-линейная интерполяция по таблице Blevins.
   - Для `TANDEM`: двумерная интерполяция по (Re, L/D) из экспериментальных данных.
@@ -723,20 +723,20 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `core/physics/vortex_frequency.py`:
 
-- [ ] Функция `calculate_shedding_frequency(St, V, D) -> float`.
+- [+] Функция `calculate_shedding_frequency(St, V, D) -> float`.
   - Формула: `fs = St * V / D`.
   - Проверять: `D > 0`, `V > 0`.
-- [ ] Функция `calculate_velocity_ratio(V, fn, D) -> float | None`.
+- [+] Функция `calculate_velocity_ratio(V, fn, D) -> float | None`.
   - Формула: `Vr = V / (fn * D)`.
   - Если `fn is None` → возвращать `None`.
-- [ ] Функция `calculate_frequency_ratio(fs, fn) -> float | None`.
+- [+] Функция `calculate_frequency_ratio(fs, fn) -> float | None`.
   - Если `fn is None` → возвращать `None`.
 
 #### 6.4 Оценка риска резонанса
 
 Создать `core/physics/lock_in_risk.py`:
 
-- [ ] Функция `assess_risk(physics_result: PhysicsResult, spectrum_result: SpectrumResult) -> RiskAssessment`.
+- [+] Функция `assess_risk(physics_result: PhysicsResult, spectrum_result: SpectrumResult) -> RiskAssessment`.
   - Алгоритм из docs/11_algorithms.md (алгоритм 10).
   - Если `fn` не задана → вернуть `RiskAssessment(risk_level=SAFE, ...)` с пометкой «fn не задана».
   - Вычислить `deviation = |fs − fn| / fn`.
@@ -749,41 +749,41 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `core/validation/error_metrics.py`:
 
-- [ ] Функция `rmse(experiment, cfd) -> float`.
-- [ ] Функция `mae(experiment, cfd) -> float`.
-- [ ] Функция `mape(experiment, cfd) -> float | None`. Вернуть `None` если знаменатель ≈ 0.
-- [ ] Функция `pearson_r(experiment, cfd) -> float`.
-- [ ] Константа `MAPE_DENOMINATOR_THRESHOLD = 1e-6`.
+- [+] Функция `rmse(experiment, cfd) -> float`.
+- [+] Функция `mae(experiment, cfd) -> float`.
+- [+] Функция `mape(experiment, cfd) -> float | None`. Вернуть `None` если знаменатель ≈ 0.
+- [+] Функция `pearson_r(experiment, cfd) -> float`.
+- [+] Константа `MAPE_DENOMINATOR_THRESHOLD = 1e-6`.
 
 Создать `core/validation/experiment_vs_cfd.py`:
 
-- [ ] Функция `compare(experiment, cfd_data) -> ValidationResult`.
+- [+] Функция `compare(experiment, cfd_data) -> ValidationResult`.
   - Интерполировать оба профиля на общую сетку координат.
   - Вызвать все метрики из `error_metrics.py`.
   - Вернуть `ValidationResult`.
 
 #### 6.6 Тесты
 
-- [ ] Создать `tests/unit/core/physics/test_reynolds_calculator.py`.
-  - [ ] Тест: Re(V=2.0, D=0.012, ρ=998, μ=1.002e-3) ≈ 23904 (погрешность < 0.1%).
-  - [ ] Тест: D=0 → `PhysicsInputError`.
-- [ ] Создать `tests/unit/core/physics/test_vortex_frequency.py`.
-  - [ ] Тест: fs(St=0.21, V=2.0, D=0.012) = 35.0 Гц.
-- [ ] Создать `tests/unit/core/physics/test_lock_in_risk.py`.
-  - [ ] Тест: fs близка к fn (deviation < 0.10) → `CRITICAL`.
-  - [ ] Тест: fn не задана → `SAFE` с соответствующим сообщением.
-  - [ ] Тест: deviation > 0.30 → `SAFE`.
-- [ ] Создать `tests/unit/core/validation/test_error_metrics.py`.
-  - [ ] Тест: идентичные массивы → RMSE=0, MAE=0, r=1.
-  - [ ] Тест: нули в знаменателе MAPE → функция возвращает `None`, а не исключение.
+- [+] Создать `tests/unit/core/physics/test_reynolds_calculator.py`.
+  - [+] Тест: Re(V=2.0, D=0.012, ρ=998, μ=1.002e-3) ≈ 23904 (погрешность < 0.1%).
+  - [+] Тест: D=0 → `PhysicsInputError`.
+- [+] Создать `tests/unit/core/physics/test_vortex_frequency.py`.
+  - [+] Тест: fs(St=0.21, V=2.0, D=0.012) = 35.0 Гц.
+- [+] Создать `tests/unit/core/physics/test_lock_in_risk.py`.
+  - [+] Тест: fs близка к fn (deviation < 0.10) → `CRITICAL`.
+  - [+] Тест: fn не задана → `SAFE` с соответствующим сообщением.
+  - [+] Тест: deviation > 0.30 → `SAFE`.
+- [+] Создать `tests/unit/core/validation/test_error_metrics.py`.
+  - [+] Тест: идентичные массивы → RMSE=0, MAE=0, r=1.
+  - [+] Тест: нули в знаменателе MAPE → функция возвращает `None`, а не исключение.
 
 #### Критерии завершения этапа 6
 
-- [ ] Re, St, fs, Vr вычисляются корректно.
-- [ ] Риск классифицируется по трём уровням.
-- [ ] Рекомендация генерируется на русском языке.
-- [ ] Метрики RMSE, MAE, MAPE, r работают корректно.
-- [ ] Все тесты проходят.
+- [+] Re, St, fs, Vr вычисляются корректно.
+- [+] Риск классифицируется по трём уровням.
+- [+] Рекомендация генерируется на русском языке.
+- [+] Метрики RMSE, MAE, MAPE, r работают корректно.
+- [+] Все тесты проходят.
 
 ---
 
