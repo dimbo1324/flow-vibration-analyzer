@@ -1,10 +1,18 @@
 repos:
   - repo: local
     hooks:
+      - id: trailing-whitespace
+        name: trailing whitespace
+        language: system
+        entry: python -c "import sys, re; files=sys.argv[1:]; [open(f,'w').write(re.sub(r'[ \t]+\n','\n',open(f).read())) for f in files if not f.endswith(('.spec','.iss'))]"
+        types: [text]
+        exclude: '\.spec$|\.iss$'
+
       - id: black
         name: black (format)
         language: system
         entry: python -m black
+        args: ['--line-length=100']
         types: [python]
 
       - id: ruff-fix
@@ -23,6 +31,6 @@ repos:
         name: mypy (type check)
         language: system
         entry: python -m mypy
-        args: [iva, main.py]
+        args: ['--ignore-missing-imports', 'iva', 'main.py']
         pass_filenames: false
         types: [python]

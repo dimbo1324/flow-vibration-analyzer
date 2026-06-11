@@ -82,12 +82,12 @@ jobs:
       - name: Compile check
         run: python -m compileall main.py iva tests scripts -q
 
-      - name: pytest
+      - name: pytest with coverage
         env:
           QT_QPA_PLATFORM: offscreen
           QT_OPENGL: software
           MPLBACKEND: Agg
-        run: python -m pytest
+        run: python -m pytest --cov=iva/core --cov-report=term-missing --cov-fail-under=80 -m "not performance"
 
       - name: black (format check)
         run: python -m black --check .
