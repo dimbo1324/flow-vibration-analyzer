@@ -19,9 +19,9 @@ def main() -> int:
         from iva.ui.styles.theme import apply_dark_theme
     except ImportError as exc:
         print(
-            "Error: PySide6 is not installed.\n"
-            "Install it with:  pip install PySide6\n"
-            f"Details: {exc}",
+            "Ошибка: PySide6 не установлен.\n"
+            "Установите его командой: pip install PySide6\n"
+            f"Подробности: {exc}",
             file=sys.stderr,
         )
         return 1

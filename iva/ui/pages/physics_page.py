@@ -15,6 +15,13 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
 )
 
 from iva.core.models.enums import GeometryType, RiskLevel
+from iva.ui.strings_ru import (
+    GEOMETRY_LABELS,
+    RISK_LABELS,
+    display_label,
+    source_value,
+    tr,
+)
 from iva.ui.styles.theme import (
     COLOR_BAD,
     COLOR_GOOD,
@@ -63,13 +70,13 @@ class PhysicsPage(QWidget):
         layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
         layout.setSpacing(SPACING_MD)
 
-        title = QLabel("05 — Physics")
+        title = QLabel(tr("05 — Physics"))
         title.setStyleSheet(
             f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
         )
         layout.addWidget(title)
 
-        subtitle = QLabel("Flow and geometry parameters — dimensionless criteria")
+        subtitle = QLabel(tr("Flow and geometry parameters — dimensionless criteria"))
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
 
@@ -78,12 +85,12 @@ class PhysicsPage(QWidget):
         main_row.setSpacing(SPACING_MD)
 
         # Parameter form
-        form_box = QGroupBox("Flow Parameters (SI units)")
+        form_box = QGroupBox(tr("Flow Parameters (SI units)"))
         form_layout = QVBoxLayout(form_box)
         self._form = ParameterForm()
         self._form.add_float_field(
             "cylinder_diameter_m",
-            "Cylinder diameter (m):",
+            tr("Cylinder diameter (m):"),
             value=0.012,
             min_val=1e-5,
             max_val=10.0,
@@ -91,7 +98,7 @@ class PhysicsPage(QWidget):
         )
         self._form.add_float_field(
             "mean_flow_velocity_ms",
-            "Mean flow velocity (m/s):",
+            tr("Mean flow velocity (m/s):"),
             value=2.0,
             min_val=0.0,
             max_val=1000.0,
@@ -99,7 +106,7 @@ class PhysicsPage(QWidget):
         )
         self._form.add_float_field(
             "fluid_density_kgm3",
-            "Fluid density (kg/m³):",
+            tr("Fluid density (kg/m³):"),
             value=998.0,
             min_val=0.1,
             max_val=20000.0,
@@ -107,7 +114,7 @@ class PhysicsPage(QWidget):
         )
         self._form.add_float_field(
             "dynamic_viscosity_pas",
-            "Dynamic viscosity (Pa·s):",
+            tr("Dynamic viscosity (Pa·s):"),
             value=1.002e-3,
             min_val=1e-10,
             max_val=1000.0,
@@ -115,47 +122,52 @@ class PhysicsPage(QWidget):
         )
         self._form.add_float_field(
             "natural_frequency_hz",
-            "Natural frequency fn (Hz):",
+            tr("Natural frequency fn (Hz):"),
             value=0.0,
             min_val=0.0,
             max_val=100000.0,
             decimals=3,
         )
         self._form.add_float_field(
-            "damping_ratio", "Damping ratio ζ:", value=0.0, min_val=0.0, max_val=1.0, decimals=4
+            "damping_ratio",
+            tr("Damping ratio ζ:"),
+            value=0.0,
+            min_val=0.0,
+            max_val=1.0,
+            decimals=4,
         )
         self._form.add_float_field(
             "cylinder_spacing_m",
-            "Cylinder spacing (m):",
+            tr("Cylinder spacing (m):"),
             value=0.0,
             min_val=0.0,
             max_val=100.0,
             decimals=4,
         )
-        geom_options = [g.value for g in GeometryType]
+        geom_options = [GEOMETRY_LABELS[g.value] for g in GeometryType]
         self._form.add_combo_field(
             "geometry_type",
-            "Geometry type:",
+            tr("Geometry type:"),
             geom_options,
-            current=GeometryType.SINGLE_CYLINDER.value,
+            current=GEOMETRY_LABELS[GeometryType.SINGLE_CYLINDER.value],
         )
         form_layout.addWidget(self._form)
         main_row.addWidget(form_box, stretch=1)
 
         # Results panel
-        results_box = QGroupBox("Computed Results")
+        results_box = QGroupBox(tr("Computed Results"))
         results_layout = QVBoxLayout(results_box)
 
         metrics_widget = QWidget()
         metrics_layout = QGridLayout(metrics_widget)
         metrics_layout.setSpacing(SPACING_SM)
 
-        self._card_re = MetricCard("Reynolds Number")
-        self._card_st = MetricCard("Strouhal Number")
-        self._card_fs = MetricCard("Shedding Freq")
-        self._card_vr = MetricCard("Velocity Ratio")
-        self._card_fr = MetricCard("Frequency Ratio")
-        self._card_risk = MetricCard("Risk Level")
+        self._card_re = MetricCard(tr("Reynolds Number"))
+        self._card_st = MetricCard(tr("Strouhal Number"))
+        self._card_fs = MetricCard(tr("Shedding Freq"))
+        self._card_vr = MetricCard(tr("Velocity Ratio"))
+        self._card_fr = MetricCard(tr("Frequency Ratio"))
+        self._card_risk = MetricCard(tr("Risk Level"))
 
         metrics_layout.addWidget(self._card_re, 0, 0)
         metrics_layout.addWidget(self._card_st, 0, 1)
@@ -166,7 +178,7 @@ class PhysicsPage(QWidget):
         results_layout.addWidget(metrics_widget)
 
         self._recommendation_label = QLabel(
-            "Enter flow parameters and run the analysis to compute results."
+            "Введите параметры потока и запустите анализ для расчета результатов."
         )
         self._recommendation_label.setWordWrap(True)
         self._recommendation_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
@@ -196,7 +208,8 @@ class PhysicsPage(QWidget):
                 return v
             return None
 
-        geom_str = vals.get("geometry_type", "")
+        geom_label = str(vals.get("geometry_type", ""))
+        geom_str = source_value(GEOMETRY_LABELS, geom_label)
         geometry = None
         if isinstance(geom_str, str):
             try:
@@ -237,7 +250,9 @@ class PhysicsPage(QWidget):
 
         if result.risk is not None:
             level = str(result.risk.risk_level)
-            self._card_risk.set_value(level.upper(), "", _RISK_STATUS.get(level))
+            self._card_risk.set_value(
+                display_label(RISK_LABELS, level), "", _RISK_STATUS.get(level)
+            )
             color = _RISK_COLOR.get(level, COLOR_MUTED)
             self._recommendation_label.setText(result.risk.recommendation_text)
             self._recommendation_label.setStyleSheet(f"color: {color}; font-size: 11pt;")
@@ -254,5 +269,5 @@ class PhysicsPage(QWidget):
         ):
             card.clear()
         self._recommendation_label.setText(
-            "Enter flow parameters and run the analysis to compute results."
+            "Введите параметры потока и запустите анализ для расчета результатов."
         )

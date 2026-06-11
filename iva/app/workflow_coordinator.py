@@ -100,12 +100,14 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
     # ------------------------------------------------------------------ #
     if not session.is_ready_for_analysis():
         raise ProcessingError(
-            user_message="Cannot start analysis: source file or column assignment is missing.",
+            user_message=(
+                "Не удалось запустить анализ: не выбран исходный файл " "или не назначены столбцы."
+            ),
             technical_details=(
                 f"source_file_path={session.source_file_path}, "
                 f"role_assignment={session.role_assignment}"
             ),
-            recovery_hint="Set source_file_path and role_assignment before calling run_pipeline.",
+            recovery_hint="Выберите файл данных и назначьте роли столбцов перед запуском анализа.",
         )
 
     assert session.source_file_path is not None  # narrowing for type checker
@@ -200,7 +202,7 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
                     physics_result = build_physics_result(settings.flow_parameters)
                 except IVAError as exc:
                     logger.error("Physics calculation failed: %s", exc)
-                    warnings.append(f"Physics calculation skipped: {exc.user_message}")
+                    warnings.append(f"Расчет физических параметров пропущен: {exc.user_message}")
 
         # ------------------------------------------------------------------ #
         # Step 10 — interpret peaks with physics context
@@ -255,7 +257,7 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
     except Exception as exc:
         logger.error("Pipeline failed with unexpected error: %s", exc, exc_info=True)
         raise ProcessingError(
-            user_message="An unexpected error occurred during analysis.",
+            user_message="Во время анализа произошла непредвиденная ошибка.",
             technical_details=str(exc),
         ) from exc
 

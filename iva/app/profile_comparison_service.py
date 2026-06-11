@@ -77,9 +77,9 @@ def _read_profile_csv(
     """Read a two-column profile CSV and return (coords, values) arrays."""
     if not path.exists():
         raise ValidationError(
-            user_message=f"Profile file not found: '{path.name}'.",
+            user_message=f"Файл профиля не найден: '{path.name}'.",
             technical_details=f"Path does not exist: {path}",
-            recovery_hint="Check the file path and try again.",
+            recovery_hint="Проверьте путь к файлу и повторите попытку.",
         )
 
     try:
@@ -90,8 +90,8 @@ def _read_profile_csv(
             if not {"coordinate", "value"}.issubset(field_map):
                 raise ValidationError(
                     user_message=(
-                        f"Profile file '{path.name}' must contain "
-                        "'coordinate' and 'value' columns."
+                        f"Файл профиля '{path.name}' должен содержать столбцы "
+                        "'coordinate' и 'value'."
                     ),
                     technical_details=f"columns={reader.fieldnames!r}",
                 )
@@ -104,8 +104,8 @@ def _read_profile_csv(
                 except (KeyError, TypeError, ValueError) as exc:
                     raise ValidationError(
                         user_message=(
-                            f"Profile file '{path.name}' contains an invalid numeric "
-                            f"value at row {row_number}."
+                            f"Файл профиля '{path.name}' содержит некорректное числовое "
+                            f"значение в строке {row_number}."
                         ),
                         technical_details=str(exc),
                     ) from exc
@@ -115,17 +115,17 @@ def _read_profile_csv(
         raise
     except OSError as exc:
         raise ValidationError(
-            user_message=f"Cannot read profile file '{path.name}'.",
+            user_message=f"Не удалось прочитать файл профиля '{path.name}'.",
             technical_details=str(exc),
         ) from exc
 
     if not coords:
         raise ValidationError(
-            user_message=f"Profile file '{path.name}' contains no valid numeric data.",
+            user_message=f"Файл профиля '{path.name}' не содержит корректных числовых данных.",
             technical_details=f"label={label}, path={path}",
             recovery_hint=(
-                "Ensure the file has at least two numeric columns "
-                "(coordinate, value) with no header."
+                "Убедитесь, что файл содержит не менее двух числовых столбцов "
+                "(coordinate, value)."
             ),
         )
 

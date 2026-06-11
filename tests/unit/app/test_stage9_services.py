@@ -50,5 +50,5 @@ def test_profile_comparison_rejects_bad_numeric_value(tmp_path: Path) -> None:
     cfd = tmp_path / "cfd.csv"
     experiment.write_text("coordinate,value\n0,bad\n1,2\n", encoding="utf-8")
     cfd.write_text("coordinate,value\n0,1\n1,2\n", encoding="utf-8")
-    with pytest.raises(ValidationError, match="row 2"):
+    with pytest.raises(ValidationError, match="строке 2"):
         compare_profile_csv_files(experiment, cfd)

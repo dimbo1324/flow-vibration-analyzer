@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
 )
 
 from iva.core.models.enums import RiskLevel
+from iva.ui.strings_ru import RISK_LABELS, display_label, tr
 from iva.ui.styles.theme import (
     COLOR_BAD,
     COLOR_GOOD,
@@ -66,13 +67,13 @@ class OverviewPage(QWidget):
         layout.setSpacing(SPACING_MD)
 
         # Title
-        title = QLabel("01 — Overview")
+        title = QLabel(tr("01 — Overview"))
         title.setStyleSheet(
             f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
         )
         layout.addWidget(title)
 
-        subtitle = QLabel("Analysis summary — dominant metrics at a glance")
+        subtitle = QLabel(tr("Analysis summary — dominant metrics at a glance"))
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
 
@@ -82,10 +83,10 @@ class OverviewPage(QWidget):
         cards_layout.setSpacing(SPACING_SM)
         cards_layout.setContentsMargins(0, 0, 0, 0)
 
-        self._card_peak_freq = MetricCard("Dominant Peak")
-        self._card_rms = MetricCard("Total RMS")
-        self._card_shedding = MetricCard("Shedding Freq")
-        self._card_risk = MetricCard("Risk Level")
+        self._card_peak_freq = MetricCard(tr("Dominant Peak"))
+        self._card_rms = MetricCard(tr("Total RMS"))
+        self._card_shedding = MetricCard(tr("Shedding Freq"))
+        self._card_risk = MetricCard(tr("Risk Level"))
 
         cards_layout.addWidget(self._card_peak_freq, 0, 0)
         cards_layout.addWidget(self._card_rms, 0, 1)
@@ -95,7 +96,7 @@ class OverviewPage(QWidget):
         layout.addWidget(cards_widget)
 
         # Charts row
-        charts_box = QGroupBox("Signal / Spectrum")
+        charts_box = QGroupBox(tr("Signal / Spectrum"))
         charts_layout = QHBoxLayout(charts_box)
         charts_layout.setSpacing(SPACING_SM)
 
@@ -114,10 +115,10 @@ class OverviewPage(QWidget):
         layout.addWidget(charts_box)
 
         # Recommendation text
-        rec_box = QGroupBox("Assessment")
+        rec_box = QGroupBox(tr("Assessment"))
         rec_layout = QVBoxLayout(rec_box)
         self._recommendation_label = QLabel(
-            "No analysis result yet.\n\nOpen a data file and run the analysis."
+            "Результат анализа пока отсутствует.\n\nОткройте файл данных и запустите анализ."
         )
         self._recommendation_label.setWordWrap(True)
         self._recommendation_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 12pt;")
@@ -158,14 +159,14 @@ class OverviewPage(QWidget):
         if result.risk:
             level = str(result.risk.risk_level)
             status = _RISK_STATUS.get(level, None)
-            self._card_risk.set_value(level.upper(), "", status)
+            self._card_risk.set_value(display_label(RISK_LABELS, level), "", status)
         else:
             self._card_risk.set_value("N/A", "")
 
         # Charts
         if result.processed_data is not None:
             pd = result.processed_data
-            self._signal_chart.plot_signal(pd.time_array, pd.signal_filtered, "Filtered")
+            self._signal_chart.plot_signal(pd.time_array, pd.signal_filtered, tr("Filtered"))
 
         if result.spectrum is not None:
             sp = result.spectrum
@@ -192,4 +193,4 @@ class OverviewPage(QWidget):
             card.clear()
         self._signal_chart.clear()
         self._spectrum_chart.clear()
-        self._recommendation_label.setText("No analysis result yet.")
+        self._recommendation_label.setText("Результат анализа пока отсутствует.")

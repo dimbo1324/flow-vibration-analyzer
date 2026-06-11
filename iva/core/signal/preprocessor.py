@@ -154,7 +154,7 @@ def preprocess_signal(
     if settings.remove_mean:
         offset = float(np.nanmean(signal))
         signal = remove_mean(signal)
-        log.append(f"remove_mean: offset={offset:.6f}")
+        log.append(f"Удалено среднее значение: смещение={offset:.6f}")
 
     # Step 2: outlier detection and replacement
     if settings.remove_outliers:
@@ -166,9 +166,9 @@ def preprocess_signal(
         n_outliers = int(np.sum(outlier_mask))
         if n_outliers > 0:
             signal = replace_outliers(signal, outlier_mask)
-            log.append(f"replace_outliers: {n_outliers} point(s) replaced")
+            log.append(f"Обработка выбросов: заменено точек {n_outliers}")
         else:
-            log.append("replace_outliers: no outliers detected")
+            log.append("Обработка выбросов: выбросы не обнаружены")
 
     # Step 3: gap filling
     if settings.fill_gaps:
@@ -179,7 +179,7 @@ def preprocess_signal(
             max_gap_seconds=max_gap_seconds,
             sampling_rate_hz=data.sampling_rate_hz,
         )
-        log.append(f"fill_gaps: max_gap={max_gap_seconds*1000:.1f} ms")
+        log.append(f"Заполнены пропуски: максимальный интервал={max_gap_seconds*1000:.1f} ms")
 
     # Store cleaned signal before filtering
     signal_cleaned = signal.copy()
@@ -195,8 +195,8 @@ def preprocess_signal(
             order=settings.filter_order,
         )
         log.append(
-            f"apply_bandpass_filter: [{settings.filter_low_hz}, {settings.filter_high_hz}] Hz, "
-            f"order={settings.filter_order}"
+            f"Применен полосовой фильтр: [{settings.filter_low_hz}, "
+            f"{settings.filter_high_hz}] Hz, порядок={settings.filter_order}"
         )
 
     logger.info("preprocess_signal: pipeline completed (%d step(s))", len(log))

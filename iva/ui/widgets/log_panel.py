@@ -26,17 +26,17 @@ class LogPanel(QWidget):
 
     def append_info(self, message: str) -> None:
         """Append an INFO-level message."""
-        self._text.append(f'<span style="color:{COLOR_TEXT}">[INFO] {message}</span>')
+        self._text.append(f'<span style="color:{COLOR_TEXT}">[ИНФО] {message}</span>')
         self._scroll_to_bottom()
 
     def append_warning(self, message: str) -> None:
         """Append a WARNING-level message."""
-        self._text.append(f'<span style="color:{COLOR_WARN}">[WARN] {message}</span>')
+        self._text.append(f'<span style="color:{COLOR_WARN}">[ПРЕДУПР.] {message}</span>')
         self._scroll_to_bottom()
 
     def append_error(self, message: str) -> None:
         """Append an ERROR-level message."""
-        self._text.append(f'<span style="color:{COLOR_BAD}">[ERROR] {message}</span>')
+        self._text.append(f'<span style="color:{COLOR_BAD}">[ОШИБКА] {message}</span>')
         self._scroll_to_bottom()
 
     def clear(self) -> None:

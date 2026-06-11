@@ -48,10 +48,10 @@ def read_file(file_path: str) -> RawFileData:
         supported = ", ".join(sorted(_EXTENSION_MAP))
         raise UnsupportedFormatError(
             user_message=(
-                f"The file format '{ext}' is not supported. " f"Supported formats: {supported}."
+                f"Формат файла '{ext}' не поддерживается. " f"Поддерживаемые форматы: {supported}."
             ),
             technical_details=f"Extension '{ext}' not in {list(_EXTENSION_MAP)}",
-            recovery_hint=f"Convert the file to one of: {supported}.",
+            recovery_hint=f"Преобразуйте файл в один из форматов: {supported}.",
         )
 
     if fmt == "csv":

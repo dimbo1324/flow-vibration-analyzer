@@ -41,6 +41,7 @@ from iva.ui.pages.profiles_page import ProfilesPage
 from iva.ui.pages.report_page import ReportPage
 from iva.ui.pages.signal_page import SignalPage
 from iva.ui.pages.spectrum_page import SpectrumPage
+from iva.ui.strings_ru import RISK_LABELS, display_label, tr
 from iva.ui.styles.theme import (
     COLOR_BAD,
     COLOR_BORDER,
@@ -68,13 +69,13 @@ class MainWindow(QMainWindow):
     """
 
     PAGE_NAMES = [
-        "01  Overview",
-        "02  Import",
-        "03  Signal",
-        "04  Spectrum",
-        "05  Physics",
-        "06  Profiles",
-        "07  Report",
+        tr("01  Overview"),
+        tr("02  Import"),
+        tr("03  Signal"),
+        tr("04  Spectrum"),
+        tr("05  Physics"),
+        tr("06  Profiles"),
+        tr("07  Report"),
     ]
 
     def __init__(self) -> None:
@@ -84,7 +85,7 @@ class MainWindow(QMainWindow):
         self._setup_ui()
         self._setup_shortcuts()
         self._load_defaults()
-        self.setWindowTitle("Industrial Vibration Analyzer (IVA)")
+        self.setWindowTitle(tr("Industrial Vibration Analyzer (IVA)"))
         self.resize(1400, 900)
 
     # ------------------------------------------------------------------
@@ -93,45 +94,47 @@ class MainWindow(QMainWindow):
 
     def _setup_ui(self) -> None:
         # ── Toolbar ─────────────────────────────────────────────────────
-        toolbar = QToolBar("Main Toolbar")
+        toolbar = QToolBar(tr("Main Toolbar"))
         toolbar.setMovable(False)
         toolbar.setObjectName("MainToolbar")
 
-        self._action_open = QAction("Open File  (Ctrl+O)", self)
-        self._action_open.setToolTip("Open a data file (Ctrl+O)")
+        self._action_open = QAction(tr("Open File  (Ctrl+O)"), self)
+        self._action_open.setToolTip(tr("Open a data file (Ctrl+O)"))
         self._action_open.triggered.connect(self.open_file)
 
-        self._action_run = QAction("Run Analysis  (F5)", self)
-        self._action_run.setToolTip("Run the full analysis pipeline (F5)")
+        self._action_run = QAction(tr("Run Analysis  (F5)"), self)
+        self._action_run.setToolTip(tr("Run the full analysis pipeline (F5)"))
         self._action_run.triggered.connect(self.run_analysis)
 
-        self._action_save = QAction("Save Project  (Ctrl+S)", self)
-        self._action_save.setToolTip("Save project session as .vibproj file (Ctrl+S)")
+        self._action_save = QAction(tr("Save Project  (Ctrl+S)"), self)
+        self._action_save.setToolTip(tr("Save project session as .vibproj file (Ctrl+S)"))
         self._action_save.setEnabled(False)
         self._action_save.triggered.connect(self._save_project)
 
-        self._action_save_as = QAction("Save Project As…  (Ctrl+Shift+S)", self)
-        self._action_save_as.setToolTip("Save project session with a new name (Ctrl+Shift+S)")
+        self._action_save_as = QAction(tr("Save Project As…  (Ctrl+Shift+S)"), self)
+        self._action_save_as.setToolTip(tr("Save project session with a new name (Ctrl+Shift+S)"))
         self._action_save_as.setEnabled(False)
         self._action_save_as.triggered.connect(self._save_project_as)
 
-        self._action_open_project = QAction("Open Project  (Ctrl+Shift+O)", self)
-        self._action_open_project.setToolTip("Open a saved .vibproj session file (Ctrl+Shift+O)")
+        self._action_open_project = QAction(tr("Open Project  (Ctrl+Shift+O)"), self)
+        self._action_open_project.setToolTip(
+            tr("Open a saved .vibproj session file (Ctrl+Shift+O)")
+        )
         self._action_open_project.triggered.connect(self._open_project)
 
-        self._action_new_session = QAction("New Session  (Ctrl+N)", self)
-        self._action_new_session.setToolTip("Clear current session (Ctrl+N)")
+        self._action_new_session = QAction(tr("New Session  (Ctrl+N)"), self)
+        self._action_new_session.setToolTip(tr("Clear current session (Ctrl+N)"))
         self._action_new_session.triggered.connect(self._new_session)
 
-        self._action_export_report = QAction("Export Report Bundle…", self)
+        self._action_export_report = QAction(tr("Export Report Bundle…"), self)
         self._action_export_report.setToolTip(
-            "Export PDF, HTML, JSON and CSV reports to a directory"
+            tr("Export PDF, HTML, JSON and CSV reports to a directory")
         )
         self._action_export_report.setEnabled(False)
         self._action_export_report.triggered.connect(self._export_report_bundle)
 
-        self._action_inspector = QAction("Inspector  (R)", self)
-        self._action_inspector.setToolTip("Toggle inspector panel (R)")
+        self._action_inspector = QAction(tr("Inspector  (R)"), self)
+        self._action_inspector.setToolTip(tr("Toggle inspector panel (R)"))
         self._action_inspector.triggered.connect(self._toggle_inspector)
 
         toolbar.addAction(self._action_new_session)
@@ -205,7 +208,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
         # ── Status bar ──────────────────────────────────────────────────
-        self._status_label = QLabel("Ready")
+        self._status_label = QLabel(tr("Ready"))
         self._status_label.setStyleSheet(f"color: {COLOR_MUTED};")
         self.statusBar().addWidget(self._status_label)
 
@@ -214,7 +217,7 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self._progress_label)
 
         # ── Inspector dock ──────────────────────────────────────────────
-        self._inspector_dock = QDockWidget("Inspector", self)
+        self._inspector_dock = QDockWidget(tr("Inspector"), self)
         self._inspector_dock.setObjectName("InspectorDock")
         self._inspector_dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea)
         self._inspector_dock.setMinimumWidth(220)
@@ -226,7 +229,7 @@ class MainWindow(QMainWindow):
         inspector_layout.setContentsMargins(8, 8, 8, 8)
 
         self._inspector_text = QLabel(
-            "No analysis result yet.\n\nRun an analysis to see details here."
+            "Результат анализа пока отсутствует.\n\n" "Запустите анализ, чтобы увидеть подробности."
         )
         self._inspector_text.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self._inspector_text.setWordWrap(True)
@@ -290,13 +293,13 @@ class MainWindow(QMainWindow):
         """Open a file-selection dialog and update the session."""
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open Data File",
+            tr("Open Data File"),
             "",
-            "Data Files (*.csv *.parquet *.xlsx);;CSV Files (*.csv);;All Files (*)",
+            tr("Data Files (*.csv *.parquet *.xlsx);;CSV Files (*.csv);;All Files (*)"),
         )
         if path:
             self._session.source_file_path = Path(path)
-            self._status_label.setText(f"File: {Path(path).name}")
+            self._status_label.setText(f"Файл: {Path(path).name}")
             import_page = self._pages[1]
             if isinstance(import_page, ImportPage):
                 import_page.set_file_path(Path(path))
@@ -328,17 +331,17 @@ class MainWindow(QMainWindow):
         if not self._session.is_ready_for_analysis():
             err = IVAError(
                 user_message=(
-                    "Cannot run analysis: please select a data file and configure "
-                    "column assignments on the Import page."
+                    "Не удалось запустить анализ: выберите файл данных и настройте "
+                    "назначение столбцов на странице «Импорт»."
                 ),
                 technical_details="AnalysisSession.is_ready_for_analysis() returned False",
-                recovery_hint="Use 'Open File' (Ctrl+O) to select a CSV file.",
+                recovery_hint="Нажмите «Открыть файл» (Ctrl+O) и выберите файл данных.",
             )
             self.show_error_banner(err)
             return
 
         self._action_run.setEnabled(False)
-        self._status_label.setText("Running analysis…")
+        self._status_label.setText(tr("Running analysis…"))
         self._hide_error_banner()
 
         worker = AnalysisWorker(self._session)
@@ -365,7 +368,7 @@ class MainWindow(QMainWindow):
         self._session.result = result
         self._action_run.setEnabled(True)
         self._progress_label.setText("")
-        self._status_label.setText("Analysis complete")
+        self._status_label.setText(tr("Analysis complete"))
         # Enable save/export now that we have a result
         self._action_save.setEnabled(True)
         self._action_save_as.setEnabled(True)
@@ -380,17 +383,17 @@ class MainWindow(QMainWindow):
         if isinstance(error, IVAError):
             self.show_error_banner(error)
         else:
-            self._status_label.setText("Analysis failed")
+            self._status_label.setText(tr("Analysis failed"))
 
     @Slot(str)
     def _on_unexpected_error(self, message: str) -> None:
         self._action_run.setEnabled(True)
         self._progress_label.setText("")
-        self._status_label.setText("Analysis failed")
+        self._status_label.setText(tr("Analysis failed"))
         QMessageBox.critical(
             self,
-            "Unexpected Error",
-            f"An unexpected error occurred during analysis:\n\n{message}",
+            tr("Unexpected Error"),
+            f"Во время анализа произошла непредвиденная ошибка:\n\n{message}",
         )
 
     # ------------------------------------------------------------------
@@ -400,9 +403,9 @@ class MainWindow(QMainWindow):
     def show_error_banner(self, error: IVAError) -> None:
         """Show the error banner with the user-facing message."""
         self._last_error = error
-        self._error_banner.setText(f"⚠  {error.user_message}  — click for details")
+        self._error_banner.setText(f"⚠  {error.user_message}  — нажмите для подробностей")
         self._error_banner.setVisible(True)
-        self._status_label.setText("Error — see banner")
+        self._status_label.setText(tr("Error — see banner"))
 
     def _hide_error_banner(self) -> None:
         self._error_banner.setVisible(False)
@@ -413,21 +416,24 @@ class MainWindow(QMainWindow):
         if self._last_error is None:
             return
         dlg = QDialog(self)
-        dlg.setWindowTitle("Error Details")
+        dlg.setWindowTitle(tr("Error Details"))
         dlg.resize(600, 300)
         layout = QVBoxLayout(dlg)
 
         text = QTextEdit()
         text.setReadOnly(True)
-        lines = [f"Message: {self._last_error.user_message}"]
+        lines = [f"Сообщение: {self._last_error.user_message}"]
         if self._last_error.technical_details:
-            lines.append(f"\nTechnical details:\n{self._last_error.technical_details}")
+            lines.append(f"\nТехнические сведения:\n{self._last_error.technical_details}")
         if self._last_error.recovery_hint:
-            lines.append(f"\nRecovery hint:\n{self._last_error.recovery_hint}")
+            lines.append(f"\nКак исправить:\n{self._last_error.recovery_hint}")
         text.setPlainText("\n".join(lines))
         layout.addWidget(text)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        close_button = buttons.button(QDialogButtonBox.StandardButton.Close)
+        if close_button is not None:
+            close_button.setText("Закрыть")
         buttons.rejected.connect(dlg.reject)
         layout.addWidget(buttons)
         dlg.exec()
@@ -449,8 +455,8 @@ class MainWindow(QMainWindow):
         lines: list[str] = []
         if result.spectrum and result.spectrum.dominant_peak:
             pk = result.spectrum.dominant_peak
-            lines.append(f"Peak: {pk.frequency_hz:.2f} Hz")
-            lines.append(f"  amp: {pk.amplitude:.4g}")
+            lines.append(f"Пик: {pk.frequency_hz:.2f} Hz")
+            lines.append(f"  амплитуда: {pk.amplitude:.4g}")
         if result.spectrum:
             lines.append(f"RMS: {result.spectrum.rms_total:.4g}")
         if result.physics:
@@ -459,11 +465,11 @@ class MainWindow(QMainWindow):
             lines.append(f"St: {ph.strouhal_number:.4f}")
             lines.append(f"fs: {ph.calculated_shedding_frequency_hz:.3f} Hz")
         if result.risk:
-            lines.append(f"Risk: {result.risk.risk_level.upper()}")
+            lines.append(f"Риск: {display_label(RISK_LABELS, result.risk.risk_level)}")
         if result.warnings:
-            lines.append(f"\nWarnings: {len(result.warnings)}")
+            lines.append(f"\nПредупреждения: {len(result.warnings)}")
         self._inspector_text.setText(
-            "\n".join(lines) if lines else "Analysis complete — no details"
+            "\n".join(lines) if lines else "Анализ завершен — подробности отсутствуют"
         )
 
     # ------------------------------------------------------------------
@@ -491,14 +497,14 @@ class MainWindow(QMainWindow):
             if hasattr(page, "clear"):
                 page.clear()  # type: ignore[attr-defined]
         self._inspector_text.clear()
-        self.setWindowTitle("Industrial Vibration Analyzer (IVA)")
-        self._status_label.setText("New session started")
+        self.setWindowTitle(tr("Industrial Vibration Analyzer (IVA)"))
+        self._status_label.setText(tr("New session started"))
         self._hide_error_banner()
 
     def _save_project(self) -> None:
         """Save to existing path or prompt for new path (Ctrl+S)."""
         if self._session.result is None:
-            self._status_label.setText("Nothing to save — run an analysis first")
+            self._status_label.setText(tr("Nothing to save — run an analysis first"))
             return
         if self._current_project_path is not None:
             self._do_save_project(self._current_project_path)
@@ -508,13 +514,13 @@ class MainWindow(QMainWindow):
     def _save_project_as(self) -> None:
         """Prompt for a path and save (Ctrl+Shift+S)."""
         if self._session.result is None:
-            self._status_label.setText("Nothing to save — run an analysis first")
+            self._status_label.setText(tr("Nothing to save — run an analysis first"))
             return
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Save Project As",
+            tr("Save Project As"),
             "project.vibproj",
-            "IVA Project Files (*.vibproj);;All Files (*)",
+            tr("IVA Project Files (*.vibproj);;All Files (*)"),
         )
         if path:
             self._do_save_project(Path(path))
@@ -526,10 +532,10 @@ class MainWindow(QMainWindow):
             saved = save_current_session(self._session, path)
             self._current_project_path = saved
             self.setWindowTitle(f"IVA — {saved.name}")
-            self._status_label.setText(f"Project saved: {saved.name}")
+            self._status_label.setText(f"Проект сохранен: {saved.name}")
         except Exception as exc:  # noqa: BLE001
             err = ExportError(
-                user_message=f"Could not save project: {exc}",
+                user_message=f"Не удалось сохранить проект: {exc}",
                 technical_details=str(exc),
             )
             self.show_error_banner(err)
@@ -538,9 +544,9 @@ class MainWindow(QMainWindow):
         """Open a .vibproj session file (Ctrl+Shift+O)."""
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open Project",
+            tr("Open Project"),
             "",
-            "IVA Project Files (*.vibproj);;All Files (*)",
+            tr("IVA Project Files (*.vibproj);;All Files (*)"),
         )
         if not path:
             return
@@ -551,7 +557,7 @@ class MainWindow(QMainWindow):
             self._session = loaded
             self._current_project_path = Path(path)
             self.setWindowTitle(f"IVA — {Path(path).name}")
-            self._status_label.setText(f"Project loaded: {Path(path).name}")
+            self._status_label.setText(f"Проект загружен: {Path(path).name}")
             self._action_save.setEnabled(True)
             self._action_save_as.setEnabled(True)
             self._action_export_report.setEnabled(loaded.result is not None)
@@ -566,7 +572,7 @@ class MainWindow(QMainWindow):
                 self.show_error_banner(exc)
             else:
                 err = ExportError(
-                    user_message=f"Could not open project: {exc}",
+                    user_message=f"Не удалось открыть проект: {exc}",
                     technical_details=str(exc),
                 )
                 self.show_error_banner(err)
@@ -574,10 +580,10 @@ class MainWindow(QMainWindow):
     def _export_report_bundle(self) -> None:
         """Export all report formats to a directory."""
         if self._session.result is None:
-            self._status_label.setText("Nothing to export — run an analysis first")
+            self._status_label.setText(tr("Nothing to export — run an analysis first"))
             return
         output_dir = QFileDialog.getExistingDirectory(
-            self, "Select Output Directory for Report Bundle"
+            self, tr("Select Output Directory for Report Bundle")
         )
         if not output_dir:
             return
@@ -586,11 +592,11 @@ class MainWindow(QMainWindow):
 
             written = export_report_bundle(self._session.result, output_dir)
             self._status_label.setText(
-                f"Exported {len(written)} file(s) to {Path(output_dir).name}"
+                f"Экспортировано файлов: {len(written)}; папка: {Path(output_dir).name}"
             )
         except Exception as exc:  # noqa: BLE001
             err = ExportError(
-                user_message=f"Report export failed: {exc}",
+                user_message=f"Не удалось экспортировать отчет: {exc}",
                 technical_details=str(exc),
             )
             self.show_error_banner(err)

@@ -78,12 +78,12 @@ def check_data_quality(
     df = raw_data.data
     if df is None or not isinstance(df, pd.DataFrame):
         raise ValidationError(
-            user_message="The raw data does not contain a valid table.",
+            user_message="Исходные данные не содержат корректной таблицы.",
             technical_details=f"Expected pandas DataFrame, got {type(df)}",
         )
     if len(df) < 2:
         raise InsufficientDataError(
-            user_message="The file contains fewer than 2 data rows — too little data to validate.",
+            user_message="Файл содержит менее двух строк данных: этого недостаточно для проверки.",
             technical_details=f"Row count: {len(df)}",
         )
 
@@ -97,14 +97,14 @@ def check_data_quality(
     )
 
     for col_label, col_name in (
-        ("time", assignment.time_column),
-        ("primary signal", assignment.primary_signal_column),
+        ("времени", assignment.time_column),
+        ("основного сигнала", assignment.primary_signal_column),
     ):
         if col_name not in df.columns:
             raise ValidationError(
-                user_message=f"Required {col_label} column '{col_name}' was not found in the file.",
+                user_message=f"Обязательный столбец {col_label} '{col_name}' не найден в файле.",
                 technical_details=f"Available columns: {list(df.columns)}",
-                recovery_hint="Check column names and update the column role assignment.",
+                recovery_hint="Проверьте имена столбцов и обновите назначение их ролей.",
             )
 
     # ------------------------------------------------------------------ #
@@ -115,9 +115,11 @@ def check_data_quality(
         time_series = pd.to_numeric(df[assignment.time_column], errors="raise")
     except (ValueError, TypeError) as exc:
         raise ValidationError(
-            user_message=f"The time column '{assignment.time_column}' contains non-numeric values.",
+            user_message=(
+                f"Столбец времени '{assignment.time_column}' содержит " "нечисловые значения."
+            ),
             technical_details=str(exc),
-            recovery_hint="Ensure the time column contains only numbers (seconds).",
+            recovery_hint="Убедитесь, что столбец времени содержит только числа в секундах.",
         ) from exc
 
     time_array = time_series.to_numpy(dtype=np.float64, na_value=np.nan)
@@ -130,10 +132,10 @@ def check_data_quality(
         signal_series = pd.to_numeric(df[assignment.primary_signal_column], errors="raise")
     except (ValueError, TypeError) as exc:
         raise ValidationError(
-            user_message=f"The signal column '{assignment.primary_signal_column}' "
-            "contains non-numeric values.",
+            user_message=f"Столбец сигнала '{assignment.primary_signal_column}' "
+            "содержит нечисловые значения.",
             technical_details=str(exc),
-            recovery_hint="Ensure the signal column contains only numbers.",
+            recovery_hint="Убедитесь, что столбец сигнала содержит только числа.",
         ) from exc
 
     signal_array = signal_series.to_numpy(dtype=np.float64, na_value=np.nan)
@@ -148,13 +150,13 @@ def check_data_quality(
         if np.any(diffs <= 0):
             first_bad = int(np.argwhere(diffs <= 0)[0][0])
             raise NonMonotonicTimeAxisError(
-                user_message="The time axis is not strictly increasing.",
+                user_message="Ось времени не является строго возрастающей.",
                 technical_details=(
                     f"Non-monotonic step found near index {first_bad}: "
                     f"t[{first_bad}]={finite_time[first_bad]}, "
                     f"t[{first_bad + 1}]={finite_time[first_bad + 1]}"
                 ),
-                recovery_hint="Sort the data by the time column before loading.",
+                recovery_hint="Перед загрузкой отсортируйте данные по столбцу времени.",
             )
 
     # ------------------------------------------------------------------ #
@@ -172,8 +174,8 @@ def check_data_quality(
             )
             if relative_variation > _SAMPLING_INTERVAL_TOLERANCE:
                 msg = (
-                    f"Sampling interval is not perfectly constant "
-                    f"(variation {relative_variation * 100:.3f}%, tolerance 0.010%)."
+                    "Интервал дискретизации не является постоянным "
+                    f"(разброс {relative_variation * 100:.3f}%, допуск 0.010%)."
                 )
                 warnings.append(msg)
                 logger.warning("%s", msg)
@@ -190,8 +192,8 @@ def check_data_quality(
 
     if missing_fraction > _MISSING_WARNING_THRESHOLD:
         msg = (
-            f"More than {_MISSING_WARNING_THRESHOLD * 100:.0f}% of signal values are missing "
-            f"({missing_fraction * 100:.1f}% missing)."
+            f"Отсутствует более {_MISSING_WARNING_THRESHOLD * 100:.0f}% значений сигнала "
+            f"({missing_fraction * 100:.1f}% пропусков)."
         )
         warnings.append(msg)
         logger.warning("%s", msg)
@@ -202,15 +204,15 @@ def check_data_quality(
     finite_signal = signal_array[np.isfinite(signal_array)]
     if len(finite_signal) == 0:
         raise EmptySignalError(
-            user_message="The signal column contains no valid (finite) values.",
+            user_message="Столбец сигнала не содержит допустимых конечных значений.",
             technical_details=f"Column '{assignment.primary_signal_column}' is entirely NaN/Inf.",
         )
 
     if np.all(finite_signal == 0.0):
         raise EmptySignalError(
-            user_message="The signal column contains only zeros. The sensor may not be connected.",
+            user_message="Столбец сигнала содержит только нули. Возможно, датчик не подключен.",
             technical_details=f"Column '{assignment.primary_signal_column}' is all-zero.",
-            recovery_hint="Check the sensor connection and verify the data file.",
+            recovery_hint="Проверьте подключение датчика и содержимое файла данных.",
         )
 
     # ------------------------------------------------------------------ #
@@ -238,12 +240,12 @@ def check_data_quality(
     if duration_seconds < _MIN_DURATION_SECONDS:
         raise InsufficientDataError(
             user_message=(
-                f"The recording is only {duration_seconds:.2f} s long. "
-                f"A minimum of {_MIN_DURATION_SECONDS:.0f} seconds is required."
+                f"Длительность записи составляет только {duration_seconds:.2f} s. "
+                f"Требуется не менее {_MIN_DURATION_SECONDS:.0f} s."
             ),
             technical_details=f"time[0]={finite_time[0] if len(finite_time) else 'N/A'}, "
             f"time[-1]={finite_time[-1] if len(finite_time) else 'N/A'}",
-            recovery_hint="Use a longer recording.",
+            recovery_hint="Используйте более длинную запись.",
         )
 
     # ------------------------------------------------------------------ #

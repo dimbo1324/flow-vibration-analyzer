@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QWidget,
 )
 
+from iva.ui.strings_ru import tr
 from iva.ui.styles.theme import COLOR_MUTED, COLOR_TEXT, FONT_SIZE_TITLE, SPACING_MD
 from iva.ui.widgets.chart_widget import ChartWidget
 
@@ -33,18 +34,18 @@ class SignalPage(QWidget):
         layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
         layout.setSpacing(SPACING_MD)
 
-        title = QLabel("03 — Signal")
+        title = QLabel(tr("03 — Signal"))
         title.setStyleSheet(
             f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
         )
         layout.addWidget(title)
 
-        subtitle = QLabel("Time-domain signal — cleaned and filtered")
+        subtitle = QLabel(tr("Time-domain signal — cleaned and filtered"))
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
 
         # Chart: cleaned vs filtered
-        charts_box = QGroupBox("Signal (cleaned vs filtered)")
+        charts_box = QGroupBox(tr("Signal (cleaned vs filtered)"))
         charts_layout = QVBoxLayout(charts_box)
         self._chart = ChartWidget()
         self._chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -53,7 +54,7 @@ class SignalPage(QWidget):
         layout.addWidget(charts_box)
 
         # RMS trend chart
-        rms_box = QGroupBox("RMS Trend")
+        rms_box = QGroupBox(tr("RMS Trend"))
         rms_layout = QVBoxLayout(rms_box)
         self._rms_chart = ChartWidget()
         self._rms_chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -62,9 +63,9 @@ class SignalPage(QWidget):
         layout.addWidget(rms_box)
 
         # Preprocessing log
-        log_box = QGroupBox("Preprocessing Log")
+        log_box = QGroupBox(tr("Preprocessing Log"))
         log_layout = QVBoxLayout(log_box)
-        self._log_label = QLabel("No preprocessing log available.")
+        self._log_label = QLabel(tr("No preprocessing log available."))
         self._log_label.setWordWrap(True)
         self._log_label.setStyleSheet(
             f"color: {COLOR_MUTED}; font-family: monospace; font-size: 10pt;"
@@ -82,8 +83,8 @@ class SignalPage(QWidget):
             pd.time_array,
             pd.signal_cleaned,
             pd.signal_filtered,
-            label_a="Cleaned",
-            label_b="Filtered",
+            label_a=tr("Cleaned"),
+            label_b=tr("Filtered"),
         )
 
         if result.spectrum is not None:
@@ -100,10 +101,10 @@ class SignalPage(QWidget):
                 self._rms_chart.plot_rms_trend(rms_time, sp.rms_trend)
 
         log_lines = list(pd.preprocessing_log)
-        self._log_label.setText("\n".join(log_lines) if log_lines else "No operations logged.")
+        self._log_label.setText("\n".join(log_lines) if log_lines else tr("No operations logged."))
 
     def clear(self) -> None:
         """Reset the page."""
         self._chart.clear()
         self._rms_chart.clear()
-        self._log_label.setText("No preprocessing log available.")
+        self._log_label.setText(tr("No preprocessing log available."))

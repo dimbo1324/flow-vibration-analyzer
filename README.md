@@ -15,7 +15,8 @@ resonance risk assessment, comparison with CFD results, and structured report ge
 
 IVA v1.0.0 includes the complete analysis pipeline, desktop visualisation, PDF/HTML reporting,
 versioned project sessions, experiment-versus-CFD profile comparison, and a full Windows installer
-build toolchain.
+build toolchain. The desktop UI, CLI help and product-facing errors, recommendations, and PDF/HTML
+reports are presented in Russian; technical notation and machine-readable export keys remain stable.
 
 ## Requirements
 
@@ -57,13 +58,6 @@ python -m pip install -r requirements-dev.txt
 
 ```bash
 python main.py
-```
-
-Expected output at Stage 1:
-
-```
-Industrial Vibration Analyzer foundation is ready.
-No analysis pipeline is implemented yet.
 ```
 
 ## Run Tests and Checks

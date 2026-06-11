@@ -50,7 +50,7 @@ def export_analysis_summary_json(result: AnalysisResult, output_path: str | Path
             json.dump(summary, fh, indent=2, ensure_ascii=False, default=_json_default)
     except OSError as exc:
         raise ExportError(
-            user_message=f"Cannot write JSON summary to '{output_path.name}'.",
+            user_message=f"Не удалось записать сводку JSON в файл '{output_path.name}'.",
             technical_details=str(exc),
         ) from exc
 
