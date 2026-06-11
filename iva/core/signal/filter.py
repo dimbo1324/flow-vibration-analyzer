@@ -49,14 +49,14 @@ def apply_bandpass_filter(
     if not (0.0 < low_hz < high_hz < nyq):
         raise FilterConfigurationError(
             user_message=(
-                f"Bandpass filter cutoffs [{low_hz}, {high_hz}] Hz are invalid "
-                f"(must satisfy 0 < low < high < Nyquist={nyq:.1f} Hz)."
+                f"Некорректные границы полосового фильтра [{low_hz}, {high_hz}] Hz: "
+                f"требуется 0 < нижняя < верхняя < Найквист={nyq:.1f} Hz."
             ),
             technical_details=(
                 f"low_hz={low_hz}, high_hz={high_hz}, "
                 f"sampling_rate_hz={sampling_rate_hz}, nyquist={nyq}"
             ),
-            recovery_hint="Adjust filter_low_hz and filter_high_hz in PreprocessingSettings.",
+            recovery_hint="Исправьте filter_low_hz и filter_high_hz в настройках предобработки.",
         )
 
     logger.debug(
@@ -94,7 +94,8 @@ def apply_lowpass_filter(
     if not (0.0 < cutoff_hz < nyq):
         raise FilterConfigurationError(
             user_message=(
-                f"Lowpass cutoff {cutoff_hz} Hz is invalid " f"(must be in (0, {nyq:.1f}) Hz)."
+                f"Некорректная граница ФНЧ {cutoff_hz} Hz: "
+                f"значение должно находиться в интервале (0, {nyq:.1f}) Hz."
             ),
             technical_details=f"cutoff_hz={cutoff_hz}, nyquist={nyq}",
         )
@@ -133,7 +134,8 @@ def apply_highpass_filter(
     if not (0.0 < cutoff_hz < nyq):
         raise FilterConfigurationError(
             user_message=(
-                f"Highpass cutoff {cutoff_hz} Hz is invalid " f"(must be in (0, {nyq:.1f}) Hz)."
+                f"Некорректная граница ФВЧ {cutoff_hz} Hz: "
+                f"значение должно находиться в интервале (0, {nyq:.1f}) Hz."
             ),
             technical_details=f"cutoff_hz={cutoff_hz}, nyquist={nyq}",
         )

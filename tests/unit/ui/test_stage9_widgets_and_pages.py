@@ -39,7 +39,7 @@ def test_report_page_becomes_ready(stage9_result) -> None:
     assert page._result is stage9_result
     assert page._pdf_btn.isEnabled()
     assert page._html_btn.isEnabled()
-    assert "Result ready" in page._readiness_label.text()
+    assert "Результат готов" in page._readiness_label.text()
     page.close()
 
 

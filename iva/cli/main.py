@@ -22,6 +22,7 @@ import sys
 import traceback
 from collections.abc import Sequence
 from pathlib import Path
+from typing import NoReturn
 
 from iva.app.analysis_runner import AnalysisRunner
 from iva.app.analysis_session import AnalysisSession
@@ -40,68 +41,106 @@ from iva.infrastructure.writers.json_export_writer import export_analysis_summar
 __all__ = ["main", "build_parser"]
 
 
+_RISK_LABELS = {
+    "safe": "БЕЗОПАСНО",
+    "watch": "НАБЛЮДЕНИЕ",
+    "critical": "КРИТИЧЕСКИЙ",
+}
+
+
+class _RussianArgumentParser(argparse.ArgumentParser):
+    """Argument parser with localized standard headings and errors."""
+
+    @staticmethod
+    def _localize(text: str) -> str:
+        replacements = {
+            "usage:": "использование:",
+            "options:": "параметры:",
+            "positional arguments:": "позиционные аргументы:",
+            "show this help message and exit": "показать эту справку и выйти",
+        }
+        for source, translated in replacements.items():
+            text = text.replace(source, translated)
+        return text
+
+    def format_help(self) -> str:
+        return self._localize(super().format_help())
+
+    def format_usage(self) -> str:
+        return self._localize(super().format_usage())
+
+    def error(self, message: str) -> NoReturn:
+        message = message.replace(
+            "the following arguments are required:", "не указаны обязательные аргументы:"
+        )
+        message = message.replace("expected one argument", "требуется одно значение")
+        message = message.replace("invalid choice", "недопустимый вариант")
+        self.print_usage(sys.stderr)
+        self.exit(2, f"{self.prog}: ошибка: {message}\n")
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build and return the argument parser for the IVA CLI."""
-    parser = argparse.ArgumentParser(
+    parser = _RussianArgumentParser(
         prog="iva",
-        description="Industrial Vibration Analyzer — command-line interface",
+        description="Анализатор вибраций потока IVA - интерфейс командной строки",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            "Example:\n"
+            "Пример:\n"
             "  python -m iva.cli.main analyze \\\n"
             "      --data data/examples/example_clean_sine.csv \\\n"
             "      --config config/example_config.json \\\n"
             "      --output reports/run_001\n"
         ),
     )
-    subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
+    subparsers = parser.add_subparsers(dest="command", metavar="КОМАНДА")
 
     analyze = subparsers.add_parser(
         "analyze",
-        help="Run a full vibration analysis from a data file and config.",
+        help="Выполнить полный анализ вибраций по файлу данных и конфигурации.",
     )
     analyze.add_argument(
         "--data",
         required=True,
-        metavar="PATH",
-        help="Path to the input data file (.csv, .parquet, or .xlsx).",
+        metavar="ПУТЬ",
+        help="Путь к входному файлу данных (.csv, .parquet или .xlsx).",
     )
     analyze.add_argument(
         "--config",
         required=True,
-        metavar="PATH",
-        help="Path to the JSON analysis configuration file.",
+        metavar="ПУТЬ",
+        help="Путь к файлу конфигурации анализа JSON.",
     )
     analyze.add_argument(
         "--output",
         required=True,
-        metavar="DIR",
-        help="Output directory where result files will be written.",
+        metavar="ПАПКА",
+        help="Папка для записи файлов с результатами.",
     )
     analyze.add_argument(
         "--debug",
         action="store_true",
         default=False,
-        help="Print full tracebacks on error (for debugging).",
+        help="Печатать полную трассировку при ошибке (для отладки).",
     )
     # Stage 9: optional report/session export flags
     analyze.add_argument(
         "--export-pdf",
         action="store_true",
         default=False,
-        help="Export a PDF report to the output directory.",
+        help="Экспортировать отчет PDF в папку результатов.",
     )
     analyze.add_argument(
         "--export-html",
         action="store_true",
         default=False,
-        help="Export an HTML report to the output directory.",
+        help="Экспортировать отчет HTML в папку результатов.",
     )
     analyze.add_argument(
         "--save-project",
         action="store_true",
         default=False,
-        help="Save the session as a .vibproj file in the output directory.",
+        help="Сохранить сеанс как файл .vibproj в папке результатов.",
     )
     return parser
 
@@ -164,27 +203,29 @@ def _run_analyze(args: argparse.Namespace) -> int:
         # --- optional report/session exports -------------------------------
         if args.export_pdf:
             path = export_report_pdf(result, output_dir / "report.pdf")
-            print(f"PDF report: {path}")
+            print(f"Отчет PDF: {path}")
 
         if args.export_html:
             path = export_report_html(result, output_dir / "report.html")
-            print(f"HTML report: {path}")
+            print(f"Отчет HTML: {path}")
 
         if args.save_project:
             path = save_current_session(session, output_dir / "project.vibproj")
-            print(f"Project saved: {path}")
+            print(f"Проект сохранен: {path}")
 
         # --- console summary -----------------------------------------------
         _print_summary(result, output_dir)
         return 0
 
     except IVAError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        print(f"Ошибка: {exc}", file=sys.stderr)
+        if exc.recovery_hint:
+            print(f"Как исправить: {exc.recovery_hint}", file=sys.stderr)
         if args.debug:
             traceback.print_exc(file=sys.stderr)
         return 1
     except Exception as exc:  # noqa: BLE001
-        print(f"Unexpected error: {exc}", file=sys.stderr)
+        print(f"Непредвиденная ошибка: {exc}", file=sys.stderr)
         if args.debug:
             traceback.print_exc(file=sys.stderr)
         return 2
@@ -192,29 +233,30 @@ def _run_analyze(args: argparse.Namespace) -> int:
 
 def _print_summary(result, output_dir: Path) -> None:  # type: ignore[no-untyped-def]
     """Print a concise analysis summary to stdout."""
-    print("=== IVA Analysis Complete ===")
-    print(f"Output directory: {output_dir}")
+    print("=== Анализ IVA завершен ===")
+    print(f"Папка результатов: {output_dir}")
 
     if result.spectrum is not None and result.spectrum.dominant_peak is not None:
-        print(f"Dominant peak: {result.spectrum.dominant_peak.frequency_hz:.2f} Hz")
+        print(f"Доминирующий пик: {result.spectrum.dominant_peak.frequency_hz:.2f} Hz")
     else:
-        print("Dominant peak: not detected")
+        print("Доминирующий пик: не обнаружен")
 
     if result.physics is not None:
-        print(f"Reynolds number: {result.physics.reynolds_number:.3e}")
-        print(f"Strouhal number: {result.physics.strouhal_number:.4f}")
+        print(f"Число Рейнольдса: {result.physics.reynolds_number:.3e}")
+        print(f"Число Струхаля: {result.physics.strouhal_number:.4f}")
         if result.physics.velocity_ratio is not None:
-            print(f"Velocity ratio (Vr): {result.physics.velocity_ratio:.4f}")
+            print(f"Приведенная скорость (Vr): {result.physics.velocity_ratio:.4f}")
     else:
-        print("Physics: not calculated (flow_parameters not set)")
+        print("Физика: расчет не выполнен (параметры потока не заданы)")
 
     if result.risk is not None:
-        print(f"Risk level: {result.risk.risk_level.upper()}")
+        risk = _RISK_LABELS.get(str(result.risk.risk_level), str(result.risk.risk_level))
+        print(f"Уровень риска: {risk}")
     else:
-        print("Risk level: not assessed")
+        print("Уровень риска: не оценен")
 
     if result.warnings:
-        print(f"Warnings ({len(result.warnings)}):")
+        print(f"Предупреждения ({len(result.warnings)}):")
         for w in result.warnings:
             print(f"  - {w}")
 

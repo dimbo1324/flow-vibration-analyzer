@@ -91,9 +91,9 @@ def read_csv(file_path: str) -> RawFileData:
 
     if not path.exists():
         raise IVAFileNotFoundError(
-            user_message="Input file was not found.",
+            user_message="Входной файл не найден.",
             technical_details=f"Full path checked: {path}",
-            recovery_hint="Check that the file path is correct and the file has not been moved.",
+            recovery_hint="Проверьте путь к файлу и убедитесь, что файл не был перемещен.",
         )
 
     file_size = path.stat().st_size
@@ -103,8 +103,8 @@ def read_csv(file_path: str) -> RawFileData:
         raw_text = path.read_text(encoding=encoding, errors="replace")
     except OSError as exc:
         raise FileReadError(
-            user_message="The CSV file could not be read. "
-            "Check the file encoding, delimiter and table structure.",
+            user_message="Не удалось прочитать CSV-файл. Проверьте кодировку, "
+            "разделитель и структуру таблицы.",
             technical_details=str(exc),
         ) from exc
 
@@ -137,8 +137,8 @@ def read_csv(file_path: str) -> RawFileData:
         )
     except Exception as exc:
         raise FileReadError(
-            user_message="The CSV file could not be read. "
-            "Check the file encoding, delimiter and table structure.",
+            user_message="Не удалось прочитать CSV-файл. Проверьте кодировку, "
+            "разделитель и структуру таблицы.",
             technical_details=f"pandas error: {exc}",
         ) from exc
 

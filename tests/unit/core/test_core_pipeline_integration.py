@@ -72,10 +72,10 @@ def test_core_chain_clean_sine_end_to_end():
     # remove_mean -> outlier replacement -> fill_gaps -> bandpass filter.
     log_keys = [entry.split(":")[0] for entry in processed.preprocessing_log]
     assert log_keys == [
-        "remove_mean",
-        "replace_outliers",
-        "fill_gaps",
-        "apply_bandpass_filter",
+        "Удалено среднее значение",
+        "Обработка выбросов",
+        "Заполнены пропуски",
+        "Применен полосовой фильтр",
     ]
 
     freqs, psd = calculate_psd(processed.signal_filtered, FS, SpectralSettings())

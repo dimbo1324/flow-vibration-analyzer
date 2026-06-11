@@ -50,7 +50,7 @@ def test_unsupported_schema_is_rejected(stage9_session, tmp_path: Path) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
     payload["_vibproj_version"] = "99.0"
     path.write_text(json.dumps(payload), encoding="utf-8")
-    with pytest.raises(ValidationError, match="Unsupported"):
+    with pytest.raises(ValidationError, match="не поддерживается"):
         load_project(path)
 
 

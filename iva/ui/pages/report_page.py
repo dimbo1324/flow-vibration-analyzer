@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QWidget,
 )
 
+from iva.ui.strings_ru import RISK_LABELS, display_label, tr
 from iva.ui.styles.theme import (
     COLOR_GOOD,
     COLOR_MUTED,
@@ -44,54 +45,56 @@ class ReportPage(QWidget):
         layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
         layout.setSpacing(SPACING_MD)
 
-        title = QLabel("07 — Report")
+        title = QLabel(tr("07 — Report"))
         title.setStyleSheet(
             f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
         )
         layout.addWidget(title)
 
-        subtitle = QLabel("Export analysis results as PDF, HTML, JSON or CSV")
+        subtitle = QLabel(tr("Export analysis results as PDF, HTML, JSON or CSV"))
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
 
         # Readiness indicator
-        self._readiness_label = QLabel("No analysis result available.")
+        self._readiness_label = QLabel(tr("No analysis result available."))
         self._readiness_label.setStyleSheet(f"color: {COLOR_WARN}; font-size: 11pt;")
         layout.addWidget(self._readiness_label)
 
         # Export buttons row
-        btn_box = QGroupBox("Export")
+        btn_box = QGroupBox(tr("Export"))
         btn_layout = QHBoxLayout(btn_box)
 
-        self._pdf_btn = QPushButton("Export PDF")
+        self._pdf_btn = QPushButton(tr("Export PDF"))
         self._pdf_btn.setEnabled(False)
-        self._pdf_btn.setToolTip("Export full PDF analysis report")
+        self._pdf_btn.setToolTip("Экспортировать полный отчет анализа в PDF")
         self._pdf_btn.clicked.connect(self._on_export_pdf)
 
-        self._html_btn = QPushButton("Export HTML")
+        self._html_btn = QPushButton(tr("Export HTML"))
         self._html_btn.setEnabled(False)
-        self._html_btn.setToolTip("Export standalone HTML report")
+        self._html_btn.setToolTip("Экспортировать автономный отчет HTML")
         self._html_btn.clicked.connect(self._on_export_html)
 
-        self._json_btn = QPushButton("Export JSON Summary")
+        self._json_btn = QPushButton(tr("Export JSON Summary"))
         self._json_btn.setEnabled(False)
-        self._json_btn.setToolTip("Export machine-readable JSON summary")
+        self._json_btn.setToolTip("Экспортировать машиночитаемую сводку JSON")
         self._json_btn.clicked.connect(self._on_export_json)
 
-        self._csv_pkg_btn = QPushButton("Export CSV Package")
+        self._csv_pkg_btn = QPushButton(tr("Export CSV Package"))
         self._csv_pkg_btn.setEnabled(False)
-        self._csv_pkg_btn.setToolTip("Export spectrum, signal and physics CSV files")
+        self._csv_pkg_btn.setToolTip(
+            "Экспортировать CSV-файлы спектра, сигнала и физических параметров"
+        )
         self._csv_pkg_btn.clicked.connect(self._on_export_csv_package)
 
-        self._csv_spectrum_btn = QPushButton("Spectrum CSV")
+        self._csv_spectrum_btn = QPushButton(tr("Spectrum CSV"))
         self._csv_spectrum_btn.setEnabled(False)
         self._csv_spectrum_btn.clicked.connect(self._on_export_spectrum_csv)
 
-        self._csv_signal_btn = QPushButton("Signal CSV")
+        self._csv_signal_btn = QPushButton(tr("Signal CSV"))
         self._csv_signal_btn.setEnabled(False)
         self._csv_signal_btn.clicked.connect(self._on_export_signal_csv)
 
-        self._csv_physics_btn = QPushButton("Physics CSV")
+        self._csv_physics_btn = QPushButton(tr("Physics CSV"))
         self._csv_physics_btn.setEnabled(False)
         self._csv_physics_btn.clicked.connect(self._on_export_physics_csv)
 
@@ -106,12 +109,12 @@ class ReportPage(QWidget):
         layout.addWidget(btn_box)
 
         # Summary text area
-        summary_box = QGroupBox("Analysis Summary")
+        summary_box = QGroupBox(tr("Analysis Summary"))
         summary_layout = QVBoxLayout(summary_box)
         self._summary_text = QTextEdit()
         self._summary_text.setReadOnly(True)
         self._summary_text.setPlaceholderText(
-            "No analysis result yet.\nRun an analysis to see the summary here."
+            "Результат анализа пока отсутствует.\n" "Запустите анализ, чтобы увидеть сводку."
         )
         self._summary_text.setMinimumHeight(300)
         summary_layout.addWidget(self._summary_text)
@@ -129,7 +132,7 @@ class ReportPage(QWidget):
         if self._result is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export PDF Report", "report.pdf", "PDF Files (*.pdf)"
+            self, "Экспорт отчета PDF", "report.pdf", "Файлы PDF (*.pdf)"
         )
         if not path:
             return
@@ -137,15 +140,15 @@ class ReportPage(QWidget):
             from iva.app.report_service import export_report_pdf
 
             export_report_pdf(self._result, path)
-            self._set_status(f"PDF exported: {Path(path).name}", ok=True)
+            self._set_status(f"PDF экспортирован: {Path(path).name}", ok=True)
         except Exception as exc:  # noqa: BLE001
-            self._set_status(f"PDF export failed: {exc}", ok=False)
+            self._set_status(f"Ошибка экспорта PDF: {exc}", ok=False)
 
     def _on_export_html(self) -> None:
         if self._result is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export HTML Report", "report.html", "HTML Files (*.html)"
+            self, "Экспорт отчета HTML", "report.html", "Файлы HTML (*.html)"
         )
         if not path:
             return
@@ -153,15 +156,15 @@ class ReportPage(QWidget):
             from iva.app.report_service import export_report_html
 
             export_report_html(self._result, path)
-            self._set_status(f"HTML exported: {Path(path).name}", ok=True)
+            self._set_status(f"HTML экспортирован: {Path(path).name}", ok=True)
         except Exception as exc:  # noqa: BLE001
-            self._set_status(f"HTML export failed: {exc}", ok=False)
+            self._set_status(f"Ошибка экспорта HTML: {exc}", ok=False)
 
     def _on_export_json(self) -> None:
         if self._result is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export JSON Summary", "analysis_summary.json", "JSON Files (*.json)"
+            self, tr("Export JSON Summary"), "analysis_summary.json", "Файлы JSON (*.json)"
         )
         if not path:
             return
@@ -169,15 +172,15 @@ class ReportPage(QWidget):
             from iva.app.report_service import export_report_json
 
             export_report_json(self._result, path)
-            self._set_status(f"JSON exported: {Path(path).name}", ok=True)
+            self._set_status(f"JSON экспортирован: {Path(path).name}", ok=True)
         except Exception as exc:  # noqa: BLE001
-            self._set_status(f"JSON export failed: {exc}", ok=False)
+            self._set_status(f"Ошибка экспорта JSON: {exc}", ok=False)
 
     def _on_export_csv_package(self) -> None:
         if self._result is None:
             return
         output_dir = QFileDialog.getExistingDirectory(
-            self, "Select Output Directory for CSV Package"
+            self, tr("Select Output Directory for CSV Package")
         )
         if not output_dir:
             return
@@ -187,17 +190,18 @@ class ReportPage(QWidget):
             written = export_report_bundle(self._result, output_dir)
             csv_count = sum(1 for k in written if "csv" in k)
             self._set_status(
-                f"CSV package exported: {csv_count} file(s) to {Path(output_dir).name}",
+                f"Комплект CSV экспортирован: файлов {csv_count}; "
+                f"папка {Path(output_dir).name}",
                 ok=True,
             )
         except Exception as exc:  # noqa: BLE001
-            self._set_status(f"CSV package export failed: {exc}", ok=False)
+            self._set_status(f"Ошибка экспорта комплекта CSV: {exc}", ok=False)
 
     def _on_export_spectrum_csv(self) -> None:
         if self._result is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Spectrum CSV", "spectrum.csv", "CSV Files (*.csv)"
+            self, "Экспорт CSV спектра", "spectrum.csv", "Файлы CSV (*.csv)"
         )
         if not path:
             return
@@ -205,15 +209,15 @@ class ReportPage(QWidget):
             from iva.app.report_service import export_report_spectrum_csv
 
             export_report_spectrum_csv(self._result, path)
-            self._set_status(f"Exported: {Path(path).name}", ok=True)
+            self._set_status(f"Экспортирован файл: {Path(path).name}", ok=True)
         except Exception as exc:  # noqa: BLE001
-            self._set_status(f"Export failed: {exc}", ok=False)
+            self._set_status(f"Ошибка экспорта: {exc}", ok=False)
 
     def _on_export_signal_csv(self) -> None:
         if self._result is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Signal CSV", "signal.csv", "CSV Files (*.csv)"
+            self, "Экспорт CSV сигнала", "signal.csv", "Файлы CSV (*.csv)"
         )
         if not path:
             return
@@ -221,15 +225,18 @@ class ReportPage(QWidget):
             from iva.app.report_service import export_report_signal_csv
 
             export_report_signal_csv(self._result, path)
-            self._set_status(f"Exported: {Path(path).name}", ok=True)
+            self._set_status(f"Экспортирован файл: {Path(path).name}", ok=True)
         except Exception as exc:  # noqa: BLE001
-            self._set_status(f"Export failed: {exc}", ok=False)
+            self._set_status(f"Ошибка экспорта: {exc}", ok=False)
 
     def _on_export_physics_csv(self) -> None:
         if self._result is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Physics CSV", "physics_summary.csv", "CSV Files (*.csv)"
+            self,
+            "Экспорт CSV физических параметров",
+            "physics_summary.csv",
+            "Файлы CSV (*.csv)",
         )
         if not path:
             return
@@ -237,9 +244,9 @@ class ReportPage(QWidget):
             from iva.app.report_service import export_report_physics_csv
 
             export_report_physics_csv(self._result, path)
-            self._set_status(f"Exported: {Path(path).name}", ok=True)
+            self._set_status(f"Экспортирован файл: {Path(path).name}", ok=True)
         except Exception as exc:  # noqa: BLE001
-            self._set_status(f"Export failed: {exc}", ok=False)
+            self._set_status(f"Ошибка экспорта: {exc}", ok=False)
 
     def _set_status(self, message: str, ok: bool = True) -> None:
         colour = COLOR_GOOD if ok else COLOR_WARN
@@ -256,51 +263,52 @@ class ReportPage(QWidget):
 
         # Update readiness indicator
         self._readiness_label.setText(
-            f"Result ready — Session {result.session_id[:8]}… | "
-            f"Source: {result.source_file_path.name} | "
-            f"Warnings: {len(result.warnings)}"
+            f"Результат готов — сеанс {result.session_id[:8]}… | "
+            f"Источник: {result.source_file_path.name} | "
+            f"Предупреждения: {len(result.warnings)}"
         )
         self._readiness_label.setStyleSheet(f"color: {COLOR_GOOD}; font-size: 11pt;")
 
         lines: list[str] = []
-        lines.append(f"Session ID:    {result.session_id}")
-        lines.append(f"Completed at:  {result.completed_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
-        lines.append(f"Source file:   {result.source_file_path.name}")
+        lines.append(f"ID сеанса:     {result.session_id}")
+        lines.append(f"Завершено:     {result.completed_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        lines.append(f"Исходный файл: {result.source_file_path.name}")
         lines.append(f"MD5:           {result.source_file_md5}")
         lines.append("")
 
         if result.spectrum:
             sp = result.spectrum
-            lines.append(f"RMS total:     {sp.rms_total:.6f}")
+            lines.append(f"Общий RMS:     {sp.rms_total:.6f}")
             if sp.dominant_peak:
                 pk = sp.dominant_peak
                 lines.append(
-                    f"Dominant peak: {pk.frequency_hz:.3f} Hz  (amplitude: {pk.amplitude:.4g})"
+                    f"Доминирующий пик: {pk.frequency_hz:.3f} Hz  "
+                    f"(амплитуда: {pk.amplitude:.4g})"
                 )
-            lines.append(f"Peaks found:   {len(sp.all_peaks)}")
+            lines.append(f"Найдено пиков: {len(sp.all_peaks)}")
 
         if result.physics:
             ph = result.physics
             lines.append("")
-            lines.append(f"Reynolds number:        {ph.reynolds_number:.4e}")
-            lines.append(f"Strouhal number:        {ph.strouhal_number:.6f}")
-            lines.append(f"Shedding frequency:     {ph.calculated_shedding_frequency_hz:.4f} Hz")
+            lines.append(f"Число Рейнольдса:       {ph.reynolds_number:.4e}")
+            lines.append(f"Число Струхаля:         {ph.strouhal_number:.6f}")
+            lines.append(f"Частота срыва:          {ph.calculated_shedding_frequency_hz:.4f} Hz")
             if ph.velocity_ratio is not None:
-                lines.append(f"Velocity ratio Vr:      {ph.velocity_ratio:.4f}")
+                lines.append(f"Приведенная скорость Vr:{ph.velocity_ratio:>10.4f}")
             if ph.frequency_ratio is not None:
-                lines.append(f"Frequency ratio fs/fn:  {ph.frequency_ratio:.4f}")
+                lines.append(f"Отношение частот fs/fn: {ph.frequency_ratio:.4f}")
 
         if result.risk:
             lines.append("")
-            lines.append(f"Risk level:    {result.risk.risk_level}")
-            lines.append(f"Deviation:     {result.risk.dominant_frequency_deviation:.4f}")
+            lines.append(f"Уровень риска: {display_label(RISK_LABELS, result.risk.risk_level)}")
+            lines.append(f"Отклонение:    {result.risk.dominant_frequency_deviation:.4f}")
             lines.append("")
-            lines.append("Recommendation:")
+            lines.append("Рекомендация:")
             lines.append(result.risk.recommendation_text)
 
         if result.warnings:
             lines.append("")
-            lines.append("Warnings:")
+            lines.append("Предупреждения:")
             for w in result.warnings:
                 lines.append(f"  • {w}")
 
@@ -322,7 +330,7 @@ class ReportPage(QWidget):
         """Reset the page."""
         self._result = None
         self._summary_text.clear()
-        self._readiness_label.setText("No analysis result available.")
+        self._readiness_label.setText(tr("No analysis result available."))
         self._readiness_label.setStyleSheet(f"color: {COLOR_WARN}; font-size: 11pt;")
         for btn in (
             self._pdf_btn,

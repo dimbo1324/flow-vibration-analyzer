@@ -18,27 +18,27 @@ class TestBuildReportDocument:
     def test_has_overview_section(self, minimal_result):
         doc = build_report_document(minimal_result)
         titles = [s.title for s in doc.sections]
-        assert "Overview" in titles
+        assert "Обзор" in titles
 
     def test_has_spectral_section(self, minimal_result):
         doc = build_report_document(minimal_result)
         titles = [s.title for s in doc.sections]
-        assert "Spectral Analysis" in titles
+        assert "Спектральный анализ" in titles
 
     def test_has_physics_section(self, minimal_result):
         doc = build_report_document(minimal_result)
         titles = [s.title for s in doc.sections]
-        assert "Physics" in titles
+        assert "Физические параметры" in titles
 
     def test_has_risk_section(self, minimal_result):
         doc = build_report_document(minimal_result)
         titles = [s.title for s in doc.sections]
-        assert "Risk Assessment" in titles
+        assert "Оценка риска" in titles
 
     def test_has_warnings_section(self, minimal_result):
         doc = build_report_document(minimal_result)
         titles = [s.title for s in doc.sections]
-        assert "Warnings" in titles
+        assert "Предупреждения" in titles
 
     def test_peaks_table_present(self, minimal_result):
         doc = build_report_document(minimal_result)
@@ -47,7 +47,7 @@ class TestBuildReportDocument:
     def test_no_physics_graceful(self, result_no_physics):
         doc = build_report_document(result_no_physics)
         titles = [s.title for s in doc.sections]
-        assert "Physics" in titles
+        assert "Физические параметры" in titles
         # Ensure no exception raised
         assert len(doc.sections) > 0
 
@@ -58,7 +58,14 @@ class TestBuildReportDocument:
 
     def test_title_set(self, minimal_result):
         doc = build_report_document(minimal_result)
-        assert "IVA" in doc.title or "Report" in doc.title
+        assert doc.title == "Отчет об анализе IVA"
+
+    def test_risk_level_and_peak_interpretation_are_russian(self, minimal_result):
+        doc = build_report_document(minimal_result)
+        risk = next(section for section in doc.sections if section.title == "Оценка риска")
+        assert "НАБЛЮДЕНИЕ" in risk.body
+        assert "WATCH" not in risk.body
+        assert "Срыв вихрей" in doc.tables[0].rows[0]
 
     def test_generated_at_set(self, minimal_result):
         from datetime import datetime

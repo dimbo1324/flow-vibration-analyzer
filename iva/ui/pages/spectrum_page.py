@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QWidget,
 )
 
+from iva.ui.strings_ru import PEAK_INTERPRETATION_LABELS, display_label, tr
 from iva.ui.styles.theme import COLOR_MUTED, COLOR_TEXT, FONT_SIZE_TITLE, SPACING_MD, SPACING_SM
 from iva.ui.widgets.chart_widget import ChartWidget
 
@@ -37,13 +38,13 @@ class SpectrumPage(QWidget):
         layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
         layout.setSpacing(SPACING_MD)
 
-        title = QLabel("04 — Spectrum")
+        title = QLabel(tr("04 — Spectrum"))
         title.setStyleSheet(
             f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
         )
         layout.addWidget(title)
 
-        subtitle = QLabel("Power spectral density — Welch method")
+        subtitle = QLabel(tr("Power spectral density — Welch method"))
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
 
@@ -61,11 +62,11 @@ class SpectrumPage(QWidget):
         content_layout.addWidget(chart_box, stretch=3)
 
         # Peaks table
-        peaks_box = QGroupBox("Detected Peaks")
+        peaks_box = QGroupBox(tr("Detected Peaks"))
         peaks_layout = QVBoxLayout(peaks_box)
         self._peaks_table = QTableWidget(0, 4)
         self._peaks_table.setHorizontalHeaderLabels(
-            ["Freq (Hz)", "Amplitude", "Width (Hz)", "Interpretation"]
+            [tr("Freq (Hz)"), tr("Amplitude"), tr("Width (Hz)"), tr("Interpretation")]
         )
         header = self._peaks_table.horizontalHeader()
         if header:
@@ -94,7 +95,11 @@ class SpectrumPage(QWidget):
                 self._peaks_table.setItem(row, 0, QTableWidgetItem(f"{pk.frequency_hz:.3f}"))
                 self._peaks_table.setItem(row, 1, QTableWidgetItem(f"{pk.amplitude:.4g}"))
                 self._peaks_table.setItem(row, 2, QTableWidgetItem(f"{pk.width_hz_3db:.3f}"))
-                self._peaks_table.setItem(row, 3, QTableWidgetItem(str(pk.interpretation)))
+                self._peaks_table.setItem(
+                    row,
+                    3,
+                    QTableWidgetItem(display_label(PEAK_INTERPRETATION_LABELS, pk.interpretation)),
+                )
 
     def clear(self) -> None:
         """Reset the page."""

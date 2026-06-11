@@ -60,9 +60,9 @@ def read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData:
 
     if not path.exists():
         raise IVAFileNotFoundError(
-            user_message="Input file was not found.",
+            user_message="Входной файл не найден.",
             technical_details=f"Full path checked: {path}",
-            recovery_hint="Check that the file path is correct and the file has not been moved.",
+            recovery_hint="Проверьте путь к файлу и убедитесь, что файл не был перемещен.",
         )
 
     file_size = path.stat().st_size
@@ -71,15 +71,15 @@ def read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData:
         wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     except FileNotFoundError as exc:
         raise IVAFileNotFoundError(
-            user_message="Input file was not found.",
+            user_message="Входной файл не найден.",
             technical_details=str(exc),
         ) from exc
     except Exception as exc:
         raise FileCorruptedError(
-            user_message="The Excel file could not be opened. "
-            "It may be corrupted or in an unsupported format.",
+            user_message="Не удалось открыть файл Excel. Возможно, файл поврежден "
+            "или имеет неподдерживаемый формат.",
             technical_details=str(exc),
-            recovery_hint="Save the file again in .xlsx format and try once more.",
+            recovery_hint="Повторно сохраните файл в формате .xlsx и попробуйте снова.",
         ) from exc
 
     try:
@@ -89,9 +89,9 @@ def read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData:
         else:
             if sheet_name not in wb.sheetnames:
                 raise FileReadError(
-                    user_message=f"Sheet '{sheet_name}' was not found in the workbook.",
+                    user_message=f"Лист '{sheet_name}' не найден в книге Excel.",
                     technical_details=f"Available sheets: {wb.sheetnames}",
-                    recovery_hint="Check the sheet name and try again.",
+                    recovery_hint="Проверьте имя листа и повторите попытку.",
                 )
             ws = wb[sheet_name]
 
@@ -101,7 +101,7 @@ def read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData:
 
     if not rows:
         raise FileReadError(
-            user_message="The selected worksheet is empty.",
+            user_message="Выбранный лист Excel пуст.",
             technical_details=f"Sheet '{sheet_name}' contained no rows.",
         )
 
@@ -119,7 +119,7 @@ def read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData:
         df = pd.DataFrame(data_rows, columns=headers)
     except Exception as exc:
         raise FileReadError(
-            user_message="The Excel worksheet could not be converted to a table.",
+            user_message="Не удалось преобразовать лист Excel в таблицу.",
             technical_details=str(exc),
         ) from exc
 

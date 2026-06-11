@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QWidget,
 )
 
+from iva.ui.strings_ru import tr
 from iva.ui.styles.theme import (
     COLOR_GOOD,
     COLOR_MUTED,
@@ -47,38 +48,38 @@ class ProfilesPage(QWidget):
         layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
         layout.setSpacing(SPACING_MD)
 
-        title = QLabel("06 — Profiles")
+        title = QLabel(tr("06 — Profiles"))
         title.setStyleSheet(
             f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
         )
         layout.addWidget(title)
 
-        subtitle = QLabel("Experiment vs CFD velocity profile comparison")
+        subtitle = QLabel(tr("Experiment vs CFD velocity profile comparison"))
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
 
         # File load buttons
-        btn_box = QGroupBox("Load Profile Files")
+        btn_box = QGroupBox(tr("Load Profile Files"))
         btn_layout = QHBoxLayout(btn_box)
 
-        self._load_exp_btn = QPushButton("Load Experiment CSV…")
+        self._load_exp_btn = QPushButton(tr("Load Experiment CSV…"))
         self._load_exp_btn.setToolTip(
-            "Load experimental profile CSV (two columns: coordinate, value)"
+            "Загрузить CSV профиля эксперимента (столбцы coordinate и value)"
         )
         self._load_exp_btn.clicked.connect(self._on_load_experiment)
 
-        self._load_cfd_btn = QPushButton("Load CFD CSV…")
-        self._load_cfd_btn.setToolTip("Load CFD profile CSV (two columns: coordinate, value)")
+        self._load_cfd_btn = QPushButton(tr("Load CFD CSV…"))
+        self._load_cfd_btn.setToolTip("Загрузить CSV профиля CFD (столбцы coordinate и value)")
         self._load_cfd_btn.clicked.connect(self._on_load_cfd)
 
-        self._compare_btn = QPushButton("Compare")
+        self._compare_btn = QPushButton(tr("Compare"))
         self._compare_btn.setEnabled(False)
         self._compare_btn.clicked.connect(self._on_compare)
 
-        self._exp_file_label = QLabel("No experiment file")
+        self._exp_file_label = QLabel(tr("No experiment file"))
         self._exp_file_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 10pt;")
 
-        self._cfd_file_label = QLabel("No CFD file")
+        self._cfd_file_label = QLabel(tr("No CFD file"))
         self._cfd_file_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 10pt;")
 
         btn_layout.addWidget(self._load_exp_btn)
@@ -95,11 +96,11 @@ class ProfilesPage(QWidget):
         layout.addWidget(self._chart)
 
         # Validation metrics
-        self._validation_box = QGroupBox("Validation Metrics")
+        self._validation_box = QGroupBox(tr("Validation Metrics"))
         val_layout = QVBoxLayout(self._validation_box)
 
         self._metrics_table = QTableWidget(0, 2)
-        self._metrics_table.setHorizontalHeaderLabels(["Metric", "Value"])
+        self._metrics_table.setHorizontalHeaderLabels([tr("Metric"), tr("Value")])
         self._metrics_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._metrics_table.setMinimumHeight(120)
         val_layout.addWidget(self._metrics_table)
@@ -119,7 +120,10 @@ class ProfilesPage(QWidget):
 
     def _on_load_experiment(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Load Experiment Profile CSV", "", "CSV Files (*.csv);;All Files (*)"
+            self,
+            tr("Load Experiment Profile CSV"),
+            "",
+            tr("CSV Files (*.csv);;All Files (*)"),
         )
         if path:
             self._experiment_path = Path(path)
@@ -129,7 +133,10 @@ class ProfilesPage(QWidget):
 
     def _on_load_cfd(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Load CFD Profile CSV", "", "CSV Files (*.csv);;All Files (*)"
+            self,
+            tr("Load CFD Profile CSV"),
+            "",
+            tr("CSV Files (*.csv);;All Files (*)"),
         )
         if path:
             self._cfd_path = Path(path)
@@ -155,9 +162,9 @@ class ProfilesPage(QWidget):
                 val.experiment_array,
                 val.cfd_array,
             )
-            self._set_status("Comparison complete.", ok=True)
+            self._set_status(tr("Comparison complete."), ok=True)
         except Exception as exc:  # noqa: BLE001
-            self._set_status(f"Comparison failed: {exc}", ok=False)
+            self._set_status(f"Ошибка сравнения: {exc}", ok=False)
             self._validation_box.setVisible(False)
 
     def _show_metrics(self, val: object) -> None:
@@ -172,7 +179,7 @@ class ProfilesPage(QWidget):
             ("RMSE", f"{val.rmse:.6f}"),
             ("MAE", f"{val.mae:.6f}"),
             ("MAPE", mape_str),
-            ("Pearson r", f"{val.pearson_r:.6f}"),
+            ("Коэффициент Пирсона r", f"{val.pearson_r:.6f}"),
         ]
         self._metrics_table.setRowCount(len(rows))
         for i, (metric, value) in enumerate(rows):
@@ -211,8 +218,8 @@ class ProfilesPage(QWidget):
         self._status_label.setText("")
         self._experiment_path = None
         self._cfd_path = None
-        self._exp_file_label.setText("No experiment file")
+        self._exp_file_label.setText(tr("No experiment file"))
         self._exp_file_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 10pt;")
-        self._cfd_file_label.setText("No CFD file")
+        self._cfd_file_label.setText(tr("No CFD file"))
         self._cfd_file_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 10pt;")
         self._compare_btn.setEnabled(False)

@@ -18,6 +18,12 @@ from iva.infrastructure.reporting.report_models import (
     ReportSection,
     ReportTable,
 )
+from iva.infrastructure.reporting.report_strings_ru import (
+    PEAK_INTERPRETATION_LABELS,
+    RISK_LABELS,
+    SIGNAL_ROLE_LABELS,
+    display_label,
+)
 
 if TYPE_CHECKING:
     from iva.core.models.analysis_result import AnalysisResult
@@ -43,65 +49,68 @@ def build_report_document(result: AnalysisResult) -> ReportDocument:
 
     # ── Section: Overview ──────────────────────────────────────────────────
     overview_body = (
-        f"Session ID:     {result.session_id}\n"
-        f"Completed at:   {result.completed_at.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
-        f"Source file:    {result.source_file_path}\n"
-        f"MD5 (source):   {result.source_file_md5}\n"
-        f"Warnings:       {len(result.warnings)}"
+        f"ID сеанса:        {result.session_id}\n"
+        f"Завершено:        {result.completed_at.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+        f"Исходный файл:    {result.source_file_path}\n"
+        f"MD5 источника:    {result.source_file_md5}\n"
+        f"Предупреждения:   {len(result.warnings)}"
     )
-    sections.append(ReportSection(title="Overview", body=overview_body, level=1))
+    sections.append(ReportSection(title="Обзор", body=overview_body, level=1))
 
     # ── Section: Data quality (validated_data) ─────────────────────────────
     if result.validated_data is not None:
         vd = result.validated_data
         dq_body = (
-            f"Sample count:       {vd.sample_count}\n"
-            f"Duration:           {vd.duration_seconds:.3f} s\n"
-            f"Sampling rate:      {vd.sampling_rate_hz:.1f} Hz\n"
-            f"Signal role:        {vd.signal_role}\n"
-            f"Physical unit:      {vd.physical_unit}\n"
-            f"Missing fraction:   {vd.missing_fraction:.4f}\n"
-            f"Outlier fraction:   {vd.outlier_fraction:.4f}"
+            f"Количество отсчетов: {vd.sample_count}\n"
+            f"Длительность:         {vd.duration_seconds:.3f} s\n"
+            f"Частота дискретизации:{vd.sampling_rate_hz:>10.1f} Hz\n"
+            f"Роль сигнала:         {display_label(SIGNAL_ROLE_LABELS, vd.signal_role)}\n"
+            f"Физическая единица:   {vd.physical_unit}\n"
+            f"Доля пропусков:       {vd.missing_fraction:.4f}\n"
+            f"Доля выбросов:        {vd.outlier_fraction:.4f}"
         )
-        sections.append(ReportSection(title="Data Quality", body=dq_body, level=1))
+        sections.append(ReportSection(title="Качество данных", body=dq_body, level=1))
     else:
         sections.append(
             ReportSection(
-                title="Data Quality", body="Raw data not available in this session.", level=1
+                title="Качество данных",
+                body="Исходные данные в этом сеансе недоступны.",
+                level=1,
             )
         )
 
     # ── Section: Preprocessing ─────────────────────────────────────────────
     if result.processed_data is not None:
         pd_data = result.processed_data
-        log_text = "\n".join(pd_data.preprocessing_log) if pd_data.preprocessing_log else "(none)"
+        log_text = "\n".join(pd_data.preprocessing_log) if pd_data.preprocessing_log else "(нет)"
         sections.append(
-            ReportSection(title="Preprocessing", body=f"Applied steps:\n{log_text}", level=1)
+            ReportSection(title="Предобработка", body=f"Выполненные операции:\n{log_text}", level=1)
         )
     else:
         sections.append(
-            ReportSection(title="Preprocessing", body="Processed data not available.", level=1)
+            ReportSection(title="Предобработка", body="Обработанные данные недоступны.", level=1)
         )
 
     # ── Section: Spectral Analysis ────────────────────────────────────────
     if result.spectrum is not None:
         sp = result.spectrum
         spec_body_lines = [
-            f"Frequency points:  {len(sp.frequencies)}",
-            f"RMS total:         {sp.rms_total:.6g}",
+            f"Частотных точек:    {len(sp.frequencies)}",
+            f"Общий RMS:          {sp.rms_total:.6g}",
         ]
         if sp.rms_in_band is not None:
-            spec_body_lines.append(f"RMS in band:       {sp.rms_in_band:.6g}")
+            spec_body_lines.append(f"RMS в полосе:       {sp.rms_in_band:.6g}")
         if sp.dominant_peak is not None:
             dp = sp.dominant_peak
             spec_body_lines.append(
-                f"Dominant peak:     {dp.frequency_hz:.3f} Hz "
-                f"(amp={dp.amplitude:.4g}, width={dp.width_hz_3db:.3f} Hz, "
-                f"{dp.interpretation}, conf={dp.confidence:.2f})"
+                f"Доминирующий пик:  {dp.frequency_hz:.3f} Hz "
+                f"(амплитуда={dp.amplitude:.4g}, ширина={dp.width_hz_3db:.3f} Hz, "
+                f"{display_label(PEAK_INTERPRETATION_LABELS, dp.interpretation)}, "
+                f"достоверность={dp.confidence:.2f})"
             )
-        spec_body_lines.append(f"Total peaks found: {len(sp.all_peaks)}")
+        spec_body_lines.append(f"Всего найдено пиков: {len(sp.all_peaks)}")
         sections.append(
-            ReportSection(title="Spectral Analysis", body="\n".join(spec_body_lines), level=1)
+            ReportSection(title="Спектральный анализ", body="\n".join(spec_body_lines), level=1)
         )
 
         # Peaks table
@@ -111,20 +120,20 @@ def build_report_document(result: AnalysisResult) -> ReportDocument:
                     f"{pk.frequency_hz:.3f}",
                     f"{pk.amplitude:.4e}",
                     f"{pk.width_hz_3db:.3f}",
-                    str(pk.interpretation),
+                    display_label(PEAK_INTERPRETATION_LABELS, pk.interpretation),
                     f"{pk.confidence:.2f}",
                 )
                 for pk in sp.all_peaks
             )
             tables.append(
                 ReportTable(
-                    title="Detected Spectral Peaks",
+                    title="Обнаруженные спектральные пики",
                     headers=(
-                        "Frequency (Hz)",
-                        "Amplitude",
-                        "Width -3dB (Hz)",
-                        "Interpretation",
-                        "Confidence",
+                        "Частота (Hz)",
+                        "Амплитуда",
+                        "Ширина -3 dB (Hz)",
+                        "Интерпретация",
+                        "Достоверность",
                     ),
                     rows=peak_rows,
                 )
@@ -132,7 +141,9 @@ def build_report_document(result: AnalysisResult) -> ReportDocument:
     else:
         sections.append(
             ReportSection(
-                title="Spectral Analysis", body="Spectral analysis not performed.", level=1
+                title="Спектральный анализ",
+                body="Спектральный анализ не выполнен.",
+                level=1,
             )
         )
 
@@ -140,22 +151,22 @@ def build_report_document(result: AnalysisResult) -> ReportDocument:
     if result.physics is not None:
         ph = result.physics
         phys_body = (
-            f"Reynolds number (Re):           {ph.reynolds_number:.4e}\n"
-            f"Strouhal number (St):           {ph.strouhal_number:.6f}\n"
-            f"Shedding frequency (fs):        {ph.calculated_shedding_frequency_hz:.4f} Hz\n"
-            f"Kinematic viscosity (nu):       {ph.kinematic_viscosity_m2s:.4e} m²/s\n"
-            f"Velocity ratio (Vr):            "
-            + (f"{ph.velocity_ratio:.4f}" if ph.velocity_ratio is not None else "N/A")
+            f"Число Рейнольдса (Re):          {ph.reynolds_number:.4e}\n"
+            f"Число Струхаля (St):            {ph.strouhal_number:.6f}\n"
+            f"Частота срыва (fs):             {ph.calculated_shedding_frequency_hz:.4f} Hz\n"
+            f"Кинематическая вязкость (nu):   {ph.kinematic_viscosity_m2s:.4e} m²/s\n"
+            f"Приведенная скорость (Vr):      "
+            + (f"{ph.velocity_ratio:.4f}" if ph.velocity_ratio is not None else "нет данных")
             + "\n"
-            "Frequency ratio (fs/fn):        "
-            + (f"{ph.frequency_ratio:.4f}" if ph.frequency_ratio is not None else "N/A")
+            "Отношение частот (fs/fn):       "
+            + (f"{ph.frequency_ratio:.4f}" if ph.frequency_ratio is not None else "нет данных")
         )
-        sections.append(ReportSection(title="Physics", body=phys_body, level=1))
+        sections.append(ReportSection(title="Физические параметры", body=phys_body, level=1))
     else:
         sections.append(
             ReportSection(
-                title="Physics",
-                body="Physics not calculated — flow parameters were not provided.",
+                title="Физические параметры",
+                body="Расчет не выполнен: параметры потока не заданы.",
                 level=1,
             )
         )
@@ -164,17 +175,18 @@ def build_report_document(result: AnalysisResult) -> ReportDocument:
     if result.risk is not None:
         risk = result.risk
         risk_body = (
-            f"Risk level:                {risk.risk_level.upper()}\n"
-            f"Frequency deviation:       {risk.dominant_frequency_deviation:.4f}\n\n"
-            f"Recommendation:\n{risk.recommendation_text}\n\n"
-            f"Contributing factors:\n" + "\n".join(f"  - {f}" for f in risk.contributing_factors)
+            f"Уровень риска:             {display_label(RISK_LABELS, risk.risk_level)}\n"
+            f"Отклонение частоты:        {risk.dominant_frequency_deviation:.4f}\n\n"
+            f"Рекомендация:\n{risk.recommendation_text}\n\n"
+            f"Учитываемые факторы:\n"
+            + "\n".join(f"  - {factor}" for factor in risk.contributing_factors)
         )
-        sections.append(ReportSection(title="Risk Assessment", body=risk_body, level=1))
+        sections.append(ReportSection(title="Оценка риска", body=risk_body, level=1))
     else:
         sections.append(
             ReportSection(
-                title="Risk Assessment",
-                body="Risk not assessed — physics not available or fn not set.",
+                title="Оценка риска",
+                body="Риск не оценен: физические параметры недоступны или fn не задана.",
                 level=1,
             )
         )
@@ -182,28 +194,31 @@ def build_report_document(result: AnalysisResult) -> ReportDocument:
     # ── Section: Validation (Experiment vs CFD) ───────────────────────────
     if result.validation is not None:
         val = result.validation
-        mape_str = f"{val.mape:.4f} %" if val.is_mape_valid and val.mape is not None else "N/A"
+        mape_str = (
+            f"{val.mape:.4f} %" if val.is_mape_valid and val.mape is not None else "нет данных"
+        )
         val_body = (
             f"RMSE:      {val.rmse:.6g}\n"
             f"MAE:       {val.mae:.6g}\n"
             f"MAPE:      {mape_str}\n"
-            f"Pearson r: {val.pearson_r:.6f}\n"
-            f"Points:    {len(val.coordinate_array)}"
+            f"Пирсон r:  {val.pearson_r:.6f}\n"
+            f"Точек:     {len(val.coordinate_array)}"
         )
-        sections.append(ReportSection(title="Experiment vs CFD Validation", body=val_body, level=1))
+        sections.append(ReportSection(title="Сравнение эксперимента и CFD", body=val_body, level=1))
 
     # ── Section: Warnings ─────────────────────────────────────────────────
     if result.warnings:
         warn_body = "\n".join(f"  [{i + 1}] {w}" for i, w in enumerate(result.warnings))
-        sections.append(ReportSection(title="Warnings", body=warn_body, level=1))
+        sections.append(ReportSection(title="Предупреждения", body=warn_body, level=1))
 
     sections.append(
         ReportSection(
-            title="Limitations and Disclaimer",
+            title="Ограничения и отказ от ответственности",
             body=(
-                "This report supports engineering review and does not replace qualified "
-                "inspection, structural assessment, or applicable safety procedures. "
-                "Conclusions are limited by the supplied data quality and analysis settings."
+                "Этот отчет предназначен для инженерного анализа и не заменяет "
+                "квалифицированное обследование, оценку конструкции или действующие "
+                "процедуры безопасности. Выводы ограничены качеством предоставленных "
+                "данных и настройками анализа."
             ),
             level=1,
         )
@@ -217,8 +232,8 @@ def build_report_document(result: AnalysisResult) -> ReportDocument:
     )
 
     return ReportDocument(
-        title="IVA Analysis Report",
-        subtitle=f"Source: {result.source_file_path.name}",
+        title="Отчет об анализе IVA",
+        subtitle=f"Источник: {result.source_file_path.name}",
         generated_at=datetime.now(tz=UTC),
         sections=tuple(sections),
         tables=tuple(tables),

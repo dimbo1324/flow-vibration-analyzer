@@ -53,6 +53,12 @@ _RISK_TEXTS = {
     RiskLevel.CRITICAL: _TEXT_CRITICAL,
 }
 
+_RISK_LABELS = {
+    RiskLevel.SAFE: "БЕЗОПАСНО",
+    RiskLevel.WATCH: "НАБЛЮДЕНИЕ",
+    RiskLevel.CRITICAL: "КРИТИЧЕСКИЙ",
+}
+
 _DOWNGRADE = {
     RiskLevel.CRITICAL: RiskLevel.WATCH,
     RiskLevel.WATCH: RiskLevel.SAFE,
@@ -126,16 +132,22 @@ def assess_risk(
 
     if deviation > _THRESHOLD_WATCH:
         base_risk = RiskLevel.SAFE
-        factors.append(f"Отклонение {deviation:.4f} > {_THRESHOLD_WATCH} → уровень SAFE")
+        factors.append(
+            f"Отклонение {deviation:.4f} > {_THRESHOLD_WATCH} → "
+            f"уровень {_RISK_LABELS[RiskLevel.SAFE]}"
+        )
     elif deviation > _THRESHOLD_CRITICAL:
         base_risk = RiskLevel.WATCH
         factors.append(
             f"Отклонение {deviation:.4f} ∈ ({_THRESHOLD_CRITICAL},"
-            f" {_THRESHOLD_WATCH}] → уровень WATCH"
+            f" {_THRESHOLD_WATCH}] → уровень {_RISK_LABELS[RiskLevel.WATCH]}"
         )
     else:
         base_risk = RiskLevel.CRITICAL
-        factors.append(f"Отклонение {deviation:.4f} ≤ {_THRESHOLD_CRITICAL} → уровень CRITICAL")
+        factors.append(
+            f"Отклонение {deviation:.4f} ≤ {_THRESHOLD_CRITICAL} → "
+            f"уровень {_RISK_LABELS[RiskLevel.CRITICAL]}"
+        )
 
     # --- Step 4: amplitude downgrade -------------------------------------
     risk = base_risk
@@ -150,7 +162,7 @@ def assess_risk(
                 factors.append(
                     f"Амплитуда доминирующего пика ({dominant.amplitude:.4g}) "
                     f"ниже порога ({threshold_amplitude:.4g}); "
-                    f"уровень понижен {base_risk.upper()} → {risk.upper()}"
+                    f"уровень понижен {_RISK_LABELS[base_risk]} → {_RISK_LABELS[risk]}"
                 )
 
     recommendation = _RISK_TEXTS[risk]

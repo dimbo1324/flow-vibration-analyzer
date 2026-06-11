@@ -15,6 +15,11 @@ from pathlib import Path
 
 from iva.core.models.analysis_result import AnalysisResult
 from iva.core.models.exceptions import ExportError
+from iva.infrastructure.reporting.report_strings_ru import (
+    PEAK_INTERPRETATION_LABELS,
+    RISK_LABELS,
+    display_label,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +52,7 @@ def export_analysis_summary_html(result: AnalysisResult, output_path: str | Path
             fh.write(content)
     except OSError as exc:
         raise ExportError(
-            user_message=f"Cannot write HTML summary to '{output_path.name}'.",
+            user_message=f"Не удалось записать сводку HTML в файл '{output_path.name}'.",
             technical_details=str(exc),
         ) from exc
 
@@ -82,19 +87,19 @@ def _render_html(result: AnalysisResult) -> str:
             dp = sp.dominant_peak
             dominant_info = (
                 f"{dp.frequency_hz:.2f} Hz "
-                f"(amplitude {dp.amplitude:.4e}, "
-                f"width {dp.width_hz_3db:.2f} Hz, "
-                f"{_e(dp.interpretation)})"
+                f"(амплитуда {dp.amplitude:.4e}, "
+                f"ширина {dp.width_hz_3db:.2f} Hz, "
+                f"{_e(display_label(PEAK_INTERPRETATION_LABELS, dp.interpretation))})"
             )
         spectrum_rows = f"""
-        <tr><th>Dominant peak</th><td>{dominant_info}</td></tr>
-        <tr><th>Peak count</th><td>{len(sp.all_peaks)}</td></tr>
-        <tr><th>RMS total</th><td>{sp.rms_total:.4e}</td></tr>
-        <tr><th>RMS in band</th><td>{rms_band}</td></tr>
-        <tr><th>Frequency points</th><td>{len(sp.frequencies)}</td></tr>
+        <tr><th>Доминирующий пик</th><td>{dominant_info}</td></tr>
+        <tr><th>Количество пиков</th><td>{len(sp.all_peaks)}</td></tr>
+        <tr><th>Общий RMS</th><td>{sp.rms_total:.4e}</td></tr>
+        <tr><th>RMS в полосе</th><td>{rms_band}</td></tr>
+        <tr><th>Частотные точки</th><td>{len(sp.frequencies)}</td></tr>
 """
     else:
-        spectrum_rows = "<tr><td colspan='2'>Spectral analysis not available.</td></tr>"
+        spectrum_rows = "<tr><td colspan='2'>Спектральный анализ недоступен.</td></tr>"
 
     # ---- peaks table ------------------------------------------------------
     peaks_rows = ""
@@ -105,7 +110,7 @@ def _render_html(result: AnalysisResult) -> str:
                 f"<td>{pk.frequency_hz:.2f}</td>"
                 f"<td>{pk.amplitude:.4e}</td>"
                 f"<td>{pk.width_hz_3db:.2f}</td>"
-                f"<td>{_e(pk.interpretation)}</td>"
+                f"<td>{_e(display_label(PEAK_INTERPRETATION_LABELS, pk.interpretation))}</td>"
                 f"<td>{pk.confidence:.2f}</td>"
                 f"</tr>\n"
             )
@@ -118,55 +123,55 @@ def _render_html(result: AnalysisResult) -> str:
         fr_txt = f"{ph.frequency_ratio:.4f}" if ph.frequency_ratio is not None else "—"
         fs_txt = f"{ph.calculated_shedding_frequency_hz:.4f}"
         physics_rows = f"""
-        <tr><th>Reynolds number (Re)</th><td>{ph.reynolds_number:.4e}</td></tr>
-        <tr><th>Strouhal number (St)</th><td>{ph.strouhal_number:.6f}</td></tr>
-        <tr><th>Shedding frequency (fs)</th><td>{fs_txt} Hz</td></tr>
-        <tr><th>Velocity ratio (Vr)</th><td>{vr_txt}</td></tr>
-        <tr><th>Frequency ratio (fs/fn)</th><td>{fr_txt}</td></tr>
-        <tr><th>Kinematic viscosity (ν)</th><td>{ph.kinematic_viscosity_m2s:.4e} m²/s</td></tr>
+        <tr><th>Число Рейнольдса (Re)</th><td>{ph.reynolds_number:.4e}</td></tr>
+        <tr><th>Число Струхаля (St)</th><td>{ph.strouhal_number:.6f}</td></tr>
+        <tr><th>Частота срыва (fs)</th><td>{fs_txt} Hz</td></tr>
+        <tr><th>Приведенная скорость (Vr)</th><td>{vr_txt}</td></tr>
+        <tr><th>Отношение частот (fs/fn)</th><td>{fr_txt}</td></tr>
+        <tr><th>Кинематическая вязкость (ν)</th><td>{ph.kinematic_viscosity_m2s:.4e} m²/s</td></tr>
 """
     else:
         physics_rows = (
-            "<tr><td colspan='2'>Physics not calculated (flow parameters not set).</td></tr>"
+            "<tr><td colspan='2'>Расчет не выполнен: параметры потока не заданы.</td></tr>"
         )
 
     # ---- risk block -------------------------------------------------------
     risk_block = ""
     if result.risk is not None:
         risk = result.risk
-        risk_level_str = _e(risk.risk_level.upper())
+        risk_level_str = _e(display_label(RISK_LABELS, risk.risk_level))
         recommendation = _e(risk.recommendation_text)
         deviation = f"{risk.dominant_frequency_deviation:.4f}"
         risk_block = f"""
-        <h2>Risk Assessment</h2>
+        <h2>Оценка риска</h2>
         <table>
-          <tr><th>Risk level</th><td><strong>{risk_level_str}</strong></td></tr>
-          <tr><th>Frequency deviation |fs/fn − 1|</th><td>{deviation}</td></tr>
-          <tr><th>Recommendation</th><td>{recommendation}</td></tr>
+          <tr><th>Уровень риска</th><td><strong>{risk_level_str}</strong></td></tr>
+          <tr><th>Отклонение частоты |fs/fn − 1|</th><td>{deviation}</td></tr>
+          <tr><th>Рекомендация</th><td>{recommendation}</td></tr>
         </table>
 """
     else:
-        risk_block = "<h2>Risk Assessment</h2><p>Not assessed (physics not available).</p>"
+        risk_block = "<h2>Оценка риска</h2><p>Не выполнена: физические параметры недоступны.</p>"
 
     # ---- warnings block ---------------------------------------------------
     warnings_block = ""
     if result.warnings:
         items = "".join(f"<li>{_e(w)}</li>" for w in result.warnings)
-        warnings_block = f"<h2>Warnings</h2><ul>{items}</ul>"
+        warnings_block = f"<h2>Предупреждения</h2><ul>{items}</ul>"
 
     # ---- peaks section ----------------------------------------------------
     peaks_section = ""
     if peaks_rows:
         peaks_section = f"""
-        <h2>Detected Peaks</h2>
+        <h2>Обнаруженные пики</h2>
         <table>
           <thead>
             <tr>
-              <th>Frequency (Hz)</th>
-              <th>Amplitude</th>
-              <th>Width -3 dB (Hz)</th>
-              <th>Interpretation</th>
-              <th>Confidence</th>
+              <th>Частота (Hz)</th>
+              <th>Амплитуда</th>
+              <th>Ширина -3 dB (Hz)</th>
+              <th>Интерпретация</th>
+              <th>Достоверность</th>
             </tr>
           </thead>
           <tbody>
@@ -176,11 +181,11 @@ def _render_html(result: AnalysisResult) -> str:
 """
 
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IVA Analysis Summary — {source_name}</title>
+  <title>Сводка анализа IVA — {source_name}</title>
   <style>
     body {{ font-family: Arial, sans-serif; max-width: 900px; margin: 2em auto;
             padding: 0 1em; color: #222; }}
@@ -194,22 +199,22 @@ def _render_html(result: AnalysisResult) -> str:
   </style>
 </head>
 <body>
-  <h1>IVA Analysis Summary</h1>
+  <h1>Сводка анализа IVA</h1>
   <p class="meta">
-    Source file: <strong>{source_name}</strong><br>
-    Completed: {completed}<br>
-    Session ID: {session_id}<br>
+    Исходный файл: <strong>{source_name}</strong><br>
+    Завершено: {completed}<br>
+    ID сеанса: {session_id}<br>
     MD5: {md5}
   </p>
 
-  <h2>Spectral Analysis</h2>
+  <h2>Спектральный анализ</h2>
   <table>
 {spectrum_rows}
   </table>
 
 {peaks_section}
 
-  <h2>Physics</h2>
+  <h2>Физические параметры</h2>
   <table>
 {physics_rows}
   </table>

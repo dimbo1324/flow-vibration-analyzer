@@ -51,11 +51,11 @@ def calculate_psd(
     if len(signal) < nperseg:
         raise InsufficientDataError(
             user_message=(
-                f"Signal length ({len(signal)} samples) is shorter than the "
-                f"Welch segment length ({nperseg} samples)."
+                f"Длина сигнала ({len(signal)} отсчетов) меньше длины сегмента "
+                f"Уэлча ({nperseg} отсчетов)."
             ),
             technical_details=f"len(signal)={len(signal)}, nperseg={nperseg}",
-            recovery_hint="Use a longer recording or reduce segment_length_samples.",
+            recovery_hint="Используйте более длинную запись или уменьшите segment_length_samples.",
         )
 
     noverlap = int(nperseg * settings.overlap_fraction)

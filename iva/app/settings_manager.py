@@ -65,9 +65,9 @@ def load_defaults(config_path: str | Path = _DEFAULT_CONFIG_PATH) -> AnalysisSet
             data = tomllib.load(fh)
     except Exception as exc:
         raise ProcessingError(
-            user_message=f"Cannot read settings file '{config_path.name}'.",
+            user_message=f"Не удалось прочитать файл настроек '{config_path.name}'.",
             technical_details=str(exc),
-            recovery_hint="Ensure the file is valid TOML.",
+            recovery_hint="Убедитесь, что файл содержит корректный TOML.",
         ) from exc
 
     preprocessing = _parse_preprocessing(data.get("preprocessing", {}))
@@ -101,9 +101,9 @@ def load_analysis_config_json(
         from iva.core.models.exceptions import IVAFileNotFoundError
 
         raise IVAFileNotFoundError(
-            user_message=f"Config file not found: '{config_path.name}'.",
+            user_message=f"Файл конфигурации не найден: '{config_path.name}'.",
             technical_details=f"Full path: {config_path}",
-            recovery_hint="Check the --config argument.",
+            recovery_hint="Проверьте путь, переданный в параметре --config.",
         )
 
     try:
@@ -111,13 +111,13 @@ def load_analysis_config_json(
             data = json.load(fh)
     except json.JSONDecodeError as exc:
         raise ProcessingError(
-            user_message=f"Config file '{config_path.name}' contains invalid JSON.",
+            user_message=f"Файл конфигурации '{config_path.name}' содержит некорректный JSON.",
             technical_details=str(exc),
-            recovery_hint="Validate the JSON syntax (e.g. with jsonlint).",
+            recovery_hint="Проверьте синтаксис JSON, например с помощью jsonlint.",
         ) from exc
     except OSError as exc:
         raise ProcessingError(
-            user_message=f"Cannot read config file '{config_path.name}'.",
+            user_message=f"Не удалось прочитать файл конфигурации '{config_path.name}'.",
             technical_details=str(exc),
         ) from exc
 
@@ -127,10 +127,12 @@ def load_analysis_config_json(
         role_assignment = _parse_column_assignment(col_section)
     except (KeyError, ValueError) as exc:
         raise ProcessingError(
-            user_message="Config file 'columns' section is incomplete or invalid.",
+            user_message=(
+                "Раздел 'columns' файла конфигурации заполнен не полностью " "или содержит ошибки."
+            ),
             technical_details=str(exc),
-            recovery_hint="Check that 'time_column', 'primary_signal_column', "
-            "'signal_role', and 'sampling_rate_hz' are present.",
+            recovery_hint="Проверьте наличие полей 'time_column', 'primary_signal_column', "
+            "'signal_role' и 'sampling_rate_hz'.",
         ) from exc
 
     # --- settings sections -------------------------------------------------
@@ -173,7 +175,7 @@ def save_settings(settings: AnalysisSettings, config_path: str | Path) -> None:
             fh.write(_settings_to_toml(settings))
     except OSError as exc:
         raise ExportError(
-            user_message=f"Cannot write settings to '{config_path.name}'.",
+            user_message=f"Не удалось записать настройки в файл '{config_path.name}'.",
             technical_details=str(exc),
         ) from exc
 

@@ -34,9 +34,9 @@ def save_project(session: AnalysisSession, file_path: str | Path) -> Path:
         destination = destination.with_suffix(_VIBPROJ_SUFFIX)
     if session.result is None:
         raise ExportError(
-            user_message="Cannot save project: the session has no analysis result.",
+            user_message="Не удалось сохранить проект: в сеансе нет результата анализа.",
             technical_details="session.result is None",
-            recovery_hint="Run an analysis before saving the project.",
+            recovery_hint="Выполните анализ перед сохранением проекта.",
         )
 
     payload: dict[str, Any] = {
@@ -52,7 +52,7 @@ def save_project(session: AnalysisSession, file_path: str | Path) -> Path:
         destination.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     except (OSError, TypeError, ValueError) as exc:
         raise ExportError(
-            user_message=f"Cannot write project file to '{destination.name}'.",
+            user_message=f"Не удалось записать файл проекта '{destination.name}'.",
             technical_details=str(exc),
         ) from exc
     logger.info("save_project: written to '%s'", destination)
@@ -64,37 +64,39 @@ def load_project(file_path: str | Path) -> AnalysisSession:
     source = Path(file_path)
     if not source.exists():
         raise ValidationError(
-            user_message=f"Project file not found: '{source.name}'.",
+            user_message=f"Файл проекта не найден: '{source.name}'.",
             technical_details=f"Path does not exist: {source}",
-            recovery_hint="Check the file path and try again.",
+            recovery_hint="Проверьте путь к файлу и повторите попытку.",
         )
     try:
         raw_payload: Any = json.loads(source.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ValidationError(
-            user_message=f"Cannot read project file '{source.name}': file is corrupted.",
+            user_message=f"Не удалось прочитать файл проекта '{source.name}': файл поврежден.",
             technical_details=str(exc),
-            recovery_hint="Re-create the project file by running a new analysis.",
+            recovery_hint="Выполните новый анализ и создайте файл проекта повторно.",
         ) from exc
     if not isinstance(raw_payload, dict):
         raise ValidationError(
-            user_message=f"Project file '{source.name}' has an invalid structure.",
+            user_message=f"Файл проекта '{source.name}' имеет некорректную структуру.",
             technical_details="Top-level JSON value is not an object",
         )
     payload: dict[str, Any] = raw_payload
     if payload.get("_vibproj_version") != VIBPROJ_SCHEMA_VERSION:
         raise ValidationError(
             user_message=(
-                f"Unsupported project file version: '{payload.get('_vibproj_version', '')}'. "
-                f"Expected '{VIBPROJ_SCHEMA_VERSION}'."
+                f"Версия файла проекта '{payload.get('_vibproj_version', '')}' не поддерживается. "
+                f"Ожидалась версия '{VIBPROJ_SCHEMA_VERSION}'."
             ),
             technical_details=f"_vibproj_version={payload.get('_vibproj_version')!r}",
-            recovery_hint="Re-create the project file with the current IVA version.",
+            recovery_hint="Создайте файл проекта заново в текущей версии IVA.",
         )
     result_raw = payload.get("result")
     if not isinstance(result_raw, dict):
         raise ValidationError(
-            user_message=f"Project file '{source.name}' is missing a valid result section.",
+            user_message=(
+                f"В файле проекта '{source.name}' отсутствует корректный " "раздел результата."
+            ),
             technical_details="payload['result'] is absent or not an object",
         )
     try:
@@ -107,9 +109,9 @@ def load_project(file_path: str | Path) -> AnalysisSession:
         raise
     except (KeyError, TypeError, ValueError, OverflowError) as exc:
         raise ValidationError(
-            user_message=f"Project file '{source.name}' is corrupted.",
+            user_message=f"Файл проекта '{source.name}' поврежден.",
             technical_details=str(exc),
-            recovery_hint="Re-create the project file by running a new analysis.",
+            recovery_hint="Выполните новый анализ и создайте файл проекта повторно.",
         ) from exc
     session = AnalysisSession(
         source_file_path=result.source_file_path,

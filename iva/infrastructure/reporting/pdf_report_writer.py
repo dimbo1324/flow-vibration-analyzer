@@ -3,12 +3,8 @@
 Generates a professional A4 PDF report from an :class:`AnalysisResult`.
 The report uses a *light* background suitable for printing.
 
-Cyrillic text (Russian recommendations) is rendered safely using the
-built-in ReportLab Helvetica fallback (ASCII-compatible) with Cyrillic
-characters transliterated or represented as-is when using the standard
-fonts.  Since ReportLab's built-in fonts do not include full Cyrillic,
-the recommendation text is included in the HTML report instead; in the
-PDF it is represented as the risk level label in English.
+Cyrillic text is rendered with an embedded TrueType font.  The writer checks
+the platform font directory and matplotlib's bundled DejaVu Sans fonts.
 
 Architecture rule: no numerical calculations here — only serialisation.
 """
@@ -16,6 +12,7 @@ Architecture rule: no numerical calculations here — only serialisation.
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from xml.sax.saxutils import escape
@@ -40,6 +37,8 @@ try:
         getSampleStyleSheet,
     )
     from reportlab.lib.units import mm  # type: ignore[import-untyped]
+    from reportlab.pdfbase import pdfmetrics  # type: ignore[import-untyped]
+    from reportlab.pdfbase.ttfonts import TTFont  # type: ignore[import-untyped]
     from reportlab.platypus import (  # type: ignore[import-untyped]
         PageBreak,
         Paragraph,
@@ -70,9 +69,9 @@ def export_pdf_report(result: AnalysisResult, output_path: str | Path) -> Path:
     """
     if not _REPORTLAB_AVAILABLE:
         raise ExportError(
-            user_message="PDF export is unavailable: reportlab is not installed.",
+            user_message="Экспорт PDF недоступен: библиотека reportlab не установлена.",
             technical_details="import reportlab failed",
-            recovery_hint="Install with: pip install reportlab",
+            recovery_hint="Установите библиотеку командой: pip install reportlab",
         )
 
     output_path = Path(output_path)
@@ -83,7 +82,7 @@ def export_pdf_report(result: AnalysisResult, output_path: str | Path) -> Path:
         raise
     except Exception as exc:
         raise ExportError(
-            user_message=f"Failed to write PDF report to '{output_path.name}'.",
+            user_message=f"Не удалось записать отчет PDF в файл '{output_path.name}'.",
             technical_details=str(exc),
         ) from exc
 
@@ -96,21 +95,55 @@ def export_pdf_report(result: AnalysisResult, output_path: str | Path) -> Path:
 # ---------------------------------------------------------------------------
 
 
+def _font_candidates() -> tuple[list[Path], list[Path]]:
+    regular = [
+        Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "arial.ttf",
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf"),
+    ]
+    bold = [
+        Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "arialbd.ttf",
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+        Path("/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"),
+    ]
+    try:
+        from matplotlib import get_data_path  # type: ignore[import-untyped]
+
+        font_dir = Path(get_data_path()) / "fonts" / "ttf"
+        regular.append(font_dir / "DejaVuSans.ttf")
+        bold.append(font_dir / "DejaVuSans-Bold.ttf")
+    except ImportError:
+        pass
+    return regular, bold
+
+
+def _register_pdf_fonts() -> tuple[str, str]:
+    """Register Cyrillic-capable fonts and return regular/bold names."""
+    regular_candidates, bold_candidates = _font_candidates()
+    regular_path = next((path for path in regular_candidates if path.is_file()), None)
+    bold_path = next((path for path in bold_candidates if path.is_file()), regular_path)
+    if regular_path is None or bold_path is None:
+        raise ExportError(
+            user_message="Не найден шрифт с поддержкой кириллицы для экспорта PDF.",
+            technical_details="No Arial, DejaVu Sans, or Liberation Sans TTF font found",
+            recovery_hint="Установите шрифт DejaVu Sans и повторите экспорт.",
+        )
+    if "IVARegular" not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont("IVARegular", str(regular_path)))
+    if "IVABold" not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont("IVABold", str(bold_path)))
+    return "IVARegular", "IVABold"
+
+
 def _safe_str(text: str) -> str:
-    """Return *text* with non-Latin-1 characters replaced by '?' for ReportLab."""
-    result = []
-    for ch in text:
-        try:
-            ch.encode("latin-1")
-            result.append(ch)
-        except (UnicodeEncodeError, ValueError):
-            result.append("?")
-    return escape("".join(result))
+    """Escape text for ReportLab while preserving Unicode characters."""
+    return escape(str(text))
 
 
 def _write_pdf(result: AnalysisResult, output_path: Path) -> None:  # noqa: C901
     """Build and write the PDF document."""
     doc_model = build_report_document(result)
+    regular_font, bold_font = _register_pdf_fonts()
 
     doc = SimpleDocTemplate(  # type: ignore[possibly-undefined]
         str(output_path),
@@ -127,6 +160,7 @@ def _write_pdf(result: AnalysisResult, output_path: Path) -> None:  # noqa: C901
     title_style = ParagraphStyle(  # type: ignore[possibly-undefined]
         "IVATitle",
         parent=base_styles["Title"],
+        fontName=bold_font,
         fontSize=18,
         spaceAfter=6,
         textColor=colors.HexColor("#111111"),  # type: ignore[possibly-undefined]
@@ -134,6 +168,7 @@ def _write_pdf(result: AnalysisResult, output_path: Path) -> None:  # noqa: C901
     subtitle_style = ParagraphStyle(
         "IVASubtitle",
         parent=base_styles["Normal"],
+        fontName=regular_font,
         fontSize=11,
         textColor=colors.HexColor("#555555"),
         spaceAfter=12,
@@ -141,6 +176,7 @@ def _write_pdf(result: AnalysisResult, output_path: Path) -> None:  # noqa: C901
     heading1_style = ParagraphStyle(
         "IVAHeading1",
         parent=base_styles["Heading1"],
+        fontName=bold_font,
         fontSize=13,
         textColor=colors.HexColor("#222222"),
         spaceBefore=12,
@@ -150,6 +186,7 @@ def _write_pdf(result: AnalysisResult, output_path: Path) -> None:  # noqa: C901
     body_style = ParagraphStyle(
         "IVABody",
         parent=base_styles["Normal"],
+        fontName=regular_font,
         fontSize=10,
         leading=14,
         textColor=colors.HexColor("#1a1a1a"),
@@ -158,6 +195,7 @@ def _write_pdf(result: AnalysisResult, output_path: Path) -> None:  # noqa: C901
     meta_style = ParagraphStyle(
         "IVAMeta",
         parent=base_styles["Normal"],
+        fontName=regular_font,
         fontSize=9,
         textColor=colors.HexColor("#666666"),
         spaceAfter=4,
@@ -172,9 +210,9 @@ def _write_pdf(result: AnalysisResult, output_path: Path) -> None:  # noqa: C901
 
     # Metadata block
     meta_items = [
-        f"Session ID: {doc_model.metadata.get('session_id', '')}",
-        f"Generated:  {doc_model.generated_at.strftime('%Y-%m-%d %H:%M:%S UTC')}",
-        f"Source MD5: {doc_model.metadata.get('source_file_md5', '')}",
+        f"ID сеанса: {doc_model.metadata.get('session_id', '')}",
+        f"Сформировано: {doc_model.generated_at.strftime('%Y-%m-%d %H:%M:%S UTC')}",
+        f"MD5 источника: {doc_model.metadata.get('source_file_md5', '')}",
     ]
     for item in meta_items:
         story.append(Paragraph(_safe_str(item), meta_style))
@@ -199,7 +237,7 @@ def _write_pdf(result: AnalysisResult, output_path: Path) -> None:  # noqa: C901
             story.append(Paragraph(_safe_str(tbl.title), heading1_style))
             story.append(Spacer(1, 2 * mm))
 
-            table_data: list[list[str]] = [list(tbl.headers)]
+            table_data: list[list[str]] = [[_safe_str(header) for header in tbl.headers]]
             for row in tbl.rows:
                 table_data.append([_safe_str(cell) for cell in row])
 
@@ -215,7 +253,8 @@ def _write_pdf(result: AnalysisResult, output_path: Path) -> None:  # noqa: C901
                     [
                         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8e8e8")),
                         ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#111111")),
-                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTNAME", (0, 0), (-1, 0), bold_font),
+                        ("FONTNAME", (0, 1), (-1, -1), regular_font),
                         ("FONTSIZE", (0, 0), (-1, -1), 9),
                         ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#bbbbbb")),
                         (

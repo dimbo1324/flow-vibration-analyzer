@@ -34,9 +34,9 @@ def read_parquet(file_path: str) -> RawFileData:
 
     if not path.exists():
         raise IVAFileNotFoundError(
-            user_message="Input file was not found.",
+            user_message="Входной файл не найден.",
             technical_details=f"Full path checked: {path}",
-            recovery_hint="Check that the file path is correct and the file has not been moved.",
+            recovery_hint="Проверьте путь к файлу и убедитесь, что файл не был перемещен.",
         )
 
     file_size = path.stat().st_size
@@ -52,19 +52,18 @@ def read_parquet(file_path: str) -> RawFileData:
         df = pd.read_parquet(path, engine="pyarrow")
     except FileNotFoundError as exc:
         raise IVAFileNotFoundError(
-            user_message="Input file was not found.",
+            user_message="Входной файл не найден.",
             technical_details=str(exc),
         ) from exc
     except Exception as exc:
         exc_str = str(exc).lower()
         if "corrupt" in exc_str or "invalid" in exc_str or "magic" in exc_str:
             raise FileCorruptedError(
-                user_message="The Parquet file appears to be corrupted "
-                "or is not a valid Parquet file.",
+                user_message="Файл Parquet поврежден или не является корректным файлом Parquet.",
                 technical_details=str(exc),
             ) from exc
         raise FileReadError(
-            user_message="The Parquet file could not be read.",
+            user_message="Не удалось прочитать файл Parquet.",
             technical_details=str(exc),
         ) from exc
 

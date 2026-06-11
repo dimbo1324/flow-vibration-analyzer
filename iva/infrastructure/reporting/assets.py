@@ -33,4 +33,4 @@ REPORT_BAD = "#721c24"
 REPORT_BORDER = "#cccccc"
 
 IVA_APP_NAME = "Industrial Vibration Analyzer (IVA)"
-IVA_REPORT_TITLE = "IVA Analysis Report"
+IVA_REPORT_TITLE = "Отчет об анализе IVA"

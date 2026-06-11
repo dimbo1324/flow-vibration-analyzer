@@ -66,7 +66,7 @@ def export_spectrum_csv(result: AnalysisResult, output_path: str | Path) -> Path
     output_path = Path(output_path)
     if result.spectrum is None:
         raise ExportError(
-            user_message="Cannot export spectrum: spectral analysis was not performed.",
+            user_message="Не удалось экспортировать спектр: спектральный анализ не выполнен.",
             technical_details="result.spectrum is None",
         )
 
@@ -90,7 +90,7 @@ def export_spectrum_csv(result: AnalysisResult, output_path: str | Path) -> Path
                 writer.writerow([f"{float(freq):.6f}", f"{float(psd):.6e}", is_peak])
     except OSError as exc:
         raise ExportError(
-            user_message=f"Cannot write spectrum CSV to '{output_path.name}'.",
+            user_message=f"Не удалось записать CSV спектра в файл '{output_path.name}'.",
             technical_details=str(exc),
         ) from exc
 
@@ -118,7 +118,7 @@ def export_signal_csv(result: AnalysisResult, output_path: str | Path) -> Path:
     output_path = Path(output_path)
     if result.processed_data is None:
         raise ExportError(
-            user_message="Cannot export signal: signal processing was not performed.",
+            user_message="Не удалось экспортировать сигнал: обработка сигнала не выполнена.",
             technical_details="result.processed_data is None",
         )
 
@@ -133,7 +133,7 @@ def export_signal_csv(result: AnalysisResult, output_path: str | Path) -> Path:
                 writer.writerow([f"{float(t):.6f}", f"{float(sc):.6e}", f"{float(sf):.6e}"])
     except OSError as exc:
         raise ExportError(
-            user_message=f"Cannot write signal CSV to '{output_path.name}'.",
+            user_message=f"Не удалось записать CSV сигнала в файл '{output_path.name}'.",
             technical_details=str(exc),
         ) from exc
 
@@ -195,7 +195,9 @@ def export_physics_summary_csv(result: AnalysisResult, output_path: str | Path) 
             writer.writerows(rows)
     except OSError as exc:
         raise ExportError(
-            user_message=f"Cannot write physics summary CSV to '{output_path.name}'.",
+            user_message=(
+                "Не удалось записать CSV физических параметров в файл " f"'{output_path.name}'."
+            ),
             technical_details=str(exc),
         ) from exc
 

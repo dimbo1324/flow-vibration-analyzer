@@ -57,11 +57,11 @@ def analysis_result_from_dict(data: Mapping[str, Any]) -> AnalysisResult:
     if data.get("_schema_version") != VIBPROJ_SCHEMA_VERSION:
         raise ValidationError(
             user_message=(
-                f"Unsupported session file version: '{data.get('_schema_version', '')}'. "
-                f"Expected '{VIBPROJ_SCHEMA_VERSION}'."
+                f"Версия файла сеанса '{data.get('_schema_version', '')}' не поддерживается. "
+                f"Ожидалась версия '{VIBPROJ_SCHEMA_VERSION}'."
             ),
             technical_details=f"_schema_version={data.get('_schema_version')!r}",
-            recovery_hint="Re-create the session file with the current IVA version.",
+            recovery_hint="Создайте файл сеанса заново в текущей версии IVA.",
         )
 
     try:
@@ -85,9 +85,9 @@ def analysis_result_from_dict(data: Mapping[str, Any]) -> AnalysisResult:
         raise
     except (KeyError, TypeError, ValueError, OverflowError) as exc:
         raise ValidationError(
-            user_message="Session file is corrupted or has an unexpected structure.",
+            user_message="Файл сеанса поврежден или имеет неожиданную структуру.",
             technical_details=str(exc),
-            recovery_hint="Re-create the session file by running a new analysis.",
+            recovery_hint="Выполните новый анализ и создайте файл сеанса повторно.",
         ) from exc
 
 

@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
 )
 
 from iva.core.models.exceptions import ExportError
+from iva.ui.strings_ru import tr
 from iva.ui.styles.theme import (
     COLOR_ACCENT,
     COLOR_BAD,
@@ -125,11 +126,11 @@ class ChartWidget(QWidget):
             self._canvas.mpl_connect("motion_notify_event", self._on_pan_motion)
 
             controls = QHBoxLayout()
-            self._reset_button = QPushButton("Reset view")
+            self._reset_button = QPushButton(tr("Reset view"))
             self._reset_button.clicked.connect(self.reset_view)
-            self._png_button = QPushButton("Save PNG")
+            self._png_button = QPushButton(tr("Save PNG"))
             self._png_button.clicked.connect(self._save_png_dialog)
-            self._cursor_checkbox = QCheckBox("Inspect cursor")
+            self._cursor_checkbox = QCheckBox(tr("Inspect cursor"))
             self._cursor_checkbox.toggled.connect(self.enable_cursor_inspection)
             controls.addWidget(self._reset_button)
             controls.addWidget(self._png_button)
@@ -146,6 +147,22 @@ class ChartWidget(QWidget):
                         f"background: {COLOR_SURFACE}; color: {COLOR_TEXT};"
                         f" border-bottom: 1px solid #333;"
                     )
+                    toolbar_labels = {
+                        "Home": "Исходный вид",
+                        "Back": "Назад",
+                        "Forward": "Вперед",
+                        "Pan": "Панорамирование",
+                        "Zoom": "Масштабирование",
+                        "Subplots": "Параметры областей",
+                        "Customize": "Настроить график",
+                        "Save": "Сохранить",
+                    }
+                    for action in self._toolbar.actions():
+                        source = action.text().replace("&", "")
+                        translated = toolbar_labels.get(source)
+                        if translated:
+                            action.setText(translated)
+                            action.setToolTip(translated)
                     layout.addWidget(self._toolbar)
                 except Exception:  # noqa: BLE001
                     pass  # toolbar is optional
@@ -160,7 +177,7 @@ class ChartWidget(QWidget):
             self._coord_label.setVisible(False)
             layout.addWidget(self._coord_label)
         else:
-            lbl = QLabel("Chart requires matplotlib\n(pip install matplotlib)")
+            lbl = QLabel(tr("Chart requires matplotlib\n(pip install matplotlib)"))
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 12pt;")
             layout.addWidget(lbl)
@@ -295,7 +312,7 @@ class ChartWidget(QWidget):
         """
         if not _MATPLOTLIB_AVAILABLE:
             raise ExportError(
-                user_message="PNG export is unavailable: matplotlib is not installed.",
+                user_message="Экспорт PNG недоступен: библиотека matplotlib не установлена.",
                 technical_details="matplotlib import failed",
             )
         output_path = Path(output_path)
@@ -309,14 +326,14 @@ class ChartWidget(QWidget):
             )
         except Exception as exc:
             raise ExportError(
-                user_message=f"Cannot save PNG to '{output_path.name}'.",
+                user_message=f"Не удалось сохранить PNG в файл '{output_path.name}'.",
                 technical_details=str(exc),
             ) from exc
         return output_path
 
     def _save_png_dialog(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
-            self, "Save Chart as PNG", "chart.png", "PNG Images (*.png)"
+            self, tr("Save Chart as PNG"), "chart.png", tr("PNG Images (*.png)")
         )
         if path:
             self.export_png(path)
@@ -329,15 +346,15 @@ class ChartWidget(QWidget):
         self,
         time_array: NDArray[np.float64],
         signal_array: NDArray[np.float64],
-        label: str = "Signal",
+        label: str = "Сигнал",
     ) -> None:
         """Plot a time-domain signal."""
         if not _MATPLOTLIB_AVAILABLE:
             return
         self._ax.clear()
         self._ax.plot(time_array, signal_array, color=COLOR_ACCENT, linewidth=0.8, label=label)
-        self._ax.set_xlabel("Time (s)", color=COLOR_MUTED, fontsize=9)
-        self._ax.set_ylabel("Amplitude", color=COLOR_MUTED, fontsize=9)
+        self._ax.set_xlabel(tr("Time (s)"), color=COLOR_MUTED, fontsize=9)
+        self._ax.set_ylabel(tr("Amplitude"), color=COLOR_MUTED, fontsize=9)
         self._ax.legend(
             facecolor=COLOR_SURFACE,
             labelcolor=COLOR_TEXT,
@@ -353,8 +370,8 @@ class ChartWidget(QWidget):
         time_array: NDArray[np.float64],
         signal_a: NDArray[np.float64],
         signal_b: NDArray[np.float64],
-        label_a: str = "Cleaned",
-        label_b: str = "Filtered",
+        label_a: str = "Очищенный",
+        label_b: str = "Отфильтрованный",
     ) -> None:
         """Plot two overlaid time-domain signals."""
         if not _MATPLOTLIB_AVAILABLE:
@@ -362,8 +379,8 @@ class ChartWidget(QWidget):
         self._ax.clear()
         self._ax.plot(time_array, signal_a, color=COLOR_MUTED, linewidth=0.6, label=label_a)
         self._ax.plot(time_array, signal_b, color=COLOR_ACCENT, linewidth=0.8, label=label_b)
-        self._ax.set_xlabel("Time (s)", color=COLOR_MUTED, fontsize=9)
-        self._ax.set_ylabel("Amplitude", color=COLOR_MUTED, fontsize=9)
+        self._ax.set_xlabel(tr("Time (s)"), color=COLOR_MUTED, fontsize=9)
+        self._ax.set_ylabel(tr("Amplitude"), color=COLOR_MUTED, fontsize=9)
         self._ax.legend(
             facecolor=COLOR_SURFACE,
             labelcolor=COLOR_TEXT,
@@ -401,7 +418,7 @@ class ChartWidget(QWidget):
                 fontsize=7,
                 framealpha=0.8,
             )
-        self._ax.set_xlabel("Frequency (Hz)", color=COLOR_MUTED, fontsize=9)
+        self._ax.set_xlabel(tr("Frequency (Hz)"), color=COLOR_MUTED, fontsize=9)
         self._ax.set_ylabel("PSD", color=COLOR_MUTED, fontsize=9)
         self._style_axes()
         self._capture_home_view()
@@ -417,7 +434,7 @@ class ChartWidget(QWidget):
             return
         self._ax.clear()
         self._ax.plot(time_array, rms_trend, color=COLOR_WARN, linewidth=0.9)
-        self._ax.set_xlabel("Time (s)", color=COLOR_MUTED, fontsize=9)
+        self._ax.set_xlabel(tr("Time (s)"), color=COLOR_MUTED, fontsize=9)
         self._ax.set_ylabel("RMS", color=COLOR_MUTED, fontsize=9)
         self._style_axes()
         self._capture_home_view()
@@ -428,7 +445,7 @@ class ChartWidget(QWidget):
         coords: NDArray[np.float64],
         experiment: NDArray[np.float64],
         cfd: NDArray[np.float64],
-        label_exp: str = "Experiment",
+        label_exp: str = "Эксперимент",
         label_cfd: str = "CFD",
     ) -> None:
         """Plot two overlaid profiles (experiment vs CFD)."""
@@ -437,8 +454,8 @@ class ChartWidget(QWidget):
         self._ax.clear()
         self._ax.plot(coords, experiment, color=COLOR_ACCENT, linewidth=1.2, label=label_exp)
         self._ax.plot(coords, cfd, color=COLOR_WARN, linewidth=1.2, linestyle="--", label=label_cfd)
-        self._ax.set_xlabel("Coordinate", color=COLOR_MUTED, fontsize=9)
-        self._ax.set_ylabel("Value", color=COLOR_MUTED, fontsize=9)
+        self._ax.set_xlabel(tr("Coordinate"), color=COLOR_MUTED, fontsize=9)
+        self._ax.set_ylabel(tr("Value"), color=COLOR_MUTED, fontsize=9)
         self._ax.legend(
             facecolor=COLOR_SURFACE,
             labelcolor=COLOR_TEXT,

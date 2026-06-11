@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from iva.core.models.analysis_result import (
     PhysicsResult,
@@ -68,6 +69,15 @@ def _make_spectrum(dominant_amplitude: float = 1e3) -> SpectrumResult:
 
 class TestAssessRisk:
 
+    @pytest.mark.parametrize(
+        ("fs", "fn"),
+        [(60.0, 40.0), (48.0, 40.0), (42.0, 40.0)],
+    )
+    def test_all_risk_recommendations_are_russian(self, fs: float, fn: float) -> None:
+        result = assess_risk(_make_physics(fs=fs, fn=fn), _make_spectrum(1e6))
+        assert any("Ѐ" <= ch <= "ӿ" for ch in result.recommendation_text)
+        assert "risk" not in result.recommendation_text.lower()
+
     def test_critical_when_deviation_small(self) -> None:
         """deviation ≤ 0.10 → CRITICAL (with large amplitude)."""
         # fs very close to fn: frequency_ratio = 1.05 → deviation = 0.05
@@ -121,6 +131,14 @@ class TestAssessRisk:
         spectrum = _make_spectrum(dominant_amplitude=1e6)
         result = assess_risk(physics, spectrum)
         assert len(result.contributing_factors) > 0
+
+    def test_contributing_factors_use_russian_risk_labels(self) -> None:
+        physics = _make_physics(fs=42.0, fn=40.0)
+        spectrum = _make_spectrum(dominant_amplitude=1e6)
+        result = assess_risk(physics, spectrum)
+        factors = " ".join(result.contributing_factors)
+        assert "КРИТИЧЕСКИЙ" in factors
+        assert "CRITICAL" not in factors
 
     def test_amplitude_downgrade_critical_to_watch(self) -> None:
         """Small dominant peak amplitude should downgrade CRITICAL → WATCH."""
