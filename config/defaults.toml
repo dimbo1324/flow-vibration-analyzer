@@ -1,6 +1,7 @@
+# NOTE: The application version is defined solely in iva/__version__.py
+# (the single source of truth). It is intentionally NOT duplicated here.
 [application]
 name = "Industrial Vibration Analyzer"
-version = "0.1.0"
 
 [paths]
 examples_dir = "data/examples"

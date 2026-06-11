@@ -1,6 +1,6 @@
 """RMS calculation functions (Algorithms 8 and band RMS).
 
-Algorithm reference: documentation/11_algorithms.md, Algorithm 8 (sliding RMS).
+Algorithm reference: docs/11_algorithms.md, Algorithm 8 (sliding RMS).
 All operations are vectorised — no Python loops over array elements.
 """
 

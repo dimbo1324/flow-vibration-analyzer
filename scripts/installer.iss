@@ -1,9 +1,11 @@
 ; Inno Setup script for Industrial Vibration Analyzer (IVA)
-; Build with: ISCC scripts/installer.iss
+; Build through: python scripts/build_installer.py
 ; Requires PyInstaller output in dist/IVA/
 
 #define MyAppName "Industrial Vibration Analyzer"
-#define MyAppVersion "1.0.0"
+#ifndef MyAppVersion
+  #error MyAppVersion must be supplied by scripts/build_installer.py
+#endif
 #define MyAppPublisher "IVA Project"
 #define MyAppExeName "IVA.exe"
 #define MyAppID "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"

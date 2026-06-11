@@ -3,7 +3,7 @@
 Verifies that ``iva/app/``, ``iva/cli/``, and ``iva/infrastructure/``
 do not import forbidden modules (``iva.ui``, ``PySide6``, or ``PyQt5``).
 
-These tests enforce the layer constraints from ``documentation/02_architecture.md``.
+These tests enforce the layer constraints from ``docs/02_architecture.md``.
 """
 
 from __future__ import annotations

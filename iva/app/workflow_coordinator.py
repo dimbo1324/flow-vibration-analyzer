@@ -1,7 +1,7 @@
 """Pipeline coordinator — runs all analysis steps in the correct order.
 
 This module is the single place that orchestrates the full processing pipeline
-defined in ``documentation/09_processing_pipeline.md``.  It calls modules from
+defined in ``docs/09_processing_pipeline.md``.  It calls modules from
 ``iva.core`` and ``iva.infrastructure``; it must NOT perform any numerical
 calculations itself.
 
@@ -66,7 +66,7 @@ def _compute_md5(file_path: Path) -> str:
 def run_pipeline(session: AnalysisSession) -> AnalysisResult:
     """Execute the full analysis pipeline and return an :class:`AnalysisResult`.
 
-    Steps (per documentation/09_processing_pipeline.md):
+    Steps (per docs/09_processing_pipeline.md):
         1. Validate session readiness.
         2. Read the source file.
         3. Validate data quality.

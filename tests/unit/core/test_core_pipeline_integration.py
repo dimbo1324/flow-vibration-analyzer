@@ -68,7 +68,7 @@ def test_core_chain_clean_sine_end_to_end():
 
     processed = preprocess_signal(validated, PreprocessingSettings())
 
-    # The preprocessing pipeline order is fixed (documentation/09):
+    # The preprocessing pipeline order is fixed (docs/09):
     # remove_mean -> outlier replacement -> fill_gaps -> bandpass filter.
     log_keys = [entry.split(":")[0] for entry in processed.preprocessing_log]
     assert log_keys == [

@@ -66,7 +66,7 @@ def assess_risk(
 ) -> RiskAssessment:
     """Classify the resonance risk and generate a Russian engineering recommendation.
 
-    Algorithm 10 from ``documentation/11_algorithms.md``.
+    Algorithm 10 from ``docs/11_algorithms.md``.
 
     Steps
     -----

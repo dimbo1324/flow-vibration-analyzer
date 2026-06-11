@@ -1,7 +1,7 @@
 """Signal preprocessing pipeline (Algorithms 1, 3, and the main pipeline).
 
-Algorithm reference: documentation/11_algorithms.md, Algorithms 1 and 3.
-Pipeline order (fixed, per documentation/09_processing_pipeline.md):
+Algorithm reference: docs/11_algorithms.md, Algorithms 1 and 3.
+Pipeline order (fixed, per docs/09_processing_pipeline.md):
     1. remove_mean
     2. detect_outliers → replace_outliers
     3. fill_gaps
@@ -128,7 +128,7 @@ def preprocess_signal(
 ) -> ProcessedSignalData:
     """Run the full preprocessing pipeline and return cleaned signal data.
 
-    Pipeline order (fixed per documentation/09_processing_pipeline.md):
+    Pipeline order (fixed per docs/09_processing_pipeline.md):
         1. remove_mean
         2. detect_outliers + replace_outliers
         3. fill_gaps

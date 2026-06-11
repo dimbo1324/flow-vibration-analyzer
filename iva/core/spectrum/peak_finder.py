@@ -1,6 +1,6 @@
 """Peak detection and interpretation in PSD spectra (Algorithms 6 and 7).
 
-Algorithm reference: documentation/11_algorithms.md, Algorithms 6 and 7.
+Algorithm reference: docs/11_algorithms.md, Algorithms 6 and 7.
 
 Algorithm 6 — peak finding:
     1. Convert PSD to dB: psd_db = 10 * log10(psd)
@@ -117,7 +117,7 @@ def find_peaks(
 def _is_harmonic(peak: SpectralPeak, peaks: list[SpectralPeak]) -> bool:
     """Return True if *peak* is a harmonic of a stronger fundamental peak.
 
-    Implements Algorithm 7 rule 2 (documentation/11_algorithms.md): a peak is a
+    Implements Algorithm 7 rule 2 (docs/11_algorithms.md): a peak is a
     HARMONIC if its frequency lies within ``_HARMONIC_THRESHOLD`` (2 %) of an
     integer multiple (2x, 3x, 4x) of *another* peak whose amplitude is at least
     twice as high.  This rule is purely a peak-to-peak relationship and does not
@@ -140,7 +140,7 @@ def interpret_peaks(
     peaks: list[SpectralPeak],
     physics_result: PhysicsResult | None,
 ) -> list[SpectralPeak]:
-    """Classify each peak following Algorithm 7 (documentation/11_algorithms.md).
+    """Classify each peak following Algorithm 7 (docs/11_algorithms.md).
 
     Rules are applied in order; the first match wins:
 
@@ -157,7 +157,7 @@ def interpret_peaks(
     the relationship between detected peaks.
 
     The natural frequency is recovered from the canonical ``PhysicsResult``
-    fields: documentation/10 defines ``frequency_ratio = fs / fn``, so
+    fields: docs/10 defines ``frequency_ratio = fs / fn``, so
     ``fn = calculated_shedding_frequency_hz / frequency_ratio`` exactly
     (``PhysicsResult`` intentionally stores the ratio rather than ``fn``).
 

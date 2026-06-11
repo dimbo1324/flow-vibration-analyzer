@@ -161,7 +161,7 @@ def main() -> int:
     else:
         (ROOT / "dist" / "release").mkdir(parents=True, exist_ok=True)
         run_command(
-            [str(iscc), "scripts/installer.iss"],
+            [str(iscc), f"/DMyAppVersion={version}", "scripts/installer.iss"],
             "Building Inno Setup installer",
         )
         copy_installer(version)

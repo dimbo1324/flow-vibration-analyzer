@@ -1,6 +1,6 @@
 """Welch PSD estimator (Algorithm 5).
 
-Algorithm reference: documentation/11_algorithms.md, Algorithm 5.
+Algorithm reference: docs/11_algorithms.md, Algorithm 5.
 Uses scipy.signal.welch with scaling='density' so units are [physical]²/Hz.
 The segment length is fixed at settings.segment_length_samples (default 1024)
 with 50 % overlap.

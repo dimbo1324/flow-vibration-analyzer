@@ -1,6 +1,6 @@
 """Butterworth digital filters with zero-phase shift (Algorithm 4).
 
-Algorithm reference: documentation/11_algorithms.md, Algorithm 4.
+Algorithm reference: docs/11_algorithms.md, Algorithm 4.
 ``filtfilt`` is mandatory — it applies the filter forward and backward,
 eliminating phase distortion entirely.  Using ``lfilter`` would shift peaks
 in time, which is unacceptable for vibration signal analysis.

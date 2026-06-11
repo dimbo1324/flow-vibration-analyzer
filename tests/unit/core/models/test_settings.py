@@ -1,6 +1,6 @@
 """Tests for settings dataclasses and their default values.
 
-Default values are verified against documentation/10_data_models_and_schemas.md.
+Default values are verified against docs/10_data_models_and_schemas.md.
 """
 
 from __future__ import annotations
