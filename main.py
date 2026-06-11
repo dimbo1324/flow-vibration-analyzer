@@ -1,6 +1,6 @@
 def main() -> None:
-    print("Industrial Vibration Analyzer foundation is ready.")
-    print("No analysis pipeline is implemented yet.")
+    print("Industrial Vibration Analyzer (IVA)")
+    print("Use: python -m iva.cli.main analyze --help")
 
 
 if __name__ == "__main__":

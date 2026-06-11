@@ -158,9 +158,37 @@ The full documentation package is located in [`documentation/`](documentation/).
 Start with [`documentation/00_project_overview.md`](documentation/00_project_overview.md) for an
 introduction to the project, its engineering context and design goals.
 
+## CLI Usage
+
+Stage 7 adds a full command-line interface.  Run a complete analysis with:
+
+```bash
+python -m iva.cli.main analyze \
+    --data data/examples/example_clean_sine.csv \
+    --config config/example_config.json \
+    --output reports/run_001
+```
+
+The command produces the following files in the output directory:
+
+| File | Description |
+|---|---|
+| `analysis_summary.json` | Machine-readable JSON summary (scalars only, no large arrays) |
+| `spectrum.csv` | Frequency / PSD / peak-marker table |
+| `signal.csv` | Time / cleaned signal / filtered signal table |
+| `physics_summary.csv` | Physics parameters and risk level (key–value format) |
+| `analysis_summary.html` | Static HTML summary page (no JS, no external assets) |
+
+Get CLI help:
+
+```bash
+python -m iva.cli.main --help
+python -m iva.cli.main analyze --help
+```
+
 ## Development Status
 
-**Stage 5 complete — Spectral Analysis.**
+**Stage 7 complete — Application Coordination Layer and CLI.**
 
 - Stage 1: repository foundation, configuration, documentation baseline.
 - Stage 2: full domain model layer in `iva/core/models/` — frozen dataclasses, enumerations,
@@ -175,6 +203,13 @@ introduction to the project, its engineering context and design goals.
 - Stage 5: spectral analysis in `iva/core/spectrum/` — Welch PSD (`scaling='density'`), peak
   detection in dB domain with -3 dB width, peak interpretation (VORTEX_SHEDDING / HARMONIC /
   STRUCTURAL / UNKNOWN), total/band/sliding-window RMS. 29 unit tests.
+- Stage 6: physics and risk — Reynolds number, Strouhal number (Blevins table + tandem),
+  vortex shedding frequency, velocity/frequency ratios, three-level lock-in risk assessment
+  with Russian engineering recommendations.
+- Stage 7: application coordination layer (`iva/app/`) and CLI (`iva/cli/`) — synchronous
+  `run_pipeline()` orchestrator, `AnalysisSession` state container, `AnalysisRunner`,
+  `settings_manager` (TOML + JSON config), CSV/JSON/HTML result exporters, integration tests,
+  architecture boundary tests, `config/example_config.json`.
 
 **Supported input formats:** `.csv`, `.parquet`, `.xlsx`
 
@@ -183,6 +218,3 @@ To regenerate the demo data files:
 ```bash
 python scripts/generate_synthetic_data.py
 ```
-
-No physics calculations, UI, charts or reports are implemented yet. Those will
-be added in Stages 6–10 according to the development roadmap.
