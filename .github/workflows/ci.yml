@@ -34,8 +34,11 @@ jobs:
       - name: Smoke test
         run: python main.py
 
+      - name: CLI help
+        run: python -m iva.cli.main --help
+
       - name: Compile check
-        run: python -m compileall main.py iva tests -q
+        run: python -m compileall main.py iva tests scripts -q
 
       - name: pytest
         run: python -m pytest
@@ -51,3 +54,11 @@ jobs:
 
       - name: mypy (full package)
         run: python -m mypy iva main.py
+
+      - name: Upload out/ on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iva-out-${{ matrix.python-version }}-${{ github.run_id }}
+          path: out/
+          if-no-files-found: ignore

@@ -151,6 +151,47 @@ flow-vibration-analyzer/
 └─ CONTRIBUTING.md
 ```
 
+## Development Diagnostics and Logs
+
+The `out/` directory is generated at runtime and is excluded from version
+control (`.gitignore`).  It is created automatically the first time any
+script or the application writes to it.
+
+| Path | Contents |
+|---|---|
+| `out/logs/` | Daily rotating `iva_YYYY-MM-DD.log` files (30-day retention) |
+| `out/workflow-runs/` | Timestamped directories from `check_project.py` runs (per-step logs + summary) |
+| `out/test-results/` | Reserved for future pytest XML/HTML reports |
+| `out/diagnostics/` | Snapshots from `diagnose_project.py` |
+| `out/cli-runs/` | Reserved for future CLI run artefacts |
+
+Override the base path with the `IVA_OUT_DIR` environment variable (useful
+in CI or when you want to redirect output to another location).
+
+### Full project check
+
+```bash
+python scripts/check_project.py
+```
+
+Runs smoke test, CLI help, compile check, pytest, black, ruff, and mypy in
+sequence.  Creates a timestamped run directory under `out/workflow-runs/`
+with individual log files and a `summary.txt`.
+
+### Collect diagnostics
+
+```bash
+python scripts/diagnose_project.py
+```
+
+Prints Python version, platform, package versions, git branch and status,
+and the latest log file path.  Writes the same information to
+`out/diagnostics/YYYYMMDD_HHMMSS_diagnostics.txt`.
+
+Automated agents and future CI jobs can inspect `out/workflow-runs/`,
+`out/test-results/`, `out/diagnostics/`, and `out/logs/` without
+additional tooling.
+
 ## Documentation
 
 The full documentation package is located in [`documentation/`](documentation/).
