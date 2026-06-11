@@ -150,7 +150,7 @@ iva/
 [+] Этап 4   Предобработка сигнала (core/signal/)
 [+] Этап 5   Спектральный анализ (core/spectrum/)
 [+] Этап 6   Физические расчёты и оценка риска (core/physics/)
-[ ] Этап 7   Координирующий слой и CLI (app/ + CLI)
+[+] Этап 7   Координирующий слой и CLI (app/ + CLI)
 [ ] Этап 8   Desktop-интерфейс PySide6 (ui/)
 [ ] Этап 9   Графики, отчёты, сессии, сравнение с CFD
 [ ] Этап 10  Качество, производительность, сборка и релиз
@@ -811,17 +811,17 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `app/analysis_session.py`:
 
-- [ ] Класс `AnalysisSession` — хранит текущее состояние сеанса.
+- [+] Класс `AnalysisSession` — хранит текущее состояние сеанса.
   Поля: `raw_data`, `role_assignment`, `settings`, `result`.
-- [ ] Метод `is_ready_for_analysis() -> bool` — проверяет, что данные загружены и роли назначены.
-- [ ] Метод `clear()` — сбрасывает все данные сеанса.
+- [+] Метод `is_ready_for_analysis() -> bool` — проверяет, что данные загружены и роли назначены.
+- [+] Метод `clear()` — сбрасывает все данные сеанса.
   > Это единственное место для хранения состояния. Нигде больше.
 
 #### 7.2 Координатор рабочего процесса
 
 Создать `app/workflow_coordinator.py`:
 
-- [ ] Функция `run_pipeline(session: AnalysisSession) -> AnalysisResult`.
+- [+] Функция `run_pipeline(session: AnalysisSession) -> AnalysisResult`.
   - Шаг 1: вызвать `infrastructure.readers.read_file()`.
   - Шаг 2: вызвать `infrastructure.validators.check_data_quality()`.
   - Шаг 3: вызвать `core.signal.preprocessor.preprocess_signal()`.
@@ -836,64 +836,61 @@ Python-пакет `iva/` с папкой `core/models/`, содержащей в
 
 Создать `app/analysis_runner.py`:
 
-- [ ] Класс `AnalysisRunner` — обёртка над `workflow_coordinator` для запуска в фоновом потоке.
+- [+] Класс `AnalysisRunner` — обёртка над `workflow_coordinator` для запуска в фоновом потоке.
   > На этапе 7 реализовать как простой синхронный вызов. В этапе 8 — обернуть в QThread.
 
 #### 7.4 Менеджер настроек
 
 Создать `app/settings_manager.py`:
 
-- [ ] Читать и сохранять `AnalysisSettings` из/в `config/defaults.toml`.
-- [ ] Метод `load_defaults() -> AnalysisSettings`.
-- [ ] Метод `save_settings(settings: AnalysisSettings) -> None`.
+- [+] Читать и сохранять `AnalysisSettings` из/в `config/defaults.toml`.
+- [+] Метод `load_defaults() -> AnalysisSettings`.
+- [+] Метод `save_settings(settings: AnalysisSettings) -> None`.
 
 #### 7.5 Экспортёры результатов
 
 Создать `infrastructure/writers/csv_export_writer.py`:
 
-- [ ] Функция `export_spectrum_csv(result: AnalysisResult, output_path: str)`.
-- [ ] Функция `export_signal_csv(result: AnalysisResult, output_path: str)`.
-- [ ] Функция `export_physics_summary_csv(result: AnalysisResult, output_path: str)`.
+- [+] Функция `export_spectrum_csv(result: AnalysisResult, output_path: str)`.
+- [+] Функция `export_signal_csv(result: AnalysisResult, output_path: str)`.
+- [+] Функция `export_physics_summary_csv(result: AnalysisResult, output_path: str)`.
 
 #### 7.6 CLI
 
 Создать `iva/cli/main.py` и команду `analyze`:
 
-- [ ] Аргументы: `--data` (путь к файлу), `--config` (путь к JSON-конфигу), `--output` (папка для результатов).
-- [ ] При запуске: читать конфиг → запускать `run_pipeline()` → сохранять результаты → выводить сводку в консоль.
-- [ ] Выводить в консоль: уровень риска, доминирующий пик, Re, St.
-- [ ] Добавить в `README.md` пример вызова:
-  ```
-  python -m iva.cli.main analyze --data data/examples/normal.csv --config config/example.json --output reports/run_001
-  ```
-- [ ] CLI не импортирует ничего из `ui/`.
+- [+] Аргументы: `--data` (путь к файлу), `--config` (путь к JSON-конфигу), `--output` (папка для результатов).
+- [+] При запуске: читать конфиг → запускать `run_pipeline()` → сохранять результаты → выводить сводку в консоль.
+- [+] Выводить в консоль: уровень риска, доминирующий пик, Re, St.
+- [+] Добавить в `README.md` пример вызова.
+- [+] CLI не импортирует ничего из `ui/`.
 
 #### 7.7 Конфигурационный файл примера
 
 Создать `config/example_config.json`:
 
-- [ ] Включить: выбор сигнала, параметры фильтра, параметры спектра, физические параметры.
-- [ ] Добавить комментарии к каждому полю (в формате `"_comment_field": "..."`).
+- [+] Включить: выбор сигнала, параметры фильтра, параметры спектра, физические параметры.
+- [+] Добавить комментарии к каждому полю (в формате `"_comment_field": "..."`).
 
 #### 7.8 Тесты
 
-- [ ] Создать `tests/integration/test_full_pipeline_clean_data.py`.
-  - [ ] Тест: демонстрационный файл с чистым сигналом 40 Гц → доминирующий пик в диапазоне 39–41 Гц.
-- [ ] Создать `tests/integration/test_pipeline_with_gaps.py`.
-  - [ ] Тест: файл с пропусками → предупреждения в результате, анализ завершён.
-- [ ] Создать `tests/integration/test_pipeline_invalid_file.py`.
-  - [ ] Тест: несуществующий файл → `FileNotFoundError(IVA)`, не падает с трейсбэком Python.
-- [ ] Создать `tests/integration/test_cli.py`.
-  - [ ] Тест: CLI с демонстрационным файлом завершается с кодом 0.
-  - [ ] Тест: CLI с несуществующим файлом завершается с кодом не 0.
+- [+] Создать `tests/integration/test_full_pipeline_clean_data.py`.
+  - [+] Тест: демонстрационный файл с чистым сигналом 40 Гц → доминирующий пик в диапазоне 39–41 Гц.
+- [+] Создать `tests/integration/test_pipeline_with_gaps.py`.
+  - [+] Тест: файл с пропусками → предупреждения в результате, анализ завершён.
+- [+] Создать `tests/integration/test_pipeline_invalid_file.py`.
+  - [+] Тест: несуществующий файл → `FileNotFoundError(IVA)`, не падает с трейсбэком Python.
+- [+] Создать `tests/integration/test_cli.py`.
+  - [+] Тест: CLI с демонстрационным файлом завершается с кодом 0.
+  - [+] Тест: CLI с несуществующим файлом завершается с кодом не 0.
 
 #### Критерии завершения этапа 7
 
-- [ ] `run_pipeline()` работает от начала до конца на демонстрационных данных.
-- [ ] CLI-команда запускается и выводит результат.
-- [ ] Результаты сохраняются в CSV и JSON.
-- [ ] Интеграционные тесты проходят.
-- [ ] CLI не зависит от PySide6.
+- [+] `run_pipeline()` работает от начала до конца на демонстрационных данных.
+- [+] CLI-команда запускается и выводит результат.
+- [+] Результаты сохраняются в CSV и JSON.
+- [+] Интеграционные тесты проходят.
+- [+] CLI не зависит от PySide6.
 
 ---
 

@@ -1,0 +1,41 @@
+{
+  "_comment": "Example IVA analysis configuration for example_clean_sine.csv",
+  "columns": {
+    "_comment": "Column names must match the header row of the input CSV exactly",
+    "time_column": "time_s",
+    "primary_signal_column": "signal",
+    "signal_role": "acceleration_x",
+    "additional_columns": [],
+    "sampling_rate_hz": 500.0,
+    "sensor_conversion_factor": 1.0
+  },
+  "preprocessing": {
+    "_comment": "Signal preprocessing chain (applied in fixed order)",
+    "remove_mean": true,
+    "detect_outliers": true,
+    "fill_gaps": true,
+    "filter_type": "bandpass",
+    "filter_cutoff_low_hz": 1.0,
+    "filter_cutoff_high_hz": 200.0,
+    "filter_order": 4
+  },
+  "spectral": {
+    "_comment": "Welch PSD estimation parameters",
+    "window_type": "hann",
+    "nperseg": 1024,
+    "noverlap": 512,
+    "peak_threshold_db": 10.0,
+    "peak_min_width_hz": 0.5
+  },
+  "flow_parameters": {
+    "_comment": "Physical flow and geometry parameters (all SI units). Set to null to skip physics.",
+    "cylinder_diameter_m": 0.012,
+    "mean_flow_velocity_ms": 2.0,
+    "fluid_density_kgm3": 998.0,
+    "dynamic_viscosity_pas": 0.001002,
+    "natural_frequency_hz": 35.0,
+    "damping_ratio": 0.02,
+    "cylinder_spacing_m": null,
+    "geometry_type": "single_cylinder"
+  }
+}
