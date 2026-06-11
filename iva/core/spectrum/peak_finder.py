@@ -73,8 +73,8 @@ def find_peaks(
         settings.peak_detection_threshold_db,
     )
 
-    # Find candidate peaks above threshold
-    candidate_idx, properties = scipy.signal.find_peaks(psd_db, height=threshold)
+    # Find candidate peaks above threshold (peak properties are not needed here)
+    candidate_idx, _ = scipy.signal.find_peaks(psd_db, height=threshold)
     logger.debug("find_peaks: %d candidate peak(s) before width filter", len(candidate_idx))
 
     if len(candidate_idx) == 0:
@@ -114,36 +114,72 @@ def find_peaks(
     return peaks
 
 
+def _is_harmonic(peak: SpectralPeak, peaks: list[SpectralPeak]) -> bool:
+    """Return True if *peak* is a harmonic of a stronger fundamental peak.
+
+    Implements Algorithm 7 rule 2 (documentation/11_algorithms.md): a peak is a
+    HARMONIC if its frequency lies within ``_HARMONIC_THRESHOLD`` (2 %) of an
+    integer multiple (2x, 3x, 4x) of *another* peak whose amplitude is at least
+    twice as high.  This rule is purely a peak-to-peak relationship and does not
+    require any physics context.
+    """
+    for other in peaks:
+        if other is peak or other.frequency_hz <= 0:
+            continue
+        # The fundamental must be clearly stronger than its harmonic.
+        if other.amplitude < 2.0 * peak.amplitude:
+            continue
+        for n in (2, 3, 4):
+            harmonic_freq = other.frequency_hz * n
+            if abs(peak.frequency_hz - harmonic_freq) / harmonic_freq <= _HARMONIC_THRESHOLD:
+                return True
+    return False
+
+
 def interpret_peaks(
     peaks: list[SpectralPeak],
     physics_result: PhysicsResult | None,
 ) -> list[SpectralPeak]:
-    """Classify each peak using the physics context (Algorithm 7).
+    """Classify each peak following Algorithm 7 (documentation/11_algorithms.md).
 
-    If *physics_result* is ``None`` all peaks remain ``UNKNOWN``.
+    Rules are applied in order; the first match wins:
+
+    1. ``VORTEX_SHEDDING`` — within 5 % of the calculated shedding frequency
+       (requires ``physics_result``).
+    2. ``HARMONIC`` — within 2 % of an integer multiple of a stronger peak
+       (no physics context required).
+    3. ``STRUCTURAL`` — within 3 % of the natural frequency (requires
+       ``physics_result``).
+    4. ``UNKNOWN`` — otherwise.
+
+    When *physics_result* is ``None`` the vortex and structural rules are
+    skipped, but harmonic classification still runs because it depends only on
+    the relationship between detected peaks.
+
+    The natural frequency is recovered from the canonical ``PhysicsResult``
+    fields: documentation/10 defines ``frequency_ratio = fs / fn``, so
+    ``fn = calculated_shedding_frequency_hz / frequency_ratio`` exactly
+    (``PhysicsResult`` intentionally stores the ratio rather than ``fn``).
 
     Args:
         peaks: List of detected peaks (from :func:`find_peaks`).
-        physics_result: Physical calculation result providing shedding frequency
-            and natural frequency information.  May be ``None``.
+        physics_result: Physical calculation result providing the shedding
+            frequency and frequency ratio.  May be ``None``.
 
     Returns:
         New list with the same peaks but with ``interpretation`` and
         ``confidence`` fields updated.
     """
-    if not peaks or physics_result is None:
+    if not peaks:
         return list(peaks)
 
-    shedding_hz = physics_result.calculated_shedding_frequency_hz
-    # Derive natural frequency from velocity_ratio if available, else None
-    # PhysicsResult doesn't store natural_frequency directly; we use frequency_ratio
-    # to detect STRUCTURAL: if frequency_ratio is available, fn = shedding_hz / frequency_ratio
+    shedding_hz = 0.0
     fn: float | None = None
-    if physics_result.frequency_ratio is not None and physics_result.frequency_ratio != 0:
-        fn = shedding_hz / physics_result.frequency_ratio
-
-    # Dominant peak frequency (for harmonic detection)
-    dominant_freq = peaks[0].frequency_hz if peaks else 0.0
+    if physics_result is not None:
+        shedding_hz = physics_result.calculated_shedding_frequency_hz
+        ratio = physics_result.frequency_ratio
+        if ratio is not None and ratio != 0:
+            fn = shedding_hz / ratio
 
     interpreted: list[SpectralPeak] = []
     for peak in peaks:
@@ -151,51 +187,27 @@ def interpret_peaks(
         interpretation = PeakInterpretation.UNKNOWN
         confidence = 1.0
 
-        # Test VORTEX_SHEDDING
-        if shedding_hz > 0:
+        # Rule 1 — VORTEX_SHEDDING (requires physics context).
+        matched = False
+        if physics_result is not None and shedding_hz > 0:
             dev = abs(freq - shedding_hz) / shedding_hz
             if dev <= _VORTEX_THRESHOLD:
                 interpretation = PeakInterpretation.VORTEX_SHEDDING
                 confidence = 1.0 - dev / _VORTEX_THRESHOLD
-                interpreted.append(
-                    SpectralPeak(
-                        frequency_hz=freq,
-                        amplitude=peak.amplitude,
-                        width_hz_3db=peak.width_hz_3db,
-                        interpretation=interpretation,
-                        confidence=confidence,
-                    )
-                )
-                continue
+                matched = True
 
-        # Test STRUCTURAL (natural frequency)
-        if fn is not None and fn > 0:
+        # Rule 2 — HARMONIC (no physics context required).
+        if not matched and _is_harmonic(peak, peaks):
+            interpretation = PeakInterpretation.HARMONIC
+            confidence = _HARMONIC_CONFIDENCE
+            matched = True
+
+        # Rule 3 — STRUCTURAL (requires natural frequency).
+        if not matched and fn is not None and fn > 0:
             dev = abs(freq - fn) / fn
             if dev <= _STRUCTURAL_THRESHOLD:
                 interpretation = PeakInterpretation.STRUCTURAL
                 confidence = 1.0 - dev / _STRUCTURAL_THRESHOLD
-                interpreted.append(
-                    SpectralPeak(
-                        frequency_hz=freq,
-                        amplitude=peak.amplitude,
-                        width_hz_3db=peak.width_hz_3db,
-                        interpretation=interpretation,
-                        confidence=confidence,
-                    )
-                )
-                continue
-
-        # Test HARMONIC (integer multiple of dominant frequency)
-        if dominant_freq > 0 and freq > dominant_freq * 1.5:
-            for n in range(2, 10):
-                harmonic = dominant_freq * n
-                if harmonic <= 0:
-                    continue
-                dev = abs(freq - harmonic) / harmonic
-                if dev <= _HARMONIC_THRESHOLD:
-                    interpretation = PeakInterpretation.HARMONIC
-                    confidence = _HARMONIC_CONFIDENCE
-                    break
 
         interpreted.append(
             SpectralPeak(

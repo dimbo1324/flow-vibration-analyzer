@@ -123,9 +123,16 @@ def read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData:
             technical_details=str(exc),
         ) from exc
 
-    # Normalise dtypes to string for consistency with CSV reader.
+    # Normalise dtypes to string for consistency with the CSV reader.  Genuinely
+    # empty cells (openpyxl returns None) are preserved as pd.NA, while real
+    # values are stringified.  Stringifying first and then restoring NA at the
+    # originally-null positions avoids turning a legitimate textual "None" cell
+    # into a missing value.
     for col in df.columns:
-        df[col] = df[col].astype(str).replace("None", pd.NA)
+        series = df[col]
+        is_null = series.isna()
+        df[col] = series.astype(str)
+        df.loc[is_null, col] = pd.NA
 
     column_names = tuple(str(c) for c in df.columns)
     column_dtypes = {col: str(df[col].dtype) for col in df.columns}
