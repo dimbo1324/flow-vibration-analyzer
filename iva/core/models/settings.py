@@ -1,6 +1,6 @@
 """Analysis settings dataclasses.
 
-Default values are taken verbatim from documentation/10_data_models_and_schemas.md.
+Default values are taken verbatim from docs/10_data_models_and_schemas.md.
 These containers are frozen so that a settings object passed into one pipeline
 step cannot be mutated by another.
 """

@@ -1,6 +1,6 @@
 """MAD-based outlier detection and replacement (Algorithms 2).
 
-Algorithm reference: documentation/11_algorithms.md, Algorithm 2.
+Algorithm reference: docs/11_algorithms.md, Algorithm 2.
 Uses sliding median + MAD with scale factor 1.4826 (consistency factor for
 normal distribution).  All operations are vectorised — no Python loops.
 """

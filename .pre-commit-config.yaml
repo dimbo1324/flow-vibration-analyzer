@@ -4,7 +4,7 @@ repos:
       - id: trailing-whitespace
         name: trailing whitespace
         language: system
-        entry: python -c "import sys, re; files=sys.argv[1:]; [open(f,'w').write(re.sub(r'[ \t]+\n','\n',open(f).read())) for f in files if not f.endswith(('.spec','.iss'))]"
+        entry: python scripts/strip_trailing_whitespace.py
         types: [text]
         exclude: '\.spec$|\.iss$'
 

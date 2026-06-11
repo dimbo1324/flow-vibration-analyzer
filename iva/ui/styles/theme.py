@@ -1,6 +1,6 @@
 """IVA dark engineering theme tokens and stylesheet.
 
-All color constants are taken from documentation/08_ui_ux_specification.md.
+All color constants are taken from docs/08_ui_ux_specification.md.
 Components must reference color tokens, never hard-coded hex values.
 """
 

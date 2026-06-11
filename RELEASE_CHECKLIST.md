@@ -9,7 +9,7 @@ Use this checklist before each release.
 - [ ] Lint clean: `python -m black --check . && python -m ruff check . && python -m mypy iva main.py`
 - [ ] Version updated in `iva/__version__.py`
 - [ ] `CHANGELOG.md` updated with release notes
-- [ ] `checklist.md` Stage items reviewed
+- [ ] `docs/DEVELOPMENT_CHECKLIST.md` Stage items reviewed
 
 ## Build
 

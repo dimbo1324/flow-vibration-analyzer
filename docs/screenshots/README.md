@@ -23,5 +23,5 @@ The following screenshots should be added manually after running the application
 
 ## Usage
 
-These screenshots are referenced in `documentation/22_portfolio_case_study.md`
+These screenshots are referenced in `docs/22_portfolio_case_study.md`
 and are used in the README and portfolio presentation.

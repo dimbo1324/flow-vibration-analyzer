@@ -1,4 +1,4 @@
-"""Edge-case tests from documentation/12_validation_and_verification.md.
+"""Edge-case tests from docs/12_validation_and_verification.md.
 
 Tests cover boundary conditions not already exercised in the per-module
 test files: invalid physical inputs, empty/constant signals, non-monotonic

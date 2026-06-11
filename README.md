@@ -136,7 +136,7 @@ flow-vibration-analyzer/
 │  └─ infrastructure/    # File I/O, logging, export adapters (future stages)
 ├─ tests/                # Automated tests
 ├─ scripts/              # Utility and build scripts
-├─ documentation/        # Full project documentation (23 files, read-only)
+├─ docs/                 # Project documentation (23 files) + DEVELOPMENT_CHECKLIST.md
 ├─ config/               # Application configuration
 │  └─ defaults.toml      # Default settings placeholder
 ├─ data/
@@ -194,9 +194,9 @@ additional tooling.
 
 ## Documentation
 
-The full documentation package is located in [`documentation/`](documentation/).
+The full documentation package is located in [`docs/`](docs/).
 
-Start with [`documentation/00_project_overview.md`](documentation/00_project_overview.md) for an
+Start with [`docs/00_project_overview.md`](docs/00_project_overview.md) for an
 introduction to the project, its engineering context and design goals.
 
 ## CLI Usage
@@ -251,19 +251,44 @@ The CLI remains fully available and independent of the GUI:
 python -m iva.cli.main analyze --help
 ```
 
-## Running Quality Checks
+## Windows helper scripts
 
-PowerShell scripts for Windows (run from repository root):
+PowerShell helper scripts for Windows (run from the repository root). They are
+PowerShell 5.1 compatible (7+ recommended) and detect the repository root
+automatically — no hardcoded paths.
 
 ```powershell
-# Run all lint checks (black, ruff, mypy)
-.\scripts\lint.ps1
+# One-time environment bootstrap: create .venv, install deps, smoke-test
+.\scripts\setup.ps1
 
-# Run tests with coverage (excludes performance tests)
-.\scripts\test.ps1
+# Launch the desktop application
+.\scripts\run.ps1
 
-# Run lint + tests together
+# Headless smoke test
+.\scripts\run.ps1 -SmokeTest
+
+# Preview which generated artifacts would be removed (deletes nothing)
+.\scripts\clean.ps1 -DryRun
+
+# Remove generated artifacts without prompting
+.\scripts\clean.ps1 -Force
+
+# Remove IVA logs older than 30 days from Documents\IVA
+.\scripts\clean-logs.ps1 -OlderThanDays 30
+
+# Run lint + tests
 .\scripts\quality.ps1
+
+# Verify the release build environment only
+.\scripts\build-all.ps1 -CheckOnly
+```
+
+Lower-level quality scripts remain available individually:
+
+```powershell
+.\scripts\lint.ps1     # black, ruff, mypy
+.\scripts\test.ps1     # pytest with coverage (excludes performance tests)
+.\scripts\quality.ps1  # lint + tests
 ```
 
 ## Building the Windows Installer

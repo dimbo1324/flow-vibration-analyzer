@@ -16,12 +16,12 @@ All notable changes to this project are documented in this file.
   quality scripts (`lint.ps1`, `test.ps1`, `quality.ps1`)
 - Test coverage >= 80% for `iva/core` (achieved 98%)
 - Performance test: 60,000-row analysis completes in under 3 seconds
-- System tests for key user scenarios from documentation/07_user_scenarios.md
-- Edge-case tests from documentation/12_validation_and_verification.md
+- System tests for key user scenarios from docs/07_user_scenarios.md
+- Edge-case tests from docs/12_validation_and_verification.md
 - Pre-commit configuration for automated code quality checks
 - `RELEASE_CHECKLIST.md` — step-by-step release process
 - `assets/iva_icon.ico` — placeholder application icon
-- `documentation/screenshots/` — placeholder for application screenshots
+- `docs/screenshots/` — placeholder for application screenshots
 
 ### Technical stack
 - Python 3.11+, PySide6, NumPy, SciPy, pandas, matplotlib, ReportLab

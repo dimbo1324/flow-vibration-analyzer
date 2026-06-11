@@ -1,4 +1,4 @@
-"""System tests based on user scenarios from documentation/07_user_scenarios.md.
+"""System tests based on user scenarios from docs/07_user_scenarios.md.
 
 These tests exercise the full pipeline end-to-end using only domain APIs,
 so they run headless without a GUI.  They correspond to Scenario 1 (basic

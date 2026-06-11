@@ -1,7 +1,7 @@
 """Excel (.xlsx) file reader for the Industrial Vibration Analyzer.
 
 Uses openpyxl in read_only=True mode as required by
-documentation/18_security_and_data_privacy.md to prevent macro execution
+docs/18_security_and_data_privacy.md to prevent macro execution
 and disable external link resolution.
 """
 
