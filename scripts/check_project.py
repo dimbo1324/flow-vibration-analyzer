@@ -161,8 +161,8 @@ def main() -> None:
 
     # --- Required checks ---
     runner.run(
-        "Smoke test: python main.py",
-        [exe, "main.py"],
+        "Smoke test: python main.py --smoke-test",
+        [exe, "main.py", "--smoke-test"],
         log_name="smoke.log",
     )
 

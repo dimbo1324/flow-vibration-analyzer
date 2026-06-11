@@ -25,6 +25,8 @@ from pathlib import Path
 
 from iva.app.analysis_runner import AnalysisRunner
 from iva.app.analysis_session import AnalysisSession
+from iva.app.report_service import export_report_html, export_report_pdf
+from iva.app.session_service import save_current_session
 from iva.app.settings_manager import load_analysis_config_json
 from iva.core.models.exceptions import IVAError
 from iva.infrastructure.writers.csv_export_writer import (
@@ -81,6 +83,25 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="Print full tracebacks on error (for debugging).",
+    )
+    # Stage 9: optional report/session export flags
+    analyze.add_argument(
+        "--export-pdf",
+        action="store_true",
+        default=False,
+        help="Export a PDF report to the output directory.",
+    )
+    analyze.add_argument(
+        "--export-html",
+        action="store_true",
+        default=False,
+        help="Export an HTML report to the output directory.",
+    )
+    analyze.add_argument(
+        "--save-project",
+        action="store_true",
+        default=False,
+        help="Save the session as a .vibproj file in the output directory.",
     )
     return parser
 
@@ -139,6 +160,19 @@ def _run_analyze(args: argparse.Namespace) -> int:
         export_signal_csv(result, output_dir / "signal.csv")
         export_physics_summary_csv(result, output_dir / "physics_summary.csv")
         export_analysis_summary_html(result, output_dir / "analysis_summary.html")
+
+        # --- optional report/session exports -------------------------------
+        if args.export_pdf:
+            path = export_report_pdf(result, output_dir / "report.pdf")
+            print(f"PDF report: {path}")
+
+        if args.export_html:
+            path = export_report_html(result, output_dir / "report.html")
+            print(f"HTML report: {path}")
+
+        if args.save_project:
+            path = save_current_session(session, output_dir / "project.vibproj")
+            print(f"Project saved: {path}")
 
         # --- console summary -----------------------------------------------
         _print_summary(result, output_dir)

@@ -13,9 +13,8 @@ IVA automates the standard analysis workflow: data import, signal preprocessing,
 physical coefficient calculation (Reynolds number, Strouhal number, vortex shedding frequency),
 resonance risk assessment, comparison with CFD results, and structured report generation.
 
-Future stages will add full signal processing, spectral analysis, physical calculations, visualisation
-and PDF/CSV reporting. Stage 1 establishes the repository foundation only — no analysis pipeline is
-implemented yet.
+The current Stage 9 application includes the complete analysis pipeline, desktop visualisation,
+PDF/HTML reporting, versioned project sessions, and experiment-versus-CFD profile comparison.
 
 ## Requirements
 
@@ -207,7 +206,10 @@ Stage 7 adds a full command-line interface.  Run a complete analysis with:
 python -m iva.cli.main analyze \
     --data data/examples/example_clean_sine.csv \
     --config config/example_config.json \
-    --output reports/run_001
+    --output reports/run_001 \
+    --export-pdf \
+    --export-html \
+    --save-project
 ```
 
 The command produces the following files in the output directory:
@@ -219,6 +221,9 @@ The command produces the following files in the output directory:
 | `signal.csv` | Time / cleaned signal / filtered signal table |
 | `physics_summary.csv` | Physics parameters and risk level (key–value format) |
 | `analysis_summary.html` | Static HTML summary page (no JS, no external assets) |
+| `report.pdf` | Full light-theme engineering report (`--export-pdf`) |
+| `report.html` | Full standalone report (`--export-html`) |
+| `project.vibproj` | Versioned JSON project session (`--save-project`) |
 
 Get CLI help:
 
@@ -226,6 +231,11 @@ Get CLI help:
 python -m iva.cli.main --help
 python -m iva.cli.main analyze --help
 ```
+
+Stage 9 GUI features include PDF/HTML/CSV/JSON export on the Report page,
+`.vibproj` save/open actions, zoom/pan/reset and PNG chart controls, and a
+Profiles page that compares `coordinate,value` experiment and CFD CSV files.
+Installer and release packaging are intentionally deferred to Stage 10.
 
 ## Desktop GUI
 
@@ -243,7 +253,7 @@ python -m iva.cli.main analyze --help
 
 ## Development Status
 
-**Stage 8 complete — PySide6 Desktop Interface.**
+**Stage 9 complete — Reports, Sessions, and Advanced Visualisation.**
 
 - Stage 1: repository foundation, configuration, documentation baseline.
 - Stage 2: full domain model layer in `iva/core/models/` — frozen dataclasses, enumerations,

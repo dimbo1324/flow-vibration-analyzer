@@ -1,4 +1,4 @@
-"""Page 07 — Report: export controls and analysis summary."""
+"""Page 07 — Report: export controls and analysis summary (Stage 9)."""
 
 from __future__ import annotations
 
@@ -17,8 +17,10 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
 )
 
 from iva.ui.styles.theme import (
+    COLOR_GOOD,
     COLOR_MUTED,
     COLOR_TEXT,
+    COLOR_WARN,
     FONT_SIZE_TITLE,
     SPACING_MD,
 )
@@ -48,31 +50,55 @@ class ReportPage(QWidget):
         )
         layout.addWidget(title)
 
-        subtitle = QLabel("Export analysis results")
+        subtitle = QLabel("Export analysis results as PDF, HTML, JSON or CSV")
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
+
+        # Readiness indicator
+        self._readiness_label = QLabel("No analysis result available.")
+        self._readiness_label.setStyleSheet(f"color: {COLOR_WARN}; font-size: 11pt;")
+        layout.addWidget(self._readiness_label)
 
         # Export buttons row
         btn_box = QGroupBox("Export")
         btn_layout = QHBoxLayout(btn_box)
 
-        self._pdf_btn = QPushButton("Export PDF (Stage 9)")
+        self._pdf_btn = QPushButton("Export PDF")
         self._pdf_btn.setEnabled(False)
-        self._pdf_btn.setToolTip("PDF report generation is available in Stage 9")
+        self._pdf_btn.setToolTip("Export full PDF analysis report")
+        self._pdf_btn.clicked.connect(self._on_export_pdf)
 
-        self._csv_spectrum_btn = QPushButton("Export Spectrum CSV")
+        self._html_btn = QPushButton("Export HTML")
+        self._html_btn.setEnabled(False)
+        self._html_btn.setToolTip("Export standalone HTML report")
+        self._html_btn.clicked.connect(self._on_export_html)
+
+        self._json_btn = QPushButton("Export JSON Summary")
+        self._json_btn.setEnabled(False)
+        self._json_btn.setToolTip("Export machine-readable JSON summary")
+        self._json_btn.clicked.connect(self._on_export_json)
+
+        self._csv_pkg_btn = QPushButton("Export CSV Package")
+        self._csv_pkg_btn.setEnabled(False)
+        self._csv_pkg_btn.setToolTip("Export spectrum, signal and physics CSV files")
+        self._csv_pkg_btn.clicked.connect(self._on_export_csv_package)
+
+        self._csv_spectrum_btn = QPushButton("Spectrum CSV")
         self._csv_spectrum_btn.setEnabled(False)
         self._csv_spectrum_btn.clicked.connect(self._on_export_spectrum_csv)
 
-        self._csv_signal_btn = QPushButton("Export Signal CSV")
+        self._csv_signal_btn = QPushButton("Signal CSV")
         self._csv_signal_btn.setEnabled(False)
         self._csv_signal_btn.clicked.connect(self._on_export_signal_csv)
 
-        self._csv_physics_btn = QPushButton("Export Physics CSV")
+        self._csv_physics_btn = QPushButton("Physics CSV")
         self._csv_physics_btn.setEnabled(False)
         self._csv_physics_btn.clicked.connect(self._on_export_physics_csv)
 
         btn_layout.addWidget(self._pdf_btn)
+        btn_layout.addWidget(self._html_btn)
+        btn_layout.addWidget(self._json_btn)
+        btn_layout.addWidget(self._csv_pkg_btn)
         btn_layout.addWidget(self._csv_spectrum_btn)
         btn_layout.addWidget(self._csv_signal_btn)
         btn_layout.addWidget(self._csv_physics_btn)
@@ -96,8 +122,76 @@ class ReportPage(QWidget):
         layout.addWidget(self._status_label)
 
     # ------------------------------------------------------------------
-    # Slots
+    # Export slots
     # ------------------------------------------------------------------
+
+    def _on_export_pdf(self) -> None:
+        if self._result is None:
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export PDF Report", "report.pdf", "PDF Files (*.pdf)"
+        )
+        if not path:
+            return
+        try:
+            from iva.app.report_service import export_report_pdf
+
+            export_report_pdf(self._result, path)
+            self._set_status(f"PDF exported: {Path(path).name}", ok=True)
+        except Exception as exc:  # noqa: BLE001
+            self._set_status(f"PDF export failed: {exc}", ok=False)
+
+    def _on_export_html(self) -> None:
+        if self._result is None:
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export HTML Report", "report.html", "HTML Files (*.html)"
+        )
+        if not path:
+            return
+        try:
+            from iva.app.report_service import export_report_html
+
+            export_report_html(self._result, path)
+            self._set_status(f"HTML exported: {Path(path).name}", ok=True)
+        except Exception as exc:  # noqa: BLE001
+            self._set_status(f"HTML export failed: {exc}", ok=False)
+
+    def _on_export_json(self) -> None:
+        if self._result is None:
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export JSON Summary", "analysis_summary.json", "JSON Files (*.json)"
+        )
+        if not path:
+            return
+        try:
+            from iva.app.report_service import export_report_json
+
+            export_report_json(self._result, path)
+            self._set_status(f"JSON exported: {Path(path).name}", ok=True)
+        except Exception as exc:  # noqa: BLE001
+            self._set_status(f"JSON export failed: {exc}", ok=False)
+
+    def _on_export_csv_package(self) -> None:
+        if self._result is None:
+            return
+        output_dir = QFileDialog.getExistingDirectory(
+            self, "Select Output Directory for CSV Package"
+        )
+        if not output_dir:
+            return
+        try:
+            from iva.app.report_service import export_report_bundle
+
+            written = export_report_bundle(self._result, output_dir)
+            csv_count = sum(1 for k in written if "csv" in k)
+            self._set_status(
+                f"CSV package exported: {csv_count} file(s) to {Path(output_dir).name}",
+                ok=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            self._set_status(f"CSV package export failed: {exc}", ok=False)
 
     def _on_export_spectrum_csv(self) -> None:
         if self._result is None:
@@ -108,12 +202,12 @@ class ReportPage(QWidget):
         if not path:
             return
         try:
-            from iva.infrastructure.writers.csv_export_writer import export_spectrum_csv
+            from iva.app.report_service import export_report_spectrum_csv
 
-            export_spectrum_csv(self._result, path)
-            self._status_label.setText(f"Exported: {Path(path).name}")
+            export_report_spectrum_csv(self._result, path)
+            self._set_status(f"Exported: {Path(path).name}", ok=True)
         except Exception as exc:  # noqa: BLE001
-            self._status_label.setText(f"Export failed: {exc}")
+            self._set_status(f"Export failed: {exc}", ok=False)
 
     def _on_export_signal_csv(self) -> None:
         if self._result is None:
@@ -124,12 +218,12 @@ class ReportPage(QWidget):
         if not path:
             return
         try:
-            from iva.infrastructure.writers.csv_export_writer import export_signal_csv
+            from iva.app.report_service import export_report_signal_csv
 
-            export_signal_csv(self._result, path)
-            self._status_label.setText(f"Exported: {Path(path).name}")
+            export_report_signal_csv(self._result, path)
+            self._set_status(f"Exported: {Path(path).name}", ok=True)
         except Exception as exc:  # noqa: BLE001
-            self._status_label.setText(f"Export failed: {exc}")
+            self._set_status(f"Export failed: {exc}", ok=False)
 
     def _on_export_physics_csv(self) -> None:
         if self._result is None:
@@ -140,12 +234,17 @@ class ReportPage(QWidget):
         if not path:
             return
         try:
-            from iva.infrastructure.writers.csv_export_writer import export_physics_summary_csv
+            from iva.app.report_service import export_report_physics_csv
 
-            export_physics_summary_csv(self._result, path)
-            self._status_label.setText(f"Exported: {Path(path).name}")
+            export_report_physics_csv(self._result, path)
+            self._set_status(f"Exported: {Path(path).name}", ok=True)
         except Exception as exc:  # noqa: BLE001
-            self._status_label.setText(f"Export failed: {exc}")
+            self._set_status(f"Export failed: {exc}", ok=False)
+
+    def _set_status(self, message: str, ok: bool = True) -> None:
+        colour = COLOR_GOOD if ok else COLOR_WARN
+        self._status_label.setStyleSheet(f"color: {colour}; font-size: 10pt;")
+        self._status_label.setText(message)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -154,6 +253,14 @@ class ReportPage(QWidget):
     def on_analysis_completed(self, result: AnalysisResult) -> None:
         """Populate summary and enable export buttons."""
         self._result = result
+
+        # Update readiness indicator
+        self._readiness_label.setText(
+            f"Result ready — Session {result.session_id[:8]}… | "
+            f"Source: {result.source_file_path.name} | "
+            f"Warnings: {len(result.warnings)}"
+        )
+        self._readiness_label.setStyleSheet(f"color: {COLOR_GOOD}; font-size: 11pt;")
 
         lines: list[str] = []
         lines.append(f"Session ID:    {result.session_id}")
@@ -199,16 +306,29 @@ class ReportPage(QWidget):
 
         self._summary_text.setText("\n".join(lines))
 
-        # Enable relevant export buttons
-        self._csv_spectrum_btn.setEnabled(result.spectrum is not None)
-        self._csv_signal_btn.setEnabled(result.processed_data is not None)
+        # Enable export buttons
+        has_spectrum = result.spectrum is not None
+        has_processed = result.processed_data is not None
+
+        self._pdf_btn.setEnabled(True)
+        self._html_btn.setEnabled(True)
+        self._json_btn.setEnabled(True)
+        self._csv_pkg_btn.setEnabled(True)
+        self._csv_spectrum_btn.setEnabled(has_spectrum)
+        self._csv_signal_btn.setEnabled(has_processed)
         self._csv_physics_btn.setEnabled(True)
 
     def clear(self) -> None:
         """Reset the page."""
         self._result = None
         self._summary_text.clear()
+        self._readiness_label.setText("No analysis result available.")
+        self._readiness_label.setStyleSheet(f"color: {COLOR_WARN}; font-size: 11pt;")
         for btn in (
+            self._pdf_btn,
+            self._html_btn,
+            self._json_btn,
+            self._csv_pkg_btn,
             self._csv_spectrum_btn,
             self._csv_signal_btn,
             self._csv_physics_btn,

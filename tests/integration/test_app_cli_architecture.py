@@ -1,6 +1,6 @@
 """AST-based architecture boundary tests.
 
-Verifies that ``iva/app/``, ``iva/cli/``, and ``iva/infrastructure/writers/``
+Verifies that ``iva/app/``, ``iva/cli/``, and ``iva/infrastructure/``
 do not import forbidden modules (``iva.ui``, ``PySide6``, or ``PyQt5``).
 
 These tests enforce the layer constraints from ``documentation/02_architecture.md``.
@@ -19,7 +19,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _RESTRICTED_PACKAGES = [
     _PROJECT_ROOT / "iva" / "app",
     _PROJECT_ROOT / "iva" / "cli",
-    _PROJECT_ROOT / "iva" / "infrastructure" / "writers",
+    _PROJECT_ROOT / "iva" / "infrastructure",
 ]
 
 _FORBIDDEN_MODULES = {"iva.ui", "PySide6", "PyQt5", "PyQt6", "PySide2"}

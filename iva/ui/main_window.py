@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
 
 from iva.app.analysis_session import AnalysisSession
 from iva.app.settings_manager import load_defaults
-from iva.core.models.exceptions import IVAError
+from iva.core.models.exceptions import ExportError, IVAError
 from iva.ui.analysis_worker import AnalysisWorker
 from iva.ui.pages.import_page import ImportPage
 from iva.ui.pages.overview_page import OverviewPage
@@ -105,20 +105,48 @@ class MainWindow(QMainWindow):
         self._action_run.setToolTip("Run the full analysis pipeline (F5)")
         self._action_run.triggered.connect(self.run_analysis)
 
-        self._action_save = QAction("Save Report…  (Ctrl+S)", self)
-        self._action_save.setToolTip("Save report — available in Stage 9")
+        self._action_save = QAction("Save Project  (Ctrl+S)", self)
+        self._action_save.setToolTip("Save project session as .vibproj file (Ctrl+S)")
         self._action_save.setEnabled(False)
+        self._action_save.triggered.connect(self._save_project)
+
+        self._action_save_as = QAction("Save Project As…  (Ctrl+Shift+S)", self)
+        self._action_save_as.setToolTip("Save project session with a new name (Ctrl+Shift+S)")
+        self._action_save_as.setEnabled(False)
+        self._action_save_as.triggered.connect(self._save_project_as)
+
+        self._action_open_project = QAction("Open Project  (Ctrl+Shift+O)", self)
+        self._action_open_project.setToolTip("Open a saved .vibproj session file (Ctrl+Shift+O)")
+        self._action_open_project.triggered.connect(self._open_project)
+
+        self._action_new_session = QAction("New Session  (Ctrl+N)", self)
+        self._action_new_session.setToolTip("Clear current session (Ctrl+N)")
+        self._action_new_session.triggered.connect(self._new_session)
+
+        self._action_export_report = QAction("Export Report Bundle…", self)
+        self._action_export_report.setToolTip(
+            "Export PDF, HTML, JSON and CSV reports to a directory"
+        )
+        self._action_export_report.setEnabled(False)
+        self._action_export_report.triggered.connect(self._export_report_bundle)
 
         self._action_inspector = QAction("Inspector  (R)", self)
         self._action_inspector.setToolTip("Toggle inspector panel (R)")
         self._action_inspector.triggered.connect(self._toggle_inspector)
 
+        toolbar.addAction(self._action_new_session)
         toolbar.addAction(self._action_open)
+        toolbar.addAction(self._action_open_project)
         toolbar.addAction(self._action_run)
         toolbar.addSeparator()
         toolbar.addAction(self._action_save)
+        toolbar.addAction(self._action_save_as)
+        toolbar.addAction(self._action_export_report)
         toolbar.addAction(self._action_inspector)
         self.addToolBar(toolbar)
+
+        # Store current project path for save (non-as)
+        self._current_project_path: Path | None = None
 
         # ── Central widget: error banner + sidebar + stack ──────────────
         central = QWidget()
@@ -230,7 +258,13 @@ class MainWindow(QMainWindow):
         sc_run = QShortcut(QKeySequence("F5"), self)
         sc_run.activated.connect(self.run_analysis)  # type: ignore[attr-defined]
         sc_save = QShortcut(QKeySequence("Ctrl+S"), self)
-        sc_save.activated.connect(self._save_placeholder)  # type: ignore[attr-defined]
+        sc_save.activated.connect(self._save_project)  # type: ignore[attr-defined]
+        sc_save_as = QShortcut(QKeySequence("Ctrl+Shift+S"), self)
+        sc_save_as.activated.connect(self._save_project_as)  # type: ignore[attr-defined]
+        sc_open_proj = QShortcut(QKeySequence("Ctrl+Shift+O"), self)
+        sc_open_proj.activated.connect(self._open_project)  # type: ignore[attr-defined]
+        sc_new = QShortcut(QKeySequence("Ctrl+N"), self)
+        sc_new.activated.connect(self._new_session)  # type: ignore[attr-defined]
         sc_side = QShortcut(QKeySequence("L"), self)
         sc_side.activated.connect(self._toggle_sidebar)  # type: ignore[attr-defined]
         sc_insp = QShortcut(QKeySequence("R"), self)
@@ -332,6 +366,10 @@ class MainWindow(QMainWindow):
         self._action_run.setEnabled(True)
         self._progress_label.setText("")
         self._status_label.setText("Analysis complete")
+        # Enable save/export now that we have a result
+        self._action_save.setEnabled(True)
+        self._action_save_as.setEnabled(True)
+        self._action_export_report.setEnabled(True)
         self._update_all_pages(result)
         self._update_inspector(result)
 
@@ -442,5 +480,117 @@ class MainWindow(QMainWindow):
     def _toggle_inspector(self) -> None:
         self._inspector_dock.setVisible(not self._inspector_dock.isVisible())
 
-    def _save_placeholder(self) -> None:
-        self._status_label.setText("Save report: available in Stage 9")
+    def _new_session(self) -> None:
+        """Clear the current session (Ctrl+N)."""
+        self._session.clear()
+        self._current_project_path = None
+        self._action_save.setEnabled(False)
+        self._action_save_as.setEnabled(False)
+        self._action_export_report.setEnabled(False)
+        for page in self._pages:
+            if hasattr(page, "clear"):
+                page.clear()  # type: ignore[attr-defined]
+        self._inspector_text.clear()
+        self.setWindowTitle("Industrial Vibration Analyzer (IVA)")
+        self._status_label.setText("New session started")
+        self._hide_error_banner()
+
+    def _save_project(self) -> None:
+        """Save to existing path or prompt for new path (Ctrl+S)."""
+        if self._session.result is None:
+            self._status_label.setText("Nothing to save — run an analysis first")
+            return
+        if self._current_project_path is not None:
+            self._do_save_project(self._current_project_path)
+        else:
+            self._save_project_as()
+
+    def _save_project_as(self) -> None:
+        """Prompt for a path and save (Ctrl+Shift+S)."""
+        if self._session.result is None:
+            self._status_label.setText("Nothing to save — run an analysis first")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Project As",
+            "project.vibproj",
+            "IVA Project Files (*.vibproj);;All Files (*)",
+        )
+        if path:
+            self._do_save_project(Path(path))
+
+    def _do_save_project(self, path: Path) -> None:
+        try:
+            from iva.app.session_service import save_current_session
+
+            saved = save_current_session(self._session, path)
+            self._current_project_path = saved
+            self.setWindowTitle(f"IVA — {saved.name}")
+            self._status_label.setText(f"Project saved: {saved.name}")
+        except Exception as exc:  # noqa: BLE001
+            err = ExportError(
+                user_message=f"Could not save project: {exc}",
+                technical_details=str(exc),
+            )
+            self.show_error_banner(err)
+
+    def _open_project(self) -> None:
+        """Open a .vibproj session file (Ctrl+Shift+O)."""
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Project",
+            "",
+            "IVA Project Files (*.vibproj);;All Files (*)",
+        )
+        if not path:
+            return
+        try:
+            from iva.app.session_service import load_saved_session
+
+            loaded = load_saved_session(path)
+            self._session = loaded
+            self._current_project_path = Path(path)
+            self.setWindowTitle(f"IVA — {Path(path).name}")
+            self._status_label.setText(f"Project loaded: {Path(path).name}")
+            self._action_save.setEnabled(True)
+            self._action_save_as.setEnabled(True)
+            self._action_export_report.setEnabled(loaded.result is not None)
+            if loaded.result is not None:
+                self._update_all_pages(loaded.result)
+                self._update_inspector(loaded.result)
+            self._hide_error_banner()
+        except Exception as exc:  # noqa: BLE001
+            from iva.core.models.exceptions import IVAError as _IVAError
+
+            if isinstance(exc, _IVAError):
+                self.show_error_banner(exc)
+            else:
+                err = ExportError(
+                    user_message=f"Could not open project: {exc}",
+                    technical_details=str(exc),
+                )
+                self.show_error_banner(err)
+
+    def _export_report_bundle(self) -> None:
+        """Export all report formats to a directory."""
+        if self._session.result is None:
+            self._status_label.setText("Nothing to export — run an analysis first")
+            return
+        output_dir = QFileDialog.getExistingDirectory(
+            self, "Select Output Directory for Report Bundle"
+        )
+        if not output_dir:
+            return
+        try:
+            from iva.app.report_service import export_report_bundle
+
+            written = export_report_bundle(self._session.result, output_dir)
+            self._status_label.setText(
+                f"Exported {len(written)} file(s) to {Path(output_dir).name}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            err = ExportError(
+                user_message=f"Report export failed: {exc}",
+                technical_details=str(exc),
+            )
+            self.show_error_banner(err)

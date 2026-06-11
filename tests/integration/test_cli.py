@@ -214,3 +214,29 @@ def test_cli_missing_config_file(tmp_path: Path) -> None:
         str(tmp_path / "output"),
     )
     assert proc.returncode != 0
+
+
+def test_cli_stage9_exports(tmp_path: Path) -> None:
+    """Stage 9 flags create PDF, HTML, and a versioned project file."""
+    from iva.cli.main import main
+
+    project_root = Path(__file__).parents[2]
+    output = tmp_path / "stage9"
+    exit_code = main(
+        [
+            "analyze",
+            "--data",
+            str(project_root / "data" / "examples" / "example_clean_sine.csv"),
+            "--config",
+            str(project_root / "config" / "example_config.json"),
+            "--output",
+            str(output),
+            "--export-pdf",
+            "--export-html",
+            "--save-project",
+        ]
+    )
+    assert exit_code == 0
+    for filename in ("report.pdf", "report.html", "project.vibproj"):
+        path = output / filename
+        assert path.exists() and path.stat().st_size > 0
