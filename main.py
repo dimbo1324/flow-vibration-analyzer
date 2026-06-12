@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 
 
@@ -12,6 +13,15 @@ def main() -> int:
     Returns:
         Exit code (0 on success, 1 on import error).
     """
+    if "--smoke-test" not in sys.argv and os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+        # A leftover offscreen platform (typically from an interrupted smoke
+        # test in the same shell) would render the GUI window invisible.
+        print(
+            "Предупреждение: QT_QPA_PLATFORM=offscreen снят для запуска графического интерфейса.",
+            file=sys.stderr,
+        )
+        del os.environ["QT_QPA_PLATFORM"]
+
     try:
         from PySide6.QtWidgets import QApplication  # type: ignore[import-untyped]
 

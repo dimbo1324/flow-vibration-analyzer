@@ -137,11 +137,24 @@ Write-Status "OK" "Package import verified." "Green"
 # --- 7. Smoke test -----------------------------------------------------------
 if (-not $SkipSmokeTest) {
     Write-Status "INFO" "Running smoke test (python main.py --smoke-test) ..." "Cyan"
-    $env:QT_QPA_PLATFORM = "offscreen"
-    $env:QT_OPENGL = "software"
-    $env:MPLBACKEND = "Agg"
-    & $venvPython (Join-Path $repoRoot "main.py") --smoke-test
-    if ($LASTEXITCODE -ne 0) {
+    # Environment variables are process-wide in PowerShell: save and restore
+    # them so an interactive session is not left in offscreen mode (which
+    # would make a later .\scripts\run.ps1 GUI launch invisible).
+    $savedQpa = $env:QT_QPA_PLATFORM
+    $savedOpenGl = $env:QT_OPENGL
+    $savedMpl = $env:MPLBACKEND
+    try {
+        $env:QT_QPA_PLATFORM = "offscreen"
+        $env:QT_OPENGL = "software"
+        $env:MPLBACKEND = "Agg"
+        & $venvPython (Join-Path $repoRoot "main.py") --smoke-test
+        $smokeExit = $LASTEXITCODE
+    } finally {
+        $env:QT_QPA_PLATFORM = $savedQpa
+        $env:QT_OPENGL = $savedOpenGl
+        $env:MPLBACKEND = $savedMpl
+    }
+    if ($smokeExit -ne 0) {
         Write-Status "FAILED" "Smoke test failed." "Red"
         exit 1
     }
