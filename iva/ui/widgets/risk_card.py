@@ -13,7 +13,7 @@ from iva.ui.styles.theme import (
     COLOR_PANEL,
     COLOR_WARN,
     FONT_SIZE_LARGE,
-    RADIUS_MD,
+    RADIUS_LG,
     SPACING_MD,
     SPACING_SM,
 )
@@ -33,6 +33,9 @@ class RiskCard(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("riskCard")
+        # Required for a QWidget subclass to actually paint its stylesheet
+        # background and coloured border.
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACING_MD, SPACING_SM, SPACING_MD, SPACING_SM)
         layout.setSpacing(4)
@@ -70,7 +73,7 @@ class RiskCard(QWidget):
         self._recommendation_label.setStyleSheet(f"color: {color};")
         self.setStyleSheet(
             f"RiskCard {{ background: {COLOR_PANEL}; border: 2px solid {color};"
-            f" border-radius: {RADIUS_MD}px; }}"
+            f" border-radius: {RADIUS_LG}px; }}"
         )
 
     def clear(self) -> None:
@@ -85,5 +88,5 @@ class RiskCard(QWidget):
         self._recommendation_label.setStyleSheet(f"color: {COLOR_MUTED};")
         self.setStyleSheet(
             f"RiskCard {{ background: {COLOR_PANEL}; border: 1px solid {COLOR_MUTED};"
-            f" border-radius: {RADIUS_MD}px; }}"
+            f" border-radius: {RADIUS_LG}px; }}"
         )

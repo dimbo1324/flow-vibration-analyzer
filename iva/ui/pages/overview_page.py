@@ -26,6 +26,7 @@ from iva.ui.styles.theme import (
     COLOR_TEXT,
     COLOR_WARN,
     FONT_SIZE_TITLE,
+    SPACING_LG,
     SPACING_MD,
     SPACING_SM,
 )
@@ -64,7 +65,7 @@ class OverviewPage(QWidget):
 
         content = QWidget()
         layout = QVBoxLayout(content)
-        layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
+        layout.setContentsMargins(SPACING_LG, SPACING_LG, SPACING_LG, SPACING_LG)
         layout.setSpacing(SPACING_MD)
 
         # Title
@@ -92,6 +93,8 @@ class OverviewPage(QWidget):
         self._quick_open_button.setObjectName("quickOpenFileButton")
         self._quick_demo_button = QPushButton("Запустить демо-анализ")
         self._quick_demo_button.setObjectName("quickDemoButton")
+        # Primary call-to-action: filled accent style from the app stylesheet.
+        self._quick_demo_button.setProperty("accent", True)
         self._quick_project_button = QPushButton("Открыть проект .vibproj")
         self._quick_project_button.setObjectName("quickOpenProjectButton")
         self._quick_open_button.clicked.connect(self.open_file_requested.emit)
@@ -117,7 +120,7 @@ class OverviewPage(QWidget):
         # Metric cards row
         cards_widget = QWidget()
         cards_layout = QGridLayout(cards_widget)
-        cards_layout.setSpacing(SPACING_SM)
+        cards_layout.setSpacing(SPACING_MD)
         cards_layout.setContentsMargins(0, 0, 0, 0)
 
         self._card_peak_freq = MetricCard(tr("Dominant Peak"))
