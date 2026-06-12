@@ -55,8 +55,12 @@ class PageStateBanner(QLabel):
 
     def _set_state(self, message: str, color: str) -> None:
         self.setText(message)
+        # Coloured left bar + soft panel: state is readable at a glance
+        # without shouting; the message stays short and Russian.
         self.setStyleSheet(
             f"background: {COLOR_PANEL}; color: {color}; border: 1px solid {COLOR_BORDER};"
-            f" border-radius: {RADIUS_MD}px; padding: {SPACING_SM}px; font-weight: 600;"
+            f" border-left: 3px solid {color};"
+            f" border-radius: {RADIUS_MD}px; padding: {SPACING_SM + 4}px {SPACING_SM + 6}px;"
+            f" font-weight: 600;"
         )
         self.setVisible(True)

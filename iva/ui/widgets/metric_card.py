@@ -1,4 +1,4 @@
-"""MetricCard — a small widget that displays a labelled numeric metric."""
+"""MetricCard — a card widget that displays a labelled hero-size metric."""
 
 from __future__ import annotations
 
@@ -6,15 +6,17 @@ from PySide6.QtCore import Qt  # type: ignore[import-untyped]
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget  # type: ignore[import-untyped]
 
 from iva.ui.styles.theme import (
+    COLOR_ACCENT,
     COLOR_BORDER,
     COLOR_DIM,
     COLOR_MUTED,
     COLOR_SURFACE,
+    COLOR_SURFACE_HOVER,
     COLOR_TEXT,
-    FONT_SIZE_LARGE,
+    FONT_SIZE_HERO,
     FONT_SIZE_SMALL,
-    RADIUS_MD,
-    SPACING_SM,
+    RADIUS_LG,
+    SPACING_MD,
     STATUS_COLOR_MAP,
 )
 
@@ -22,7 +24,10 @@ __all__ = ["MetricCard"]
 
 
 class MetricCard(QWidget):
-    """Compact card showing a named metric value with optional unit and status.
+    """Card showing a named metric as a large hero number with optional unit.
+
+    The value dominates visually (numbers over words); the label and unit are
+    small and muted.  Hovering highlights the card border with the accent.
 
     Status colors:
         ``"good"``  → COLOR_GOOD (green)
@@ -36,20 +41,22 @@ class MetricCard(QWidget):
         self._setup_ui(label)
 
     def _setup_ui(self, label: str) -> None:
+        # Without WA_StyledBackground a plain QWidget subclass silently skips
+        # painting its stylesheet background/border, so the card style and the
+        # :hover state would never be visible.
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(SPACING_SM, SPACING_SM, SPACING_SM, SPACING_SM)
-        layout.setSpacing(2)
+        layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
+        layout.setSpacing(4)
 
         self._label = QLabel(label.upper())
         self._label.setStyleSheet(
-            f"color: {COLOR_DIM}; font-size: {FONT_SIZE_SMALL}pt; letter-spacing: 1px;"
+            f"color: {COLOR_DIM}; font-size: {FONT_SIZE_SMALL}pt; letter-spacing: 1.5px;"
         )
 
         self._value_label = QLabel("—")
         self._value_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self._value_label.setStyleSheet(
-            f"color: {COLOR_TEXT}; font-size: {FONT_SIZE_LARGE}pt; font-weight: bold;"
-        )
+        self._value_label.setStyleSheet(self._value_style(COLOR_TEXT))
 
         self._unit_label = QLabel("")
         self._unit_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: {FONT_SIZE_SMALL}pt;")
@@ -57,12 +64,19 @@ class MetricCard(QWidget):
         layout.addWidget(self._label)
         layout.addWidget(self._value_label)
         layout.addWidget(self._unit_label)
+        layout.addStretch()
 
         self.setStyleSheet(
             f"MetricCard {{ background: {COLOR_SURFACE}; border: 1px solid {COLOR_BORDER};"
-            f" border-radius: {RADIUS_MD}px; }}"
+            f" border-radius: {RADIUS_LG}px; }}"
+            f" MetricCard:hover {{ background: {COLOR_SURFACE_HOVER};"
+            f" border-color: {COLOR_ACCENT}; }}"
         )
-        self.setMinimumSize(120, 80)
+        self.setMinimumSize(150, 104)
+
+    @staticmethod
+    def _value_style(color: str) -> str:
+        return f"color: {color}; font-size: {FONT_SIZE_HERO}pt; font-weight: 800;"
 
     def set_value(self, value: str, unit: str = "", status: str | None = None) -> None:
         """Update displayed value, unit, and status colour.
@@ -75,9 +89,7 @@ class MetricCard(QWidget):
         self._value_label.setText(value)
         self._unit_label.setText(unit)
         color = STATUS_COLOR_MAP.get(status, COLOR_TEXT)
-        self._value_label.setStyleSheet(
-            f"color: {color}; font-size: {FONT_SIZE_LARGE}pt; font-weight: bold;"
-        )
+        self._value_label.setStyleSheet(self._value_style(color))
 
     def clear(self) -> None:
         """Reset the card to placeholder state."""

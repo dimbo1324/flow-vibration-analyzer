@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import (  # type: ignore[import-untyped]
+    QEasingCurve,
+    QPropertyAnimation,
     QSettings,
     QSize,
     Qt,
@@ -25,6 +27,7 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QDialogButtonBox,
     QDockWidget,
     QFileDialog,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -56,6 +59,7 @@ from iva.ui.pages.signal_page import SignalPage
 from iva.ui.pages.spectrum_page import SpectrumPage
 from iva.ui.strings_ru import tr
 from iva.ui.styles.theme import (
+    ANIM_NORMAL_MS,
     COLOR_ACCENT,
     COLOR_BAD,
     COLOR_BORDER,
@@ -650,6 +654,32 @@ class MainWindow(QMainWindow):
     @Slot(int)
     def _on_nav_changed(self, index: int) -> None:
         self._stack.setCurrentIndex(index)
+        self._animate_page_transition()
+
+    def _animate_page_transition(self) -> None:
+        """Fade the freshly shown page in for a smooth, modern transition.
+
+        Skipped in offscreen mode (tests/CI): without a running render loop
+        the animation would never progress and the page would stay at the
+        starting opacity.
+        """
+        if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+            return
+        page = self._stack.currentWidget()
+        if page is None:
+            return
+        effect = QGraphicsOpacityEffect(page)
+        page.setGraphicsEffect(effect)
+        animation = QPropertyAnimation(effect, b"opacity", self)
+        animation.setDuration(ANIM_NORMAL_MS)
+        animation.setStartValue(0.0)
+        animation.setEndValue(1.0)
+        animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        # Remove the effect afterwards: a lingering QGraphicsOpacityEffect
+        # degrades chart canvas rendering quality.
+        animation.finished.connect(lambda p=page: p.setGraphicsEffect(None))
+        animation.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
+        self._page_fade_animation = animation
 
     def _toggle_sidebar(self) -> None:
         if self._focus_mode:
