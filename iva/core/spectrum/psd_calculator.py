@@ -1,9 +1,8 @@
-"""Welch PSD estimator (Algorithm 5).
+"""Оценка PSD методом Уэлча по алгоритму 5.
 
-Algorithm reference: docs/11_algorithms.md, Algorithm 5.
-Uses scipy.signal.welch with scaling='density' so units are [physical]²/Hz.
-The segment length is fixed at settings.segment_length_samples (default 1024)
-with 50 % overlap.
+``scipy.signal.welch`` вызывается с ``scaling='density'``, поэтому результат
+имеет размерность [физическая величина]²/Hz. Длина сегмента и перекрытие берутся
+из настроек анализа и являются частью воспроизводимого расчёта.
 """
 
 from __future__ import annotations
@@ -18,7 +17,8 @@ from iva.core.models.settings import SpectralSettings
 
 logger = logging.getLogger(__name__)
 
-# Map WindowType string values to scipy window names.
+# Отдельное отображение сохраняет стабильные enum-значения проекта, даже если
+# SciPy использует другое имя окна во внешнем API.
 _WINDOW_MAP: dict[str, str] = {
     "hann": "hann",
     "hamming": "hamming",
@@ -31,7 +31,7 @@ def calculate_psd(
     sampling_rate_hz: float,
     settings: SpectralSettings,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Compute power spectral density using Welch's method.
+    """Рассчитать спектральную плотность мощности методом Уэлча.
 
     Args:
         signal: 1-D float signal array (should be preprocessed / filtered).

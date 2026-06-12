@@ -42,6 +42,7 @@ param(
     [switch]$DryRun,
     [switch]$Force,
     [switch]$KeepLogs,
+    [switch]$IncludeVenv,
     [switch]$CleanResults,
     [int]$OlderThanDays = 30
 )
@@ -97,7 +98,7 @@ function Show-Help {
     Write-Host "  quality       lint + test"
     Write-Host "  check         python scripts/check_project.py"
     Write-Host "  diagnose      python scripts/diagnose_project.py"
-    Write-Host "  clean         Очистка артефактов (-DryRun/-Force/-KeepLogs)"
+    Write-Host "  clean         Очистка (-DryRun/-Force/-KeepLogs/-IncludeVenv)"
     Write-Host "  clean-logs    Очистка логов (-DryRun/-Force/-OlderThanDays/-CleanResults)"
     Write-Host "  demo          Демо-анализ через CLI"
     Write-Host "  build-check   Проверка окружения сборки (без сборки)"
@@ -114,6 +115,7 @@ function Get-CleanBoundArgs {
     if ($DryRun) { $bound["DryRun"] = $true }
     if ($Force) { $bound["Force"] = $true }
     if ($KeepLogs) { $bound["KeepLogs"] = $true }
+    if ($IncludeVenv) { $bound["IncludeVenv"] = $true }
     return $bound
 }
 

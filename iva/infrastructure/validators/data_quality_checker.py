@@ -1,15 +1,11 @@
-"""Data quality checker for the Industrial Vibration Analyzer.
+"""Структурная проверка и оценка качества входных данных IVA.
 
-Converts a raw :class:`~iva.core.models.signal_data.RawFileData` + a column
-role assignment into a validated :class:`~iva.core.models.signal_data.ValidatedSignalData`.
+Преобразует ``RawFileData`` и назначение ролей столбцов в
+``ValidatedSignalData``.
 
-This module performs *structural and quality checks only*.  It does NOT:
-  - interpolate gaps
-  - remove outliers
-  - apply filters
-  - detrend signals
-  - compute FFT/PSD/RMS
-  - perform physical calculations
+Модуль выполняет только проверки структуры и качества. Интерполяция,
+обработка выбросов, фильтры, PSD/RMS и физические формулы относятся к core и
+здесь не выполняются.
 
 Warnings are accumulated as strings and included in ``ValidatedSignalData.warnings``
 (a ``tuple[str, ...]`` as defined by the Stage 2 model).
@@ -36,7 +32,7 @@ _MIN_DURATION_SECONDS = 5.0
 _SAMPLING_INTERVAL_TOLERANCE = 0.0001  # 0.01 %
 _MISSING_WARNING_THRESHOLD = 0.30  # 30 %
 
-# Simple mapping from SignalRole to physical unit string.
+# Стабильное соответствие роли сигнала физической единице для отчётов и UI.
 _ROLE_TO_UNIT: dict[SignalRole, str] = {
     SignalRole.ACCELERATION_X: "m/s^2",
     SignalRole.ACCELERATION_Y: "m/s^2",
@@ -50,7 +46,7 @@ def check_data_quality(
     raw_data: RawFileData,
     assignment: ColumnRoleAssignment,
 ) -> ValidatedSignalData:
-    """Validate raw tabular data and produce a :class:`ValidatedSignalData`.
+    """Проверить сырую таблицу и сформировать ``ValidatedSignalData``.
 
     Args:
         raw_data: The result of reading a file with one of the infrastructure
@@ -71,7 +67,7 @@ def check_data_quality(
     warnings: list[str] = []
 
     # ------------------------------------------------------------------ #
-    # 1. Verify raw data shape
+    # 1. Проверка формы сырой таблицы
     # ------------------------------------------------------------------ #
     logger.debug("Data quality check started for '%s'", raw_data.file_path.name)
 
@@ -88,7 +84,7 @@ def check_data_quality(
         )
 
     # ------------------------------------------------------------------ #
-    # 2. Verify required columns exist
+    # 2. Наличие обязательных столбцов
     # ------------------------------------------------------------------ #
     logger.debug(
         "Checking required columns: time='%s', signal='%s'",
@@ -108,7 +104,7 @@ def check_data_quality(
             )
 
     # ------------------------------------------------------------------ #
-    # 3. Convert time column to numeric
+    # 3. Преобразование времени в числовой массив
     # ------------------------------------------------------------------ #
     logger.debug("Converting time column to numeric")
     try:
@@ -125,7 +121,7 @@ def check_data_quality(
     time_array = time_series.to_numpy(dtype=np.float64, na_value=np.nan)
 
     # ------------------------------------------------------------------ #
-    # 4. Convert signal column to numeric
+    # 4. Преобразование сигнала в числовой массив
     # ------------------------------------------------------------------ #
     logger.debug("Converting signal column to numeric")
     try:
@@ -141,7 +137,7 @@ def check_data_quality(
     signal_array = signal_series.to_numpy(dtype=np.float64, na_value=np.nan)
 
     # ------------------------------------------------------------------ #
-    # 5. Check time axis monotonicity (NaN-tolerant)
+    # 5. Монотонность времени проверяется по конечным значениям
     # ------------------------------------------------------------------ #
     logger.debug("Checking time axis monotonicity")
     finite_time = time_array[np.isfinite(time_array)]
@@ -216,7 +212,7 @@ def check_data_quality(
         )
 
     # ------------------------------------------------------------------ #
-    # 9. Outlier fraction (4σ rule)
+    # 9. Доля выбросов по диагностическому правилу 4σ
     # ------------------------------------------------------------------ #
     mean_val = float(np.mean(finite_signal))
     std_val = float(np.std(finite_signal))
@@ -228,7 +224,7 @@ def check_data_quality(
     logger.debug("Outlier fraction (4σ): %.4f", outlier_fraction)
 
     # ------------------------------------------------------------------ #
-    # 10. Duration check
+    # 10. Минимальная длительность для осмысленного спектрального анализа
     # ------------------------------------------------------------------ #
     if len(finite_time) >= 2:
         duration_seconds = float(finite_time[-1] - finite_time[0])
@@ -249,14 +245,14 @@ def check_data_quality(
         )
 
     # ------------------------------------------------------------------ #
-    # 11. Sensor conversion factor
+    # 11. Пересчёт показаний датчика в физические единицы
     # ------------------------------------------------------------------ #
     if assignment.sensor_conversion_factor is not None:
         signal_array = signal_array * assignment.sensor_conversion_factor
         logger.debug("Sensor conversion factor applied: %.6g", assignment.sensor_conversion_factor)
 
     # ------------------------------------------------------------------ #
-    # 12. Sampling rate
+    # 12. Частота дискретизации: заданная пользователем либо оценённая по времени
     # ------------------------------------------------------------------ #
     if assignment.sampling_rate_hz > 0:
         sampling_rate_hz = assignment.sampling_rate_hz
@@ -268,7 +264,7 @@ def check_data_quality(
     logger.debug("Sampling rate: %.2f Hz", sampling_rate_hz)
 
     # ------------------------------------------------------------------ #
-    # 13. Physical unit
+    # 13. Физическая единица для последующих слоёв
     # ------------------------------------------------------------------ #
     physical_unit = _ROLE_TO_UNIT.get(assignment.signal_role, "a.u.")
 

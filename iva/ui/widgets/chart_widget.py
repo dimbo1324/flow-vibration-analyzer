@@ -1,12 +1,8 @@
-"""ChartWidget — matplotlib canvas embedded in a Qt widget.
+"""Виджет Matplotlib, встроенный в интерфейс Qt.
 
-Falls back gracefully to a placeholder label if matplotlib is not available.
-
-Stage 9 additions:
-- enable_cursor_inspection() — show mouse coordinates in a label.
-- reset_view() — reset axis limits to auto.
-- export_png() — save figure as PNG.
-- NavigationToolbar2QT (zoom/pan) added to layout (graceful fallback if unavailable).
+Если Matplotlib недоступен, вместо графика показывается заглушка, а методы
+отрисовки безопасно ничего не делают. Виджет также хранит описание последнего
+графика, чтобы режим фокуса мог повторить отрисовку без нового анализа.
 """
 
 from __future__ import annotations
@@ -48,7 +44,7 @@ if TYPE_CHECKING:
 try:
     import matplotlib  # type: ignore[import-untyped]
 
-    # Use Agg when in offscreen mode to avoid GL issues, otherwise QtAgg.
+    # В headless-режиме Agg исключает зависимость от OpenGL; в GUI нужен QtAgg.
     if os.environ.get("MPLBACKEND") == "Agg" or os.environ.get("QT_QPA_PLATFORM") == "offscreen":
         matplotlib.use("Agg")
     else:
@@ -63,7 +59,7 @@ try:
 except ImportError:
     _MATPLOTLIB_AVAILABLE = False
 
-# Try to import NavigationToolbar — only available with QtAgg backend
+# Панель навигации существует только у Qt-бэкенда и поэтому необязательна.
 try:
     from matplotlib.backends.backend_qt import (  # type: ignore[import-untyped]
         NavigationToolbar2QT,
@@ -84,18 +80,17 @@ __all__ = ["ChartWidget"]
 
 
 def _hex_to_rgb_float(hex_color: str) -> tuple[float, float, float]:
-    """Convert a ``#RRGGBB`` string to a (r, g, b) tuple in [0, 1]."""
+    """Преобразовать ``#RRGGBB`` в нормированный кортеж ``(r, g, b)``."""
     h = hex_color.lstrip("#")
     r, g, b = (int(h[i : i + 2], 16) / 255.0 for i in (0, 2, 4))
     return r, g, b
 
 
 class ChartWidget(QWidget):
-    """Matplotlib figure canvas with helper methods for IVA chart types.
+    """Полотно Matplotlib с операциями для основных графиков IVA.
 
-    If matplotlib is unavailable (e.g. during headless testing without the
-    library), a plain placeholder label is shown instead and all plotting
-    methods become no-ops.
+    При отсутствии Matplotlib создаётся текстовая заглушка, а публичные методы
+    отрисовки превращаются в безопасные пустые операции.
     """
 
     focus_requested = Signal(object)
@@ -146,7 +141,7 @@ class ChartWidget(QWidget):
             controls.addWidget(self._hint_label)
             layout.addLayout(controls)
 
-            # Add NavigationToolbar if available and not in offscreen mode
+            # В offscreen-режиме Qt-панель не создаётся: ей требуется GUI-бэкенд.
             _is_offscreen = os.environ.get("QT_QPA_PLATFORM") == "offscreen"
             if _TOOLBAR_AVAILABLE and not _is_offscreen:
                 try:
@@ -173,11 +168,11 @@ class ChartWidget(QWidget):
                             action.setToolTip(translated)
                     layout.addWidget(self._toolbar)
                 except Exception:  # noqa: BLE001
-                    pass  # toolbar is optional
+                    pass  # Панель необязательна и не должна ломать сам график.
 
             layout.addWidget(self._canvas)
 
-            # Coordinate label below chart
+            # Координаты курсора выводятся отдельно, не изменяя область графика.
             self._coord_label = QLabel("")
             self._coord_label.setStyleSheet(
                 f"color: {COLOR_MUTED}; font-size: 9pt; padding: 2px 6px;"
@@ -191,7 +186,7 @@ class ChartWidget(QWidget):
             layout.addWidget(lbl)
 
     def _style_axes(self) -> None:
-        """Apply dark theme styling to matplotlib axes."""
+        """Применить к осям Matplotlib тёмную тему приложения."""
         if not _MATPLOTLIB_AVAILABLE:
             return
         bg = _hex_to_rgb_float(COLOR_BG)
@@ -202,15 +197,14 @@ class ChartWidget(QWidget):
             spine.set_alpha(0.4)
 
     # ------------------------------------------------------------------
-    # Stage 9 additions
+    # Интерактивное управление графиком
     # ------------------------------------------------------------------
 
     def enable_cursor_inspection(self, enabled: bool = True) -> None:
-        """Enable or disable cursor coordinate display on mouse motion.
+        """Включить или отключить отображение координат под курсором.
 
-        Args:
-            enabled: If ``True``, connect motion events and show the
-                coordinate label.  If ``False``, disconnect events.
+        При отключении обработчик движения отсоединяется, чтобы невидимый
+        режим не создавал лишнюю работу на каждом событии мыши.
         """
         if not _MATPLOTLIB_AVAILABLE:
             return
@@ -232,7 +226,7 @@ class ChartWidget(QWidget):
             self._cursor_enabled = False
 
     def _on_mouse_move(self, event: object) -> None:
-        """Update coordinate label on mouse motion."""
+        """Обновить подпись координат при движении мыши."""
         if not hasattr(event, "xdata") or not hasattr(event, "ydata"):
             return
         x = getattr(event, "xdata", None)
@@ -243,7 +237,7 @@ class ChartWidget(QWidget):
             self._coord_label.setText("")
 
     def reset_view(self) -> None:
-        """Reset axis limits to auto-fit the current data."""
+        """Вернуть границы осей, сохранённые после последней отрисовки."""
         if not _MATPLOTLIB_AVAILABLE:
             return
         if self._home_xlim is not None and self._home_ylim is not None:
@@ -263,7 +257,7 @@ class ChartWidget(QWidget):
         self._home_ylim = (float(ylim[0]), float(ylim[1]))
 
     def _on_scroll(self, event: object) -> None:
-        """Zoom around the cursor using the mouse wheel."""
+        """Изменить масштаб колесом мыши относительно положения курсора."""
         if getattr(event, "inaxes", None) is not self._ax:
             return
         x = getattr(event, "xdata", None)
@@ -278,7 +272,7 @@ class ChartWidget(QWidget):
         self._canvas.draw_idle()
 
     def _on_button_press(self, event: object) -> None:
-        """Start panning with the middle mouse button."""
+        """Начать панорамирование средней кнопкой мыши."""
         if getattr(event, "dblclick", False) and getattr(event, "button", None) == 1:
             self.request_focus()
             return
@@ -308,16 +302,16 @@ class ChartWidget(QWidget):
             self._pan_anchor = None
 
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:  # noqa: N802
-        """Request focus mode when the Qt widget itself receives a double-click."""
+        """Запросить режим фокуса при двойном щелчке по виджету Qt."""
         self.request_focus()
         super().mouseDoubleClickEvent(event)
 
     def request_focus(self) -> None:
-        """Ask the main window to show this chart in focused workspace mode."""
+        """Попросить главное окно показать график в режиме фокуса."""
         self.focus_requested.emit(self)
 
     def copy_plot_to(self, target: ChartWidget) -> None:
-        """Replot the current chart in *target* without recalculating analysis data."""
+        """Повторить текущий график в *target* без пересчёта анализа."""
         if self._last_plot is None:
             target.clear()
             return
@@ -327,18 +321,10 @@ class ChartWidget(QWidget):
             plot_method(*args, **kwargs)
 
     def export_png(self, output_path: str | Path) -> Path:
-        """Save the current figure as a PNG file.
+        """Сохранить текущую фигуру в PNG.
 
-        Args:
-            output_path: Destination file path.  Parent directories are
-                created automatically.
-
-        Returns:
-            The resolved output :class:`~pathlib.Path`.
-
-        Raises:
-            ExportError: If matplotlib is unavailable or the file cannot
-                be written.
+        Родительские каталоги создаются автоматически. При отсутствии
+        Matplotlib или ошибке записи возбуждается :class:`ExportError`.
         """
         if not _MATPLOTLIB_AVAILABLE:
             raise ExportError(
@@ -369,7 +355,7 @@ class ChartWidget(QWidget):
             self.export_png(path)
 
     # ------------------------------------------------------------------
-    # Public plotting API
+    # Публичный API отрисовки
     # ------------------------------------------------------------------
 
     def plot_signal(
@@ -378,7 +364,7 @@ class ChartWidget(QWidget):
         signal_array: NDArray[np.float64],
         label: str = "Сигнал",
     ) -> None:
-        """Plot a time-domain signal."""
+        """Построить сигнал во временной области."""
         if not _MATPLOTLIB_AVAILABLE:
             return
         self._last_plot = ("plot_signal", (time_array, signal_array), {"label": label})
@@ -404,7 +390,7 @@ class ChartWidget(QWidget):
         label_a: str = "Очищенный",
         label_b: str = "Отфильтрованный",
     ) -> None:
-        """Plot two overlaid time-domain signals."""
+        """Построить два наложенных сигнала во временной области."""
         if not _MATPLOTLIB_AVAILABLE:
             return
         self._last_plot = (
@@ -433,7 +419,7 @@ class ChartWidget(QWidget):
         psd_values: NDArray[np.float64],
         peaks: list[SpectralPeak] | None = None,
     ) -> None:
-        """Plot power spectral density with optional peak markers."""
+        """Построить спектральную плотность мощности с отметками пиков."""
         if not _MATPLOTLIB_AVAILABLE:
             return
         self._last_plot = ("plot_psd", (frequencies, psd_values), {"peaks": peaks})
@@ -466,7 +452,7 @@ class ChartWidget(QWidget):
         time_array: NDArray[np.float64],
         rms_trend: NDArray[np.float64],
     ) -> None:
-        """Plot RMS trend over time."""
+        """Построить изменение RMS во времени."""
         if not _MATPLOTLIB_AVAILABLE:
             return
         self._last_plot = ("plot_rms_trend", (time_array, rms_trend), {})
@@ -486,7 +472,7 @@ class ChartWidget(QWidget):
         label_exp: str = "Эксперимент",
         label_cfd: str = "CFD",
     ) -> None:
-        """Plot two overlaid profiles (experiment vs CFD)."""
+        """Построить наложенные профили эксперимента и CFD."""
         if not _MATPLOTLIB_AVAILABLE:
             return
         self._last_plot = (
@@ -510,7 +496,7 @@ class ChartWidget(QWidget):
         self._canvas.draw()
 
     def clear(self) -> None:
-        """Clear the plot area."""
+        """Очистить область графика."""
         if _MATPLOTLIB_AVAILABLE:
             self._ax.clear()
             self._home_xlim = None

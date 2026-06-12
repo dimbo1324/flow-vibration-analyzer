@@ -1,4 +1,4 @@
-"""Parquet file reader for the Industrial Vibration Analyzer."""
+"""Чтение столбцовых Parquet-файлов для IVA."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ _LARGE_FILE_THRESHOLD_BYTES = 100 * 1024 * 1024  # 100 MB
 
 
 def read_parquet(file_path: str) -> RawFileData:
-    """Read a Parquet file and return a :class:`~iva.core.models.signal_data.RawFileData`.
+    """Прочитать Parquet и вернуть контейнер ``RawFileData``.
 
     Args:
         file_path: Absolute or relative path to the Parquet file.

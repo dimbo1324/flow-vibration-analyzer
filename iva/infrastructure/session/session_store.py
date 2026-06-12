@@ -1,4 +1,9 @@
-"""Safe JSON storage for versioned ``.vibproj`` analysis sessions."""
+"""Безопасное чтение и запись версионированных сеансов ``.vibproj``.
+
+Файл проекта всегда обрабатывается как JSON: его содержимое не импортируется
+и не исполняется. Проверка версии до построения доменных моделей защищает от
+тихого прочтения несовместимого формата.
+"""
 
 from __future__ import annotations
 
@@ -28,7 +33,7 @@ _VIBPROJ_SUFFIX = ".vibproj"
 
 
 def save_project(session: AnalysisSession, file_path: str | Path) -> Path:
-    """Save a completed session as UTF-8 JSON, adding the extension if needed."""
+    """Сохранить завершённый сеанс как UTF-8 JSON и при необходимости добавить суффикс."""
     destination = Path(file_path)
     if destination.suffix.lower() != _VIBPROJ_SUFFIX:
         destination = destination.with_suffix(_VIBPROJ_SUFFIX)
@@ -64,7 +69,7 @@ def save_project(session: AnalysisSession, file_path: str | Path) -> Path:
 
 
 def load_project(file_path: str | Path) -> AnalysisSession:
-    """Load and validate a ``.vibproj`` file without executing its contents."""
+    """Прочитать и проверить ``.vibproj``, не исполняя его содержимое."""
     source = Path(file_path)
     if not source.exists():
         raise ValidationError(

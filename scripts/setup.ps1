@@ -1,23 +1,22 @@
 #!/usr/bin/env pwsh
 #
-# setup.ps1 — IVA developer environment bootstrap (Windows)
+# setup.ps1 — Подготовка окружения разработчика IVA в Windows
 #
-# Purpose:
-#   Create and provision a local virtual environment for the Industrial
-#   Vibration Analyzer (IVA): create .venv, install development dependencies,
-#   install the package in editable mode and run a smoke test.
+# Назначение:
+#   Создать локальное .venv, установить зависимости разработки, подключить
+#   пакет в editable-режиме и проверить запуск smoke-тестом.
 #
-# Usage:
+# Использование:
 #   .\scripts\setup.ps1
-#   .\scripts\setup.ps1 -NoEditable        # skip 'pip install -e .'
-#   .\scripts\setup.ps1 -SkipSmokeTest     # skip 'python main.py --smoke-test'
+#   .\scripts\setup.ps1 -NoEditable        # пропустить pip install -e .
+#   .\scripts\setup.ps1 -SkipSmokeTest     # пропустить smoke-тест
 #
-# Safety notes:
-#   - Operates only inside the repository (.venv) and PyPI; no global changes.
-#   - No hardcoded user paths; the repository root is detected from this script.
+# Безопасность:
+#   - Изменения ограничены локальным .venv; глобальный Python не модифицируется.
+#   - Корень проекта вычисляется относительно самого скрипта.
 #
-# Compatibility:
-#   Windows PowerShell 5.1 compatible. PowerShell 7+ is recommended.
+# Совместимость:
+#   Поддерживается Windows PowerShell 5.1, рекомендуется PowerShell 7+.
 
 [CmdletBinding()]
 param(
@@ -45,7 +44,7 @@ function Write-Status {
 Write-Host "=== IVA Setup ===" -ForegroundColor Cyan
 Write-Status "INFO" "Repository root: $repoRoot" "Cyan"
 
-# --- 1. Check Python version -------------------------------------------------
+# --- 1. Проверка версии Python ----------------------------------------------
 try {
     $pythonVersionRaw = & python --version 2>&1
 } catch {

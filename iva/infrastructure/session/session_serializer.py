@@ -1,4 +1,9 @@
-"""Safe JSON serialization for compact Stage 9 analysis sessions."""
+"""Безопасное преобразование результатов анализа в компактный JSON сеанса.
+
+Сериализатор хранит только данные, а не исполняемые объекты. Машиночитаемые
+ключи являются частью формата ``.vibproj`` и меняются только вместе с версией
+схемы.
+"""
 
 from __future__ import annotations
 
@@ -39,7 +44,7 @@ _MAX_STORED_POINTS = 5000
 
 
 def analysis_result_to_dict(result: AnalysisResult) -> dict[str, Any]:
-    """Convert an analysis result to a bounded, JSON-compatible mapping."""
+    """Преобразовать результат анализа в ограниченный JSON-совместимый словарь."""
     data: dict[str, Any] = {
         "_schema_version": VIBPROJ_SCHEMA_VERSION,
         "session_id": result.session_id,
@@ -62,7 +67,7 @@ def analysis_result_to_dict(result: AnalysisResult) -> dict[str, Any]:
 
 
 def analysis_result_from_dict(data: Mapping[str, Any]) -> AnalysisResult:
-    """Reconstruct an analysis result from validated JSON data."""
+    """Восстановить результат анализа из уже разобранных данных JSON."""
     if data.get("_schema_version") != VIBPROJ_SCHEMA_VERSION:
         raise ValidationError(
             user_message=(

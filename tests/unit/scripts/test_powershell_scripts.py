@@ -1,4 +1,4 @@
-"""Tests verifying PowerShell helper scripts exist and are well-formed."""
+"""Проверки состава и безопасных контрактов PowerShell-автоматизации."""
 
 from __future__ import annotations
 
@@ -60,6 +60,7 @@ def test_clean_supports_flags():
     assert "DryRun" in text
     assert "Force" in text
     assert "KeepLogs" in text
+    assert "IncludeVenv" in text
 
 
 def test_run_supports_smoketest():
@@ -80,8 +81,9 @@ def test_setup_supports_flags():
 
 def test_clean_preserves_virtual_environment():
     text = (SCRIPTS / "clean.ps1").read_text(encoding="utf-8")
-    assert '".venv"' in text
-    assert '"venv"' in text
+    assert "IncludeVenv" in text
+    assert '"--include-venv"' in text
+    assert "_base_executable" in text
 
 
 def test_clean_logs_supports_safe_flags():
@@ -138,6 +140,12 @@ def test_iva_clean_requires_force_for_deletion():
     text = (SCRIPTS / "iva.ps1").read_text(encoding="utf-8")
     assert "-not $DryRun -and -not $Force" in text
     assert "exit 2" in text
+
+
+def test_iva_forwards_include_venv_to_clean_script():
+    text = (SCRIPTS / "iva.ps1").read_text(encoding="utf-8")
+    assert "[switch]$IncludeVenv" in text
+    assert '$bound["IncludeVenv"] = $true' in text
 
 
 def test_build_check_is_before_destructive_build_steps():

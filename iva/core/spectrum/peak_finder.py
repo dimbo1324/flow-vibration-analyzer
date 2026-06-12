@@ -1,8 +1,8 @@
-"""Peak detection and interpretation in PSD spectra (Algorithms 6 and 7).
+"""Поиск и инженерная интерпретация пиков PSD по алгоритмам 6 и 7.
 
-Algorithm reference: docs/11_algorithms.md, Algorithms 6 and 7.
+Описание алгоритмов: docs/11_algorithms.md.
 
-Algorithm 6 — peak finding:
+Алгоритм 6 — поиск пиков:
     1. Convert PSD to dB: psd_db = 10 * log10(psd)
     2. Baseline = median(psd_db)
     3. Threshold = baseline + peak_detection_threshold_db
@@ -10,7 +10,7 @@ Algorithm 6 — peak finding:
     5. Filter by minimum width
     6. Compute -3 dB width via scipy.signal.peak_widths
 
-Algorithm 7 — peak interpretation:
+Алгоритм 7 — интерпретация:
     - VORTEX_SHEDDING: within 5 % of calculated shedding frequency
     - HARMONIC: within 2 % of integer multiple of dominant peak frequency
     - STRUCTURAL: within 3 % of natural frequency
@@ -34,11 +34,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_VORTEX_THRESHOLD = 0.05  # 5 % relative deviation
-_HARMONIC_THRESHOLD = 0.02  # 2 % relative deviation
-_STRUCTURAL_THRESHOLD = 0.03  # 3 % relative deviation
+# Допуски означают инженерное совпадение частот, а не погрешность float.
+_VORTEX_THRESHOLD = 0.05
+_HARMONIC_THRESHOLD = 0.02
+_STRUCTURAL_THRESHOLD = 0.03
 _HARMONIC_CONFIDENCE = 0.85
-_MIN_PSD_DB = -200.0  # floor for log conversion of near-zero PSD
+# Нижний предел защищает логарифм от нулевой PSD без изменения значимых пиков.
+_MIN_PSD_DB = -200.0
 
 
 def find_peaks(
@@ -46,7 +48,7 @@ def find_peaks(
     psd_values: np.ndarray,
     settings: SpectralSettings,
 ) -> list[SpectralPeak]:
-    """Detect spectral peaks and return them sorted by amplitude (descending).
+    """Найти спектральные пики и отсортировать их по убыванию амплитуды.
 
     Args:
         frequencies: 1-D array of frequency values in Hz.
@@ -59,7 +61,7 @@ def find_peaks(
         sorted by amplitude descending.  May be empty if no peaks pass the
         threshold and width filters.
     """
-    # Convert to dB, clip to floor to avoid -inf from log of zero
+    # Ограничение снизу предотвращает -inf при логарифме нулевой PSD.
     with np.errstate(divide="ignore", invalid="ignore"):
         psd_db = np.where(psd_values > 0, 10.0 * np.log10(psd_values), _MIN_PSD_DB)
 
@@ -73,21 +75,21 @@ def find_peaks(
         settings.peak_detection_threshold_db,
     )
 
-    # Find candidate peaks above threshold (peak properties are not needed here)
+    # На этом шаге нужны только индексы кандидатов выше адаптивного порога.
     candidate_idx, _ = scipy.signal.find_peaks(psd_db, height=threshold)
     logger.debug("find_peaks: %d candidate peak(s) before width filter", len(candidate_idx))
 
     if len(candidate_idx) == 0:
         return []
 
-    # Frequency resolution
+    # Частотное разрешение переводит ширину scipy из отсчётов в Hz.
     df = float(frequencies[1] - frequencies[0]) if len(frequencies) > 1 else 1.0
 
-    # Compute -3 dB widths for all candidates at once
+    # Ширины -3 dB вычисляются векторно для всех кандидатов.
     widths_samples, _, _, _ = scipy.signal.peak_widths(psd_db, candidate_idx, rel_height=0.5)
     widths_hz = widths_samples * df
 
-    # Filter by minimum width
+    # Слишком узкие пики считаются численным шумом и отбрасываются.
     min_width_samples = settings.peak_min_width_hz / df if df > 0 else 0.0
 
     peaks: list[SpectralPeak] = []
@@ -107,7 +109,7 @@ def find_peaks(
             )
         )
 
-    # Sort by amplitude descending
+    # Первый элемент после сортировки становится доминирующим пиком.
     peaks.sort(key=lambda p: p.amplitude, reverse=True)
     dominant_hz = peaks[0].frequency_hz if peaks else 0.0
     logger.info("Peaks found: %d (dominant: %.1f Hz)", len(peaks), dominant_hz)
@@ -115,7 +117,7 @@ def find_peaks(
 
 
 def _is_harmonic(peak: SpectralPeak, peaks: list[SpectralPeak]) -> bool:
-    """Return True if *peak* is a harmonic of a stronger fundamental peak.
+    """Проверить, является ли *peak* гармоникой более сильного основного пика.
 
     Implements Algorithm 7 rule 2 (docs/11_algorithms.md): a peak is a
     HARMONIC if its frequency lies within ``_HARMONIC_THRESHOLD`` (2 %) of an
@@ -126,7 +128,7 @@ def _is_harmonic(peak: SpectralPeak, peaks: list[SpectralPeak]) -> bool:
     for other in peaks:
         if other is peak or other.frequency_hz <= 0:
             continue
-        # The fundamental must be clearly stronger than its harmonic.
+        # Основной тон должен быть заметно сильнее предполагаемой гармоники.
         if other.amplitude < 2.0 * peak.amplitude:
             continue
         for n in (2, 3, 4):
@@ -140,7 +142,7 @@ def interpret_peaks(
     peaks: list[SpectralPeak],
     physics_result: PhysicsResult | None,
 ) -> list[SpectralPeak]:
-    """Classify each peak following Algorithm 7 (docs/11_algorithms.md).
+    """Классифицировать каждый пик по алгоритму 7.
 
     Rules are applied in order; the first match wins:
 
@@ -187,7 +189,7 @@ def interpret_peaks(
         interpretation = PeakInterpretation.UNKNOWN
         confidence = 1.0
 
-        # Rule 1 — VORTEX_SHEDDING (requires physics context).
+        # VORTEX_SHEDDING требует результата физических расчётов.
         matched = False
         if physics_result is not None and shedding_hz > 0:
             dev = abs(freq - shedding_hz) / shedding_hz
@@ -196,13 +198,13 @@ def interpret_peaks(
                 confidence = 1.0 - dev / _VORTEX_THRESHOLD
                 matched = True
 
-        # Rule 2 — HARMONIC (no physics context required).
+        # HARMONIC определяется только взаимным положением спектральных пиков.
         if not matched and _is_harmonic(peak, peaks):
             interpretation = PeakInterpretation.HARMONIC
             confidence = _HARMONIC_CONFIDENCE
             matched = True
 
-        # Rule 3 — STRUCTURAL (requires natural frequency).
+        # STRUCTURAL возможен только при известной собственной частоте.
         if not matched and fn is not None and fn > 0:
             dev = abs(freq - fn) / fn
             if dev <= _STRUCTURAL_THRESHOLD:

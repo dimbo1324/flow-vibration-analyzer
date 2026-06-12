@@ -1,10 +1,8 @@
-"""Utility functions for resolving project output and resource directories.
+"""Определение каталогов ресурсов и результатов для разработки и сборки.
 
-These helpers are frozen-aware: when the application runs as a PyInstaller
-executable (installed e.g. under ``C:\\Program Files\\IVA``), generated output
-must NOT be written next to the executable — that directory is read-only for
-normal users.  In that case ``out/`` is redirected to the per-user documents
-folder, matching where the application logger already writes.
+В сборке PyInstaller приложение может находиться в недоступном для записи
+``Program Files``. Поэтому ресурсы читаются из каталога распаковки, а
+создаваемые файлы направляются в пользовательский ``Documents/IVA/out``.
 """
 
 from __future__ import annotations
@@ -15,16 +13,15 @@ from pathlib import Path
 
 
 def is_frozen() -> bool:
-    """Return True when running as a bundled (PyInstaller) executable."""
+    """Вернуть ``True``, если код запущен из сборки PyInstaller."""
     return bool(getattr(sys, "frozen", False))
 
 
 def get_resource_root() -> Path:
-    """Return the directory that holds bundled read-only resources.
+    """Вернуть корень доступных только для чтения ресурсов.
 
-    Frozen: the PyInstaller extraction/_internal directory (``sys._MEIPASS``),
-    where the spec file places ``config/`` and ``data/examples/``.
-    Development: the repository root.
+    В сборке это каталог распаковки PyInstaller ``sys._MEIPASS``, куда spec
+    помещает ``config/`` и ``data/examples/``. В разработке это корень репозитория.
     """
     if is_frozen():
         return Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
@@ -32,22 +29,22 @@ def get_resource_root() -> Path:
 
 
 def get_project_root() -> Path:
-    """Return project root (parent of this file's package)."""
+    """Вернуть корень репозитория относительно текущего модуля."""
     return Path(__file__).resolve().parents[3]
 
 
 def _get_user_documents_out_dir() -> Path:
-    """Writable per-user output directory for the installed application."""
+    """Вернуть доступный для записи каталог результатов установленного приложения."""
     userprofile = os.environ.get("USERPROFILE")
     base = Path(userprofile) if userprofile else Path.home()
     return base / "Documents" / "IVA" / "out"
 
 
 def get_out_dir() -> Path:
-    """Return base output directory. Override with IVA_OUT_DIR env var.
+    """Вернуть базовый каталог результатов с учётом ``IVA_OUT_DIR``.
 
-    Frozen executables write to ``Documents/IVA/out`` because the install
-    directory (Program Files) is not writable for regular users.
+    Сборка пишет в ``Documents/IVA/out``, поскольку обычный пользователь не
+    может создавать файлы рядом с программой в ``Program Files``.
     """
     env = os.environ.get("IVA_OUT_DIR")
     if env:
@@ -58,7 +55,7 @@ def get_out_dir() -> Path:
 
 
 def ensure_out_subdir(name: str) -> Path:
-    """Create and return out/<name>/ directory."""
+    """Создать и вернуть подкаталог ``out/<name>/``."""
     d = get_out_dir() / name
     d.mkdir(parents=True, exist_ok=True)
     return d

@@ -1,11 +1,8 @@
-"""Regression tests for Windows packaging and environment hygiene.
+"""Регрессионные проверки Windows-сборки и чистоты переменных окружения.
 
-Covers the failure modes reported on a real Windows 11 setup:
-- `pip install -e .` aborting on setuptools flat-layout auto-discovery;
-- smoke-test scripts leaking QT_QPA_PLATFORM=offscreen into the interactive
-  session, which made the next GUI launch render invisibly;
-- a frozen (PyInstaller) build writing output into the read-only install
-  directory under Program Files.
+Закреплены реальные сбои: конфликт autodiscovery при ``pip install -e .``,
+утечка ``QT_QPA_PLATFORM=offscreen`` после smoke-теста и попытка сборки
+PyInstaller писать результаты в недоступный для записи ``Program Files``.
 """
 
 from __future__ import annotations
@@ -19,7 +16,7 @@ _ROOT = Path(__file__).resolve().parents[3]
 
 
 # ---------------------------------------------------------------------------
-# pyproject packaging (editable install regression)
+# Упаковка pyproject (регрессия editable-установки)
 # ---------------------------------------------------------------------------
 
 
@@ -32,14 +29,14 @@ def test_pyproject_declares_build_system_and_packages() -> None:
 
 
 # ---------------------------------------------------------------------------
-# PowerShell env hygiene (offscreen leak regression)
+# Чистота окружения PowerShell (регрессия утечки offscreen)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("script", ["setup.ps1", "run.ps1"])
 def test_smoke_scripts_restore_qt_platform(script: str) -> None:
     text = (_ROOT / "scripts" / script).read_text(encoding="utf-8")
-    # Save/restore pattern around the offscreen smoke-test block.
+    # Smoke-блок обязан восстанавливать окружение даже при исключении.
     assert "$savedQpa" in text, f"{script} must save QT_QPA_PLATFORM before smoke test"
     assert "finally" in text, f"{script} must restore environment in a finally block"
     assert "$env:QT_QPA_PLATFORM = $savedQpa" in text
@@ -57,7 +54,7 @@ def test_main_guards_against_offscreen_gui_launch() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Frozen-aware output/resource paths (installed-app stability)
+# Пути ресурсов и результатов в установленном приложении
 # ---------------------------------------------------------------------------
 
 
@@ -82,7 +79,7 @@ def test_get_out_dir_frozen_uses_documents(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.delenv("IVA_OUT_DIR", raising=False)
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     out = output_paths.get_out_dir()
-    # Must NOT point inside the (read-only) install/bundle directory.
+    # Результаты не должны попадать в каталог установленной программы.
     assert "Documents" in str(out)
     assert out.name == "out"
     assert "IVA" in out.parts

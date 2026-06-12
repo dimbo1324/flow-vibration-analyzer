@@ -1,11 +1,12 @@
-"""Run the full project quality-check suite.
+"""Запуск полного набора проверок качества проекта.
 
-Run from the repository root:
+Команда из корня репозитория::
+
     python scripts/check_project.py
 
-Creates a timestamped run directory under out/workflow-runs/ with individual
-log files for each check step.  Also prints readable progress to the console.
-Exits with a non-zero code if any required command fails.
+Для каждого запуска создаётся каталог ``out/workflow-runs/<timestamp>`` с
+отдельными журналами этапов. Ошибка обязательной проверки немедленно
+возвращает её ненулевой код.
 """
 
 from __future__ import annotations
@@ -16,23 +17,23 @@ import sys
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Output directory helpers
+# Каталоги результатов
 # ---------------------------------------------------------------------------
 
 
 def _get_out_dir() -> Path:
-    """Return base output directory (out/ by default, or IVA_OUT_DIR env)."""
+    """Вернуть ``out/`` либо каталог, заданный переменной ``IVA_OUT_DIR``."""
     import os
 
     env = os.environ.get("IVA_OUT_DIR")
     if env:
         return Path(env)
-    # scripts/ sits one level inside the project root
+    # Каталог scripts/ находится непосредственно внутри корня репозитория.
     return Path(__file__).resolve().parent.parent / "out"
 
 
 def _make_run_dir() -> Path:
-    """Create and return a timestamped workflow-run directory."""
+    """Создать и вернуть каталог запуска с меткой времени."""
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     run_dir = _get_out_dir() / "workflow-runs" / ts
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -40,7 +41,7 @@ def _make_run_dir() -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Runner
+# Исполнитель проверок
 # ---------------------------------------------------------------------------
 
 
@@ -66,13 +67,13 @@ class CheckRunner:
         log_name: str | None = None,
         required: bool = True,
     ) -> bool:
-        """Run a command, print progress, write log, return True on success."""
+        """Запустить команду, записать журнал и вернуть признак успеха."""
         print(f"{'='*60}")
         print(f"  {label}")
         print(f"  {' '.join(cmd)}")
         print(f"{'='*60}")
 
-        # Append to commands.log
+        # Общий журнал сохраняет точную последовательность запущенных команд.
         with self.commands_log.open("a", encoding="utf-8") as f:
             f.write(f"CMD [{label}]: {' '.join(cmd)}\n")
 
@@ -84,7 +85,7 @@ class CheckRunner:
             errors="replace",
         )
 
-        # Print output to console (use errors="replace" for Windows cp1251 consoles)
+        # replace не даёт консоли Windows с cp1251 упасть на символах UTF-8.
         if result.stdout:
             sys.stdout.buffer.write(
                 result.stdout.encode(sys.stdout.encoding or "utf-8", errors="replace")
@@ -96,7 +97,7 @@ class CheckRunner:
             )
             sys.stderr.flush()
 
-        # Write individual log file
+        # Отдельный файл упрощает диагностику конкретного упавшего этапа.
         if log_name:
             log_path = self.run_dir / log_name
             with log_path.open("w", encoding="utf-8") as f:
@@ -139,7 +140,7 @@ class CheckRunner:
 
 
 # ---------------------------------------------------------------------------
-# Main
+# Основной сценарий
 # ---------------------------------------------------------------------------
 
 
@@ -147,7 +148,7 @@ def main() -> None:
     runner = CheckRunner()
     exe = sys.executable
 
-    # Packages that may or may not exist (targeted mypy checks)
+    # Избирательные проверки mypy пропускают отсутствующие необязательные пакеты.
     _project_root = Path(__file__).resolve().parent.parent
 
     def mypy_if_exists(label: str, pkg_path: str, log_name: str) -> None:
@@ -159,7 +160,7 @@ def main() -> None:
                 required=False,
             )
 
-    # --- Required checks ---
+    # Обязательные проверки: первая ошибка завершает сценарий.
     runner.run(
         "Smoke test: python main.py --smoke-test",
         [exe, "main.py", "--smoke-test"],
@@ -202,7 +203,7 @@ def main() -> None:
         log_name="mypy.log",
     )
 
-    # --- Targeted mypy checks (skip missing packages) ---
+    # Дополнительные проверки mypy дают более локальный диагностический журнал.
     targeted_packages = [
         ("core/models", "iva/core/models", "mypy_core_models.log"),
         ("core/signal", "iva/core/signal", "mypy_core_signal.log"),

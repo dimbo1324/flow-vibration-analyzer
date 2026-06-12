@@ -1,9 +1,8 @@
-"""High-level builder that computes a complete PhysicsResult from FlowParameters.
+"""Сборка полного PhysicsResult из проверенных FlowParameters.
 
-This module is the single entry point for the physics calculation pipeline.
-It delegates to the individual calculator modules and assembles the result
-dataclass.  Risk assessment is NOT performed here — that is the responsibility
-of ``lock_in_risk.assess_risk``.
+Модуль является единственной точкой сборки физических расчётов и делегирует
+формулы специализированным калькуляторам. Оценка риска выполняется позже в
+``lock_in_risk.assess_risk`` и намеренно не смешивается с вычислением величин.
 """
 
 from __future__ import annotations
@@ -31,7 +30,7 @@ __all__ = ["build_physics_result"]
 
 
 def build_physics_result(flow_parameters: FlowParameters) -> PhysicsResult:
-    """Compute all flow physics from *flow_parameters* and return a PhysicsResult.
+    """Рассчитать физические характеристики потока и вернуть PhysicsResult.
 
     Required fields (raises PhysicsInputError if any are None or invalid):
     - ``cylinder_diameter_m``
@@ -60,21 +59,22 @@ def build_physics_result(flow_parameters: FlowParameters) -> PhysicsResult:
         If any required field is missing or physically invalid, or if
         TANDEM geometry is selected but ``cylinder_spacing_m`` is not set.
     """
-    # --- Validate required fields ----------------------------------------
+    # Обязательные поля проверяются до любой формулы, чтобы частичный результат
+    # никогда не покидал слой core.
     _require_field(flow_parameters.cylinder_diameter_m, "cylinder_diameter_m")
     _require_field(flow_parameters.mean_flow_velocity_ms, "mean_flow_velocity_ms")
     _require_field(flow_parameters.fluid_density_kgm3, "fluid_density_kgm3")
     _require_field(flow_parameters.dynamic_viscosity_pas, "dynamic_viscosity_pas")
     _require_field(flow_parameters.geometry_type, "geometry_type")
 
-    # Type narrowing — all required fields are now confirmed non-None
+    # После проверки mypy и формулы могут считать эти значения не-None.
     diameter: float = flow_parameters.cylinder_diameter_m  # type: ignore[assignment]
     velocity: float = flow_parameters.mean_flow_velocity_ms  # type: ignore[assignment]
     density: float = flow_parameters.fluid_density_kgm3  # type: ignore[assignment]
     viscosity: float = flow_parameters.dynamic_viscosity_pas  # type: ignore[assignment]
     geometry: GeometryType = flow_parameters.geometry_type  # type: ignore[assignment]
 
-    # --- Spacing ratio for tandem ----------------------------------------
+    # Для тандемной схемы отношение шага определяет выбор таблицы Струхаля.
     spacing_ratio: float | None = None
     if geometry == GeometryType.TANDEM:
         if flow_parameters.cylinder_spacing_m is None:
@@ -88,7 +88,7 @@ def build_physics_result(flow_parameters: FlowParameters) -> PhysicsResult:
             )
         spacing_ratio = flow_parameters.cylinder_spacing_m / diameter
 
-    # --- Core computations -----------------------------------------------
+    # Формулы выполняются в порядке, описанном в научной методологии.
     nu = calculate_kinematic_viscosity(density, viscosity)
     re = calculate_reynolds_number(velocity, diameter, density, viscosity)
     st = get_strouhal_number(re, geometry, spacing_ratio)
@@ -118,7 +118,7 @@ def build_physics_result(flow_parameters: FlowParameters) -> PhysicsResult:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Вспомогательная проверка обязательных полей
 # ---------------------------------------------------------------------------
 
 

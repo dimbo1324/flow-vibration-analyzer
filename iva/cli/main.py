@@ -1,4 +1,4 @@
-"""CLI entry point for the Industrial Vibration Analyzer.
+"""Точка входа командной строки Industrial Vibration Analyzer.
 
 Usage::
 
@@ -7,12 +7,12 @@ Usage::
         --config config/example_config.json \\
         --output reports/run_001
 
-Exit codes:
-    0 — success
-    1 — IVA-specific error (bad input, validation failure, etc.)
-    2 — unexpected / unrecognised error
+Коды возврата:
+    0 — успех
+    1 — ожидаемая доменная ошибка IVA
+    2 — непредвиденная ошибка Python
 
-Architecture rule: this module must NOT import from ``iva.ui`` or ``PySide6``.
+Архитектурное правило: CLI не импортирует ``iva.ui`` или ``PySide6``.
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ _RISK_LABELS = {
 
 
 class _RussianArgumentParser(argparse.ArgumentParser):
-    """Argument parser with localized standard headings and errors."""
+    """ArgumentParser с локализованными стандартными заголовками и ошибками."""
 
     @staticmethod
     def _localize(text: str) -> str:
@@ -81,7 +81,7 @@ class _RussianArgumentParser(argparse.ArgumentParser):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build and return the argument parser for the IVA CLI."""
+    """Собрать парсер CLI без изменения стабильных имён команд и флагов."""
     parser = _RussianArgumentParser(
         prog="iva",
         description="Анализатор вибраций потока IVA - интерфейс командной строки",
@@ -124,7 +124,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
         help="Печатать полную трассировку при ошибке (для отладки).",
     )
-    # Stage 9: optional report/session export flags
+    # Экспорт отчётов и проекта необязателен: базовый analyze всегда сохраняет
+    # машиночитаемые результаты, а тяжёлые пользовательские форматы включаются явно.
     analyze.add_argument(
         "--export-pdf",
         action="store_true",
@@ -192,13 +193,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """CLI entry point.
+    """Разобрать аргументы и вернуть процессу стабильный код завершения.
 
     Args:
-        argv: Argument list (defaults to ``sys.argv[1:]`` when ``None``).
+        argv: Список аргументов; ``None`` означает ``sys.argv[1:]``.
 
     Returns:
-        Exit code (0 = success, 1 = IVAError, 2 = unexpected error).
+        Код завершения: 0 — успех, 1 — IVAError, 2 — непредвиденная ошибка.
     """
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -213,20 +214,20 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _run_analyze(args: argparse.Namespace) -> int:
-    """Execute the 'analyze' sub-command.
+    """Выполнить подкоманду ``analyze`` через штатный слой приложения.
 
     Args:
-        args: Parsed CLI arguments (must have ``data``, ``config``, ``output``,
-              ``debug`` attributes).
+        args: Разобранные аргументы ``data``, ``config``, ``output`` и ``debug``.
 
     Returns:
-        Exit code.
+        Код завершения процесса.
     """
     try:
-        # --- load config ---------------------------------------------------
+        # Конфигурация проходит через settings_manager, чтобы CLI не дублировал
+        # правила построения доменных моделей.
         role_assignment, settings = load_analysis_config_json(args.config)
 
-        # --- build session -------------------------------------------------
+        # Сеанс является единственным владельцем состояния одного анализа.
         output_dir = Path(args.output)
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -237,18 +238,18 @@ def _run_analyze(args: argparse.Namespace) -> int:
             output_dir=output_dir,
         )
 
-        # --- run pipeline --------------------------------------------------
+        # CLI вызывает тот же координатор, что и GUI и демонстрационный режим.
         runner = AnalysisRunner()
         result = runner.run(session)
 
-        # --- save outputs --------------------------------------------------
+        # Базовые машиночитаемые экспорты создаются при каждом успешном запуске.
         export_analysis_summary_json(result, output_dir / "analysis_summary.json")
         export_spectrum_csv(result, output_dir / "spectrum.csv")
         export_signal_csv(result, output_dir / "signal.csv")
         export_physics_summary_csv(result, output_dir / "physics_summary.csv")
         export_analysis_summary_html(result, output_dir / "analysis_summary.html")
 
-        # --- optional report/session exports -------------------------------
+        # Пользовательские отчёты и .vibproj создаются только по явным флагам.
         if args.export_pdf:
             path = export_report_pdf(result, output_dir / "report.pdf")
             print(f"Отчет PDF: {path}")
@@ -261,7 +262,7 @@ def _run_analyze(args: argparse.Namespace) -> int:
             path = save_current_session(session, output_dir / "project.vibproj")
             print(f"Проект сохранен: {path}")
 
-        # --- console summary -----------------------------------------------
+        # Краткая сводка остаётся человекочитаемой и не заменяет файлы экспорта.
         _print_summary(result, output_dir)
         return 0
 
@@ -280,7 +281,7 @@ def _run_analyze(args: argparse.Namespace) -> int:
 
 
 def _run_demo(args: argparse.Namespace) -> int:
-    """Execute the ``demo`` sub-command through the normal analysis pipeline."""
+    """Выполнить ``demo`` через тот же конвейер, что и пользовательский файл."""
     try:
         if args.list_scenarios:
             print("Доступные демонстрационные сценарии:")
@@ -330,7 +331,7 @@ def _run_demo(args: argparse.Namespace) -> int:
 
 
 def _print_summary(result, output_dir: Path) -> None:  # type: ignore[no-untyped-def]
-    """Print a concise analysis summary to stdout."""
+    """Вывести краткую русскую сводку анализа в stdout."""
     print("=== Анализ IVA завершен ===")
     print(f"Папка результатов: {output_dir}")
 

@@ -12,11 +12,14 @@ CYRILLIC = re.compile(r"[А-Яа-яЁё]")
 
 FILES_WITH_RUSSIAN_EXPLANATIONS = (
     "scripts/iva.ps1",
+    "scripts/clean.ps1",
     "scripts/clean_project.py",
     "scripts/build_installer.py",
+    "scripts/diagnose_project.py",
     "iva/app/workflow_coordinator.py",
     "iva/infrastructure/session/session_serializer.py",
     "iva/ui/analysis_worker.py",
+    "iva/ui/widgets/chart_widget.py",
 )
 
 

@@ -1,9 +1,8 @@
-"""Butterworth digital filters with zero-phase shift (Algorithm 4).
+"""Цифровые фильтры Баттерворта с нулевым фазовым сдвигом, алгоритм 4.
 
-Algorithm reference: docs/11_algorithms.md, Algorithm 4.
-``filtfilt`` is mandatory — it applies the filter forward and backward,
-eliminating phase distortion entirely.  Using ``lfilter`` would shift peaks
-in time, which is unacceptable for vibration signal analysis.
+``filtfilt`` выполняет прямой и обратный проход и устраняет фазовое искажение.
+Замена на ``lfilter`` сдвинула бы события по времени, что недопустимо для
+интерпретации вибрационного сигнала.
 """
 
 from __future__ import annotations
@@ -29,7 +28,7 @@ def apply_bandpass_filter(
     high_hz: float,
     order: int = 4,
 ) -> np.ndarray:
-    """Apply a zero-phase Butterworth bandpass filter.
+    """Применить полосовой фильтр Баттерворта без фазового сдвига.
 
     Args:
         signal: 1-D signal array.
@@ -76,7 +75,7 @@ def apply_lowpass_filter(
     cutoff_hz: float,
     order: int = 4,
 ) -> np.ndarray:
-    """Apply a zero-phase Butterworth lowpass filter.
+    """Применить ФНЧ Баттерворта без фазового сдвига.
 
     Args:
         signal: 1-D signal array.
@@ -116,7 +115,7 @@ def apply_highpass_filter(
     cutoff_hz: float,
     order: int = 4,
 ) -> np.ndarray:
-    """Apply a zero-phase Butterworth highpass filter.
+    """Применить ФВЧ Баттерворта без фазового сдвига.
 
     Args:
         signal: 1-D signal array.

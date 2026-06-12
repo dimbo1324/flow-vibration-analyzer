@@ -1,13 +1,12 @@
-"""Pipeline coordinator — runs all analysis steps in the correct order.
+"""Координатор полного аналитического конвейера.
 
-This module is the single place that orchestrates the full processing pipeline
-defined in ``docs/09_processing_pipeline.md``.  It calls modules from
-``iva.core`` and ``iva.infrastructure``; it must NOT perform any numerical
-calculations itself.
+Это единственное место, где стадии из ``docs/09_processing_pipeline.md``
+связываются в общий процесс. Координатор вызывает ``iva.core`` и
+``iva.infrastructure``, но не выполняет численные расчёты самостоятельно.
 
-Architecture rules:
-- No imports from ``iva.ui`` or ``PySide6``.
-- No numerical formulas here — all maths lives in ``iva.core``.
+Архитектурные правила:
+- нельзя импортировать ``iva.ui`` или ``PySide6``;
+- все формулы остаются в ``iva.core``.
 """
 
 from __future__ import annotations
@@ -45,7 +44,7 @@ __all__ = ["run_pipeline"]
 
 @contextmanager
 def _timed_step(name: str) -> Generator[None, None, None]:
-    """Context manager that logs the elapsed time for a named pipeline step."""
+    """Записать в журнал длительность именованной стадии конвейера."""
     t0 = time.perf_counter()
     try:
         yield
@@ -55,7 +54,7 @@ def _timed_step(name: str) -> Generator[None, None, None]:
 
 
 def _compute_md5(file_path: Path) -> str:
-    """Return the hex MD5 digest of *file_path* contents."""
+    """Вернуть MD5 содержимого файла для аудита воспроизводимости."""
     h = hashlib.md5()
     with open(file_path, "rb") as fh:
         for chunk in iter(lambda: fh.read(65536), b""):
@@ -64,7 +63,7 @@ def _compute_md5(file_path: Path) -> str:
 
 
 def run_pipeline(session: AnalysisSession) -> AnalysisResult:
-    """Execute the full analysis pipeline and return an :class:`AnalysisResult`.
+    """Выполнить полный конвейер и вернуть ``AnalysisResult``.
 
     Steps (per docs/09_processing_pipeline.md):
         1. Validate session readiness.
@@ -103,7 +102,7 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
     # выполняет никаких числовых расчётов.
 
     # ------------------------------------------------------------------ #
-    # Step 1 — session validation
+    # Шаг 1 — проверка готовности сеанса
     # ------------------------------------------------------------------ #
     if not session.is_ready_for_analysis():
         raise ProcessingError(
@@ -117,7 +116,7 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
             recovery_hint="Выберите файл данных и назначьте роли столбцов перед запуском анализа.",
         )
 
-    assert session.source_file_path is not None  # narrowing for type checker
+    assert session.source_file_path is not None  # Сужение типа после проверки готовности.
     assert session.role_assignment is not None
 
     source_path = session.source_file_path
@@ -138,32 +137,32 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
 
     try:
         # ------------------------------------------------------------------ #
-        # Step 2 — read file
+        # Шаг 2 — чтение файла
         # ------------------------------------------------------------------ #
         with _timed_step("File read"):
             raw_data = read_file(str(source_path))
         session.raw_data = raw_data
 
-        # Compute MD5 early (before any processing modifies state)
+        # Хэш исходника фиксируется до изменения состояния и входит в аудит.
         with _timed_step("MD5 hash"):
             source_md5 = _compute_md5(source_path)
         logger.info("Source file MD5: %s", source_md5)
 
         # ------------------------------------------------------------------ #
-        # Step 3 — data quality validation
+        # Шаг 3 — структурная проверка и качество данных
         # ------------------------------------------------------------------ #
         with _timed_step("Data quality check"):
             validated_data = check_data_quality(raw_data, session.role_assignment)
         warnings.extend(validated_data.warnings)
 
         # ------------------------------------------------------------------ #
-        # Step 4 — signal preprocessing
+        # Шаг 4 — предобработка сигнала
         # ------------------------------------------------------------------ #
         with _timed_step("Signal preprocessing"):
             processed_data = preprocess_signal(validated_data, settings.preprocessing)
 
         # ------------------------------------------------------------------ #
-        # Step 5 — PSD calculation
+        # Шаг 5 — расчёт PSD
         # ------------------------------------------------------------------ #
         with _timed_step("PSD calculation"):
             frequencies, psd_values = calculate_psd(
@@ -173,13 +172,13 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
             )
 
         # ------------------------------------------------------------------ #
-        # Step 6 — peak finding
+        # Шаг 6 — поиск спектральных пиков
         # ------------------------------------------------------------------ #
         with _timed_step("Peak detection"):
             raw_peaks = find_peaks(frequencies, psd_values, settings.spectral)
 
         # ------------------------------------------------------------------ #
-        # Step 7 — RMS calculations
+        # Шаг 7 — расчёты RMS
         # ------------------------------------------------------------------ #
         with _timed_step("RMS calculation"):
             rms_total = calculate_total_rms(processed_data.signal_filtered)
@@ -203,14 +202,13 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
             )
 
         # ------------------------------------------------------------------ #
-        # Step 8 — assemble SpectrumResult (preliminary, peaks not yet
-        # interpreted — interpretation requires physics context)
+        # Шаг 8 — предварительная подготовка SpectrumResult. Интерпретация
+        # пиков отложена до появления физического контекста.
         # ------------------------------------------------------------------ #
-        # We interpret peaks after physics so VORTEX_SHEDDING can be detected.
-        # Build a preliminary SpectrumResult that we will pass to assess_risk.
+        # Только после физики можно отличить VORTEX_SHEDDING от неизвестного пика.
 
         # ------------------------------------------------------------------ #
-        # Step 9 — physics calculations (optional)
+        # Шаг 9 — физические расчёты, если заданы параметры потока
         # ------------------------------------------------------------------ #
         physics_result = None
         if settings.flow_parameters is not None:
@@ -222,7 +220,7 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
                     warnings.append(f"Расчет физических параметров пропущен: {exc.user_message}")
 
         # ------------------------------------------------------------------ #
-        # Step 10 — interpret peaks with physics context
+        # Шаг 10 — интерпретация пиков с физическим контекстом
         # ------------------------------------------------------------------ #
         with _timed_step("Peak interpretation"):
             interpreted_peaks = interpret_peaks(raw_peaks, physics_result)
@@ -241,7 +239,7 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
         )
 
         # ------------------------------------------------------------------ #
-        # Step 11 — risk assessment (optional, requires physics)
+        # Шаг 11 — оценка риска; без физики она намеренно пропускается
         # ------------------------------------------------------------------ #
         risk_assessment = None
         if physics_result is not None:
@@ -249,7 +247,7 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
                 risk_assessment = assess_risk(physics_result, spectrum_result)
 
         # ------------------------------------------------------------------ #
-        # Step 12 — assemble AnalysisResult
+        # Шаг 12 — сборка единого результата для CLI, UI и отчётов
         # ------------------------------------------------------------------ #
         session_id = str(uuid.uuid4())
         completed_at = datetime.now(UTC)
@@ -290,7 +288,7 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
     )
 
     # ------------------------------------------------------------------ #
-    # Step 13 — store in session
+    # Шаг 13 — атомарная публикация результата в состоянии сеанса
     # ------------------------------------------------------------------ #
     session.result = result
     session.warnings = list(warnings)
