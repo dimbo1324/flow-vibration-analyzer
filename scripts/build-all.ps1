@@ -1,11 +1,10 @@
 #!/usr/bin/env pwsh
 #
-# build-all.ps1 — Full IVA release build orchestration (Windows)
+# build-all.ps1 — Полная оркестрация релизной сборки IVA (Windows)
 #
-# Purpose:
-#   Run the complete release pipeline: clean generated artifacts, run quality
-#   checks (lint + tests), then build the executable and installer via
-#   scripts\build_installer.py.
+# Назначение:
+#   Выполнить релизную цепочку: очистить артефакты, запустить проверки качества,
+#   затем собрать приложение и установщик через scripts\build_installer.py.
 #
 # Usage:
 #   .\scripts\build-all.ps1                # clean, quality, full build
@@ -13,10 +12,10 @@
 #   .\scripts\build-all.ps1 -SkipTests     # skip the test phase (lint still runs)
 #   .\scripts\build-all.ps1 -CheckOnly      # verify environment only, no build
 #
-# Safety notes:
-#   - Stops immediately on the first failure; exit codes are preserved.
-#   - -SkipClean is passed through; clean.ps1 only removes generated artifacts.
-#   - No hardcoded user paths; repository root is detected from this script.
+# Безопасность:
+#   - Любая ошибка немедленно останавливает цепочку с исходным кодом возврата.
+#   - -CheckOnly ничего не удаляет и не запускает полную сборку.
+#   - Пользовательские абсолютные пути не используются.
 #
 # Compatibility:
 #   Windows PowerShell 5.1 compatible. PowerShell 7+ is recommended.
@@ -30,71 +29,73 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
-
-function Write-Status {
-    param([string]$Tag, [string]$Message, [string]$Color)
-    $label = switch ($Tag) {
-        "OK"     { "[OK]" }
-        "FAILED" { "[FAILED]" }
-        "INFO"   { "[INFO]" }
-        "WARN"   { "[WARN]" }
-        default  { "[$Tag]" }
-    }
-    Write-Host "$label " -ForegroundColor $Color -NoNewline
-    Write-Host $Message
-}
+Import-Module (Join-Path $PSScriptRoot "lib\IvaDevTools.psm1") -Force
 
 function Stop-OnFailure {
     param([string]$Step)
     if ($LASTEXITCODE -ne 0) {
-        Write-Status "FAILED" "$Step (exit code $LASTEXITCODE)." "Red"
+        Write-IvaStatus "FAILED" "$Step (код возврата $LASTEXITCODE)."
         exit $LASTEXITCODE
     }
 }
 
-Write-Host "=== IVA Build All ===" -ForegroundColor Cyan
-Write-Status "INFO" "Repository root: $repoRoot" "Cyan"
-
-# --- 1. Clean ----------------------------------------------------------------
-if ($SkipClean) {
-    Write-Status "INFO" "Skipping clean step." "Cyan"
-} else {
-    Write-Status "INFO" "Cleaning generated artifacts ..." "Cyan"
-    & "$PSScriptRoot\clean.ps1" -Force
-    Stop-OnFailure "Clean step failed"
-    Write-Status "OK" "Clean complete." "Green"
-}
-
-# --- 2. Quality checks (lint + tests) ---------------------------------------
-if ($SkipTests) {
-    Write-Status "INFO" "Running lint only (-SkipTests) ..." "Cyan"
-    & "$PSScriptRoot\lint.ps1"
-    Stop-OnFailure "Lint failed"
-    Write-Status "OK" "Lint passed." "Green"
-} else {
-    Write-Status "INFO" "Running quality checks (lint + tests) ..." "Cyan"
-    & "$PSScriptRoot\quality.ps1"
-    Stop-OnFailure "Quality checks failed"
-    Write-Status "OK" "Quality checks passed." "Green"
-}
-
-# --- 3. Build ----------------------------------------------------------------
+$repoRoot = Get-IvaRepositoryRoot
+$venvPython = Get-IvaVenvPython -RepositoryRoot $repoRoot
 $buildScript = Join-Path $repoRoot "scripts\build_installer.py"
+
+Write-Host "=== IVA Build All ===" -ForegroundColor Cyan
+Write-IvaStatus "INFO" "Корень репозитория: $repoRoot"
+
+if (-not (Test-IvaVenv -RepositoryRoot $repoRoot)) {
+    Write-IvaStatus "FAILED" ".venv не найден. Сначала выполните .\scripts\iva.ps1 setup."
+    exit 1
+}
+
+# Проверка окружения вынесена до очистки и quality: команда используется внутри
+# безопасной цепочки `iva.ps1 all` и не должна менять рабочее дерево или повторно
+# запускать уже пройденные тесты.
 if ($CheckOnly) {
-    Write-Status "INFO" "Checking build environment (--check-only) ..." "Cyan"
-    & python $buildScript --check-only
-    Stop-OnFailure "Build environment check failed"
-} elseif ($SkipTests) {
-    Write-Status "INFO" "Building (--skip-tests) ..." "Cyan"
-    & python $buildScript --skip-tests
-    Stop-OnFailure "Build failed"
+    Write-IvaStatus "INFO" "Проверка окружения сборки без создания артефактов ..."
+    & $venvPython $buildScript --check-only
+    Stop-OnFailure "Проверка окружения сборки завершилась ошибкой"
+    Write-IvaStatus "OK" "Окружение сборки проверено."
+    exit 0
+}
+
+# --- 1. Очистка --------------------------------------------------------------
+if ($SkipClean) {
+    Write-IvaStatus "INFO" "Очистка пропущена (-SkipClean)."
 } else {
-    Write-Status "INFO" "Building installer ..." "Cyan"
-    & python $buildScript
-    Stop-OnFailure "Build failed"
+    Write-IvaStatus "INFO" "Очистка сгенерированных артефактов ..."
+    & "$PSScriptRoot\clean.ps1" -Force
+    Stop-OnFailure "Очистка завершилась ошибкой"
+    Write-IvaStatus "OK" "Очистка завершена."
+}
+
+# --- 2. Проверки качества ----------------------------------------------------
+if ($SkipTests) {
+    Write-IvaStatus "INFO" "Запуск только lint (-SkipTests) ..."
+    & "$PSScriptRoot\lint.ps1"
+    Stop-OnFailure "Lint завершился ошибкой"
+    Write-IvaStatus "OK" "Lint пройден."
+} else {
+    Write-IvaStatus "INFO" "Запуск quality (lint + tests) ..."
+    & "$PSScriptRoot\quality.ps1"
+    Stop-OnFailure "Проверки качества завершились ошибкой"
+    Write-IvaStatus "OK" "Проверки качества пройдены."
+}
+
+# --- 3. Сборка ---------------------------------------------------------------
+if ($SkipTests) {
+    Write-IvaStatus "INFO" "Сборка с флагом --skip-tests ..."
+    & $venvPython $buildScript --skip-tests
+    Stop-OnFailure "Сборка завершилась ошибкой"
+} else {
+    Write-IvaStatus "INFO" "Сборка приложения и установщика ..."
+    & $venvPython $buildScript
+    Stop-OnFailure "Сборка завершилась ошибкой"
 }
 
 Write-Host ""
-Write-Status "OK" "Build pipeline completed successfully." "Green"
+Write-IvaStatus "OK" "Цепочка сборки успешно завершена."
 exit 0

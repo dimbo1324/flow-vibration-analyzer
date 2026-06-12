@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "scripts"
 
 REQUIRED_SCRIPTS = [
+    "iva.ps1",
     "setup.ps1",
     "run.ps1",
     "clean.ps1",
@@ -48,7 +49,10 @@ def test_script_declares_parameters(name):
 @pytest.mark.parametrize("name", REQUIRED_SCRIPTS)
 def test_script_has_status_output(name):
     text = (SCRIPTS / name).read_text(encoding="utf-8")
-    assert any(marker in text for marker in ("[OK]", "[FAILED]", "[INFO]", "Write-Status"))
+    assert any(
+        marker in text
+        for marker in ("[OK]", "[FAILED]", "[INFO]", "Write-Status", "Write-IvaStatus")
+    )
 
 
 def test_clean_supports_flags():
@@ -91,3 +95,71 @@ def test_build_all_forwards_build_flags():
     assert "--check-only" in text
     assert "--skip-tests" in text
     assert "quality.ps1" in text
+
+
+def test_shared_module_exists_and_exports_expected_helpers():
+    module = SCRIPTS / "lib" / "IvaDevTools.psm1"
+    assert module.is_file()
+    text = module.read_text(encoding="utf-8")
+    for helper in (
+        "Get-IvaRepositoryRoot",
+        "Write-IvaStatus",
+        "Invoke-IvaStep",
+        "Get-IvaVenvPython",
+        "Test-IvaVenv",
+        "Set-IvaHeadlessQtEnvironment",
+        "Restore-IvaEnvironment",
+    ):
+        assert helper in text
+
+
+def test_iva_entrypoint_supports_required_commands():
+    text = (SCRIPTS / "iva.ps1").read_text(encoding="utf-8")
+    for command in (
+        "setup",
+        "run",
+        "smoke",
+        "lint",
+        "test",
+        "quality",
+        "check",
+        "diagnose",
+        "clean",
+        "clean-logs",
+        "demo",
+        "build-check",
+        "build",
+        "all",
+    ):
+        assert f'"{command}"' in text
+
+
+def test_iva_clean_requires_force_for_deletion():
+    text = (SCRIPTS / "iva.ps1").read_text(encoding="utf-8")
+    assert "-not $DryRun -and -not $Force" in text
+    assert "exit 2" in text
+
+
+def test_build_check_is_before_destructive_build_steps():
+    text = (SCRIPTS / "build-all.ps1").read_text(encoding="utf-8")
+    check_position = text.index("if ($CheckOnly)")
+    clean_position = text.index('clean.ps1" -Force')
+    quality_position = text.index('quality.ps1"')
+    assert check_position < clean_position
+    assert check_position < quality_position
+
+
+def test_all_powershell_files_avoid_user_specific_paths():
+    powershell_files = [*SCRIPTS.rglob("*.ps1"), *SCRIPTS.rglob("*.psm1")]
+    forbidden = (r"C:\Users\Users", r"C:\Users\dim", "/home/")
+    for path in powershell_files:
+        text = path.read_text(encoding="utf-8")
+        for fragment in forbidden:
+            assert fragment not in text, f"{path.name} contains {fragment!r}"
+
+
+def test_lint_runs_from_repository_root_for_tool_configuration():
+    text = (SCRIPTS / "lint.ps1").read_text(encoding="utf-8")
+    assert "Push-Location $repoRoot" in text
+    assert "finally" in text
+    assert "Pop-Location" in text

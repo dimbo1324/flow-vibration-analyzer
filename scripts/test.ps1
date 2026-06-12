@@ -1,19 +1,36 @@
 #!/usr/bin/env pwsh
-# IVA — Test script with coverage
-# Run from repository root: .\scripts\test.ps1
+# IVA — тесты с покрытием
 [CmdletBinding()]
 param()
 
-$env:QT_QPA_PLATFORM = "offscreen"
-$env:QT_OPENGL = "software"
-$env:MPLBACKEND = "Agg"
+$ErrorActionPreference = "Stop"
+Import-Module (Join-Path $PSScriptRoot "lib\IvaDevTools.psm1") -Force
+
+$repoRoot = Get-IvaRepositoryRoot
+if (-not (Test-IvaVenv -RepositoryRoot $repoRoot)) {
+    Write-IvaStatus "FAILED" ".venv не найден. Сначала выполните .\scripts\iva.ps1 setup."
+    exit 1
+}
+$python = Get-IvaVenvPython -RepositoryRoot $repoRoot
 
 Write-Host "=== IVA Tests (with coverage) ===" -ForegroundColor Cyan
 
-python -m pytest --cov=iva/core --cov-report=term-missing --cov-fail-under=80 -m "not performance"
-if ($LASTEXITCODE -ne 0) {
+# Qt-переменные действуют на весь процесс PowerShell, поэтому обязательно
+# восстанавливаем их даже после падения pytest: иначе следующий GUI-запуск
+# в том же терминале окажется невидимым.
+$environment = Set-IvaHeadlessQtEnvironment
+Push-Location $repoRoot
+try {
+    & $python -m pytest --cov=iva/core --cov-report=term-missing --cov-fail-under=80 -m "not performance"
+    $testExitCode = $LASTEXITCODE
+} finally {
+    Pop-Location
+    Restore-IvaEnvironment -Snapshot $environment
+}
+
+if ($testExitCode -ne 0) {
     Write-Host "[FAILED] === TESTS FAILED ===" -ForegroundColor Red
-    exit 1
+    exit $testExitCode
 }
 Write-Host "[OK] === TESTS PASSED ===" -ForegroundColor Green
 exit 0
