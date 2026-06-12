@@ -1,26 +1,27 @@
-"""Cross-platform cleanup of repository-local generated artifacts.
+"""Кроссплатформенная очистка сгенерированных артефактов репозитория.
 
-Python counterpart of ``scripts/clean.ps1`` for non-Windows shells and CI.
-Removes only a conservative, hardcoded list of generated artifacts:
+Python-аналог ``scripts/clean.ps1`` для не-Windows оболочек и CI. Удаляет
+только консервативный, жёстко заданный список сгенерированных артефактов:
 
-- top-level directories: ``reports``, ``.tmp``, ``.pytest_cache``,
-  ``.mypy_cache``, ``.ruff_cache``, ``build``, ``dist`` and (unless
+- каталоги верхнего уровня: ``reports``, ``.tmp``, ``.pytest_cache``,
+  ``.mypy_cache``, ``.ruff_cache``, ``build``, ``dist`` и (если не задан
   ``--keep-logs``) ``out``;
-- top-level files: ``.coverage`` and ``.coverage.*``;
-- anywhere in the tree: ``__pycache__`` directories, ``*.egg-info``
-  directories and ``*.pyc`` / ``*.pyo`` files.
+- файлы верхнего уровня: ``.coverage`` и ``.coverage.*``;
+- в любом месте дерева: каталоги ``__pycache__`` и ``*.egg-info``,
+  файлы ``*.pyc`` / ``*.pyo``.
 
-Source code, docs, tests, config, demo data, ``.git`` and ``.venv`` are
-never removed.  Without ``--force`` (and without ``--dry-run``) the script
-asks for interactive confirmation before deleting anything.
+Исходный код, docs, tests, config, демо-данные, ``.git`` и ``.venv`` НИКОГДА
+не удаляются — это защита от случайной потери данных. Без ``--force`` (и без
+``--dry-run``) скрипт запрашивает подтверждение перед удалением.
 
-Usage::
+Использование::
 
     python scripts/clean_project.py --dry-run
     python scripts/clean_project.py --dry-run --keep-logs
     python scripts/clean_project.py --force
 
-Exit codes: 0 = success/nothing to do, 1 = removal errors, 2 = safety stop.
+Коды возврата: 0 — успех/нечего делать, 1 — ошибки удаления, 2 — отказ по
+соображениям безопасности (попытка удалить недопустимый путь).
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ from pathlib import Path
 
 __all__ = ["collect_targets", "is_safe_to_remove", "main"]
 
-# Top-level directory names that may be removed as whole trees.
+# Каталоги верхнего уровня, которые разрешено удалять целиком.
 TOP_LEVEL_DIRS: tuple[str, ...] = (
     "reports",
     ".tmp",
@@ -43,15 +44,15 @@ TOP_LEVEL_DIRS: tuple[str, ...] = (
     "build",
     "dist",
 )
-# ``out`` holds workflow/diagnostic logs; removed only without --keep-logs.
+# ``out`` содержит журналы workflow/diagnostics и сохраняется с --keep-logs.
 LOGS_DIR_NAME = "out"
 
-# Artifact names/extensions that may be removed anywhere inside the tree.
+# Имена и расширения артефактов, допустимые в любой части дерева.
 _ARTIFACT_DIR_NAMES = ("__pycache__",)
 _ARTIFACT_DIR_SUFFIXES = (".egg-info",)
 _ARTIFACT_FILE_SUFFIXES = (".pyc", ".pyo")
 
-# Directories never traversed and never removed as a whole.
+# Эти каталоги не обходятся и никогда не удаляются целиком.
 _NEVER_TRAVERSE = (".git", ".venv", "venv")
 
 
@@ -60,7 +61,7 @@ def _repo_root() -> Path:
 
 
 def _is_artifact(path: Path) -> bool:
-    """Return True if *path* matches the known generated-artifact patterns."""
+    """Проверить путь по закрытому списку шаблонов артефактов."""
     name = path.name
     if name in _ARTIFACT_DIR_NAMES:
         return True
@@ -70,13 +71,12 @@ def _is_artifact(path: Path) -> bool:
 
 
 def is_safe_to_remove(path: Path, root: Path) -> bool:
-    """Return True only if *path* may legitimately be removed.
+    """Разрешить удаление только известного артефакта внутри *root*.
 
-    A path is safe when it is inside *root* AND is either one of the fixed
-    top-level generated entries, or matches the artifact patterns
-    (``__pycache__``, ``*.egg-info``, ``*.pyc``, ``*.pyo``).  Anything else —
-    in particular files under ``iva/``, ``docs/``, ``tests/``, ``config/``,
-    ``data/`` — is refused.
+    Путь должен находиться внутри *root* и быть либо одним из фиксированных
+    элементов верхнего уровня, либо соответствовать шаблону ``__pycache__``,
+    ``*.egg-info``, ``*.pyc`` или ``*.pyo``. Исходные файлы под ``iva/``,
+    ``docs/``, ``tests/``, ``config/`` и ``data/`` всегда отклоняются.
     """
     path = path.resolve()
     root = root.resolve()
@@ -85,19 +85,19 @@ def is_safe_to_remove(path: Path, root: Path) -> bool:
     rel = path.relative_to(root)
     if any(part in _NEVER_TRAVERSE for part in rel.parts):
         return False
-    # Fixed top-level entries.
+    # Фиксированные элементы верхнего уровня.
     if len(rel.parts) == 1:
         name = rel.parts[0]
         if name in TOP_LEVEL_DIRS or name == LOGS_DIR_NAME:
             return True
         if name == ".coverage" or name.startswith(".coverage."):
             return True
-    # Everything else must look like a known artifact, wherever it lives.
+    # Всё остальное обязано выглядеть как известный сгенерированный артефакт.
     return _is_artifact(path)
 
 
 def collect_targets(root: Path, keep_logs: bool) -> tuple[list[Path], list[Path]]:
-    """Return ``(directories, files)`` of existing artifacts under *root*."""
+    """Собрать существующие артефакты как ``(directories, files)``."""
     directories: list[Path] = []
     files: list[Path] = []
 
@@ -121,7 +121,7 @@ def collect_targets(root: Path, keep_logs: bool) -> tuple[list[Path], list[Path]
             elif item.is_file() and _is_artifact(item):
                 files.append(item)
 
-    # Drop files already covered by a scheduled directory.
+    # Файлы внутри уже выбранного каталога отдельно удалять не нужно.
     dir_set = {d.resolve() for d in directories}
     files = [f for f in files if not any(parent in dir_set for parent in f.resolve().parents)]
     return directories, files

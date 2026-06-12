@@ -1,13 +1,15 @@
 #!/usr/bin/env python
-"""IVA release build script.
+"""Релизная сборка IVA для Windows.
 
-Usage:
+Использование:
     python scripts/build_installer.py
     python scripts/build_installer.py --skip-tests
     python scripts/build_installer.py --check-only
 
-Reads version from iva/__version__.py, optionally runs tests, builds a
-PyInstaller executable, and (on Windows with Inno Setup) builds the installer.
+Версия читается из единственного источника ``iva/__version__.py``. Обычный
+режим запускает тесты, собирает приложение через PyInstaller и, при наличии
+Inno Setup, создаёт установщик. ``--check-only`` только сообщает готовность
+инструментов и не создаёт артефакты.
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def read_version() -> str:
-    """Read version from iva/__version__.py."""
+    """Прочитать версию из iva/__version__.py без импорта всего пакета."""
     spec = importlib.util.spec_from_file_location("__version__", ROOT / "iva" / "__version__.py")
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
@@ -33,7 +35,7 @@ def read_version() -> str:
 
 
 def run_command(command: list[str], description: str) -> None:
-    """Run a subprocess command, raising SystemExit on failure."""
+    """Запустить внешний шаг и сохранить его ненулевой код возврата."""
     print(f"\n[BUILD] {description}")
     print(f"  Command: {' '.join(command)}")
     result = subprocess.run(command, cwd=ROOT)
@@ -44,7 +46,7 @@ def run_command(command: list[str], description: str) -> None:
 
 
 def find_iscc() -> Path | None:
-    """Find Inno Setup ISCC compiler on Windows."""
+    """Найти компилятор Inno Setup через стандартные пути или PATH."""
     if platform.system() != "Windows":
         return None
     candidates = [
@@ -61,7 +63,7 @@ def find_iscc() -> Path | None:
 
 
 def copy_installer(version: str) -> Path:
-    """Report on the built installer in dist/release/."""
+    """Проверить ожидаемый установщик в dist/release/ и вывести его размер."""
     src = ROOT / "dist" / "release" / f"IVA_Setup_{version}.exe"
     if not src.exists():
         print(f"  WARNING: Expected installer not found at {src}")
@@ -72,7 +74,7 @@ def copy_installer(version: str) -> Path:
 
 
 def check_environment(version: str) -> None:
-    """Print environment information and tool availability."""
+    """Вывести платформу и доступность инструментов релизной сборки."""
     print(f"\n[CHECK] IVA v{version} build environment")
     print(f"  Platform: {platform.system()} {platform.architecture()[0]}")
     print(f"  Python: {sys.version}")
@@ -113,7 +115,8 @@ def main() -> int:
         print("\n[CHECK] Environment check complete.")
         return 0
 
-    # Step 1: Run tests
+    # Тесты выполняются до создания бинарных артефактов, чтобы не публиковать
+    # сборку из заведомо некорректного состояния исходников.
     if not args.skip_tests:
         run_command(
             [
@@ -132,7 +135,7 @@ def main() -> int:
     else:
         print("\n[BUILD] WARNING: Tests skipped (--skip-tests).")
 
-    # Step 2: PyInstaller
+    # PyInstaller необязателен для проверки окружения и обычной разработки.
     if not shutil.which("pyinstaller"):
         print("\n[BUILD] WARNING: pyinstaller not found. Install with: pip install pyinstaller")
         print("  Skipping executable build.")
@@ -149,7 +152,8 @@ def main() -> int:
             "Building PyInstaller executable",
         )
 
-    # Step 3: Inno Setup (Windows only)
+    # Inno Setup нужен только для финального Windows-установщика; отсутствие
+    # компилятора не должно ломать кроссплатформенную разработку.
     iscc = find_iscc()
     if iscc is None:
         print("\n[BUILD] NOTE: Inno Setup (ISCC) not found.")

@@ -280,42 +280,49 @@ python -m iva.cli.main analyze --help
 
 ## Windows helper scripts
 
-PowerShell helper scripts for Windows (run from the repository root). They are
-PowerShell 5.1 compatible (7+ recommended) and detect the repository root
-automatically — no hardcoded paths.
+The recommended Windows 11 entrypoint is `scripts/iva.ps1`. It works with
+Windows PowerShell 5.1 and PowerShell 7+, detects the repository root without
+user-specific paths, and keeps the common developer commands in one place.
 
 ```powershell
-# One-time environment bootstrap: create .venv, install deps, smoke-test
-.\scripts\setup.ps1
+# One-time environment bootstrap
+.\scripts\iva.ps1 setup
 
-# Launch the desktop application
-.\scripts\run.ps1
+# Headless startup check, then an interactive GUI launch
+.\scripts\iva.ps1 smoke
+.\scripts\iva.ps1 run
 
-# Headless smoke test
-.\scripts\run.ps1 -SmokeTest
+# Quality and full project checks
+.\scripts\iva.ps1 quality
+.\scripts\iva.ps1 check
+.\scripts\iva.ps1 diagnose
 
-# Preview which generated artifacts would be removed (deletes nothing)
-.\scripts\clean.ps1 -DryRun
+# Always preview cleanup before explicitly allowing deletion
+.\scripts\iva.ps1 clean -DryRun
+.\scripts\iva.ps1 clean -DryRun -KeepLogs
+.\scripts\iva.ps1 clean -Force
 
-# Remove generated artifacts without prompting
-.\scripts\clean.ps1 -Force
+# CLI demo and non-building release environment check
+.\scripts\iva.ps1 demo
+.\scripts\iva.ps1 build-check
 
-# Remove IVA logs older than 30 days from Documents\IVA
-.\scripts\clean-logs.ps1 -OlderThanDays 30
-
-# Run lint + tests
-.\scripts\quality.ps1
-
-# Verify the release build environment only
-.\scripts\build-all.ps1 -CheckOnly
+# Safe developer chain: smoke, quality, check, demo, build-check
+.\scripts\iva.ps1 all
 ```
 
-Lower-level quality scripts remain available individually:
+`all` does not perform destructive cleanup or a full installer build. The full
+build runs only via `.\scripts\iva.ps1 build` and requires Windows,
+PyInstaller, and Inno Setup 6. Existing individual scripts remain available
+for focused work and backward compatibility:
 
 ```powershell
+.\scripts\run.ps1 -SmokeTest
+.\scripts\clean.ps1 -DryRun
+.\scripts\clean-logs.ps1 -DryRun
 .\scripts\lint.ps1     # black, ruff, mypy
 .\scripts\test.ps1     # pytest with coverage (excludes performance tests)
 .\scripts\quality.ps1  # lint + tests
+.\scripts\build-all.ps1 -CheckOnly
 ```
 
 ### Cross-platform cleanup

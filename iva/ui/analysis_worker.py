@@ -1,9 +1,11 @@
-"""Background analysis worker using Qt thread pool.
+"""Фоновый исполнитель анализа поверх пула потоков Qt.
 
-The worker lives in ``iva/ui/`` (not ``iva/app/``) so that ``iva/app/`` stays
-free of PySide6 imports and can be used from the CLI without a GUI.
+Воркер намеренно расположен в ``iva/ui/`` (а не в ``iva/app/``): так слой
+``iva/app/`` остаётся свободным от импортов PySide6 и может использоваться из
+CLI без графического интерфейса. Это ключевая архитектурная граница проекта.
 
-Architecture rule: do NOT add numerical calculations here — call iva.app only.
+Архитектурное правило: здесь НЕ должно быть числовых расчётов — только вызовы
+``iva.app``. Вся математика живёт в ``iva.core``.
 """
 
 from __future__ import annotations
@@ -48,6 +50,10 @@ class AnalysisWorker(QRunnable):
         self.setAutoDelete(True)
 
     def run(self) -> None:  # noqa: D102
+        # Любой результат и любая ошибка передаются в основной поток только через
+        # сигналы Qt: напрямую трогать виджеты из рабочего потока нельзя.
+        # Доменные ошибки (IVAError) и непредвиденные исключения разделены,
+        # чтобы интерфейс показал понятное сообщение, а не сырой traceback.
         try:
             self.signals.progress_updated.emit(10)
             runner = AnalysisRunner()
