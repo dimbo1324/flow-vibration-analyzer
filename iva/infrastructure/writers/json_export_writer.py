@@ -86,6 +86,9 @@ def _build_summary(result: AnalysisResult) -> dict[str, Any]:
         "completed_at": result.completed_at.isoformat(),
         "source_file": str(result.source_file_path),
         "source_file_md5": result.source_file_md5,
+        "is_demo": result.is_demo,
+        "demo_scenario_key": result.demo_scenario_key,
+        "demo_title": result.demo_title,
     }
 
     # Spectrum section

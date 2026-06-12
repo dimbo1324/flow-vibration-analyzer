@@ -228,6 +228,23 @@ class PhysicsPage(QWidget):
             geometry_type=geometry,
         )
 
+    def set_flow_parameters(self, parameters: FlowParameters) -> None:
+        """Populate the form from a prepared analysis scenario."""
+        for key in (
+            "cylinder_diameter_m",
+            "mean_flow_velocity_ms",
+            "fluid_density_kgm3",
+            "dynamic_viscosity_pas",
+            "natural_frequency_hz",
+            "damping_ratio",
+            "cylinder_spacing_m",
+        ):
+            value = getattr(parameters, key)
+            if value is not None:
+                self._form.set_value(key, value)
+        if parameters.geometry_type is not None:
+            self._form.set_value("geometry_type", GEOMETRY_LABELS[parameters.geometry_type.value])
+
     def on_analysis_completed(self, result: AnalysisResult) -> None:
         """Update metric cards from a completed analysis result."""
         if result.physics is None:

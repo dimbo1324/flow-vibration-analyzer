@@ -116,6 +116,16 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
     source_path = session.source_file_path
     settings: AnalysisSettings = session.settings
     warnings: list[str] = []
+    if session.is_demo:
+        warnings.extend(
+            (
+                "Демонстрационные синтетические данные",
+                (
+                    "Данные сгенерированы программно и предназначены только для "
+                    "демонстрации работы приложения."
+                ),
+            )
+        )
 
     logger.info("Pipeline started for '%s'", source_path.name)
 
@@ -249,6 +259,10 @@ def run_pipeline(session: AnalysisSession) -> AnalysisResult:
             risk=risk_assessment,
             validation=None,
             warnings=tuple(warnings),
+            is_demo=session.is_demo,
+            demo_scenario_key=session.demo_scenario_key,
+            demo_title=session.demo_title,
+            demo_description=session.demo_description,
         )
 
     except IVAError:

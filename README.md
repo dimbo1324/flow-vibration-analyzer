@@ -193,6 +193,30 @@ The full documentation package is located in [`docs/`](docs/).
 Start with [`docs/00_project_overview.md`](docs/00_project_overview.md) for an
 introduction to the project, its engineering context and design goals.
 
+## Demo Mode and Quick Start
+
+Демо-режим позволяет пройти полный расчетный цикл без подготовки CSV-файла.
+
+В GUI:
+
+1. Запустите приложение командой `python main.py`.
+2. На странице «Сводка» нажмите `Запустить демо-анализ` или выберите сценарий на странице «Импорт».
+3. Изучите графики, физические параметры, оценку риска и экспортируйте отчет.
+
+Запуск демо-сценария из CLI:
+
+```bash
+python -m iva.cli.main demo --scenario clean_40hz --output out/cli-runs/demo_clean --export-pdf --export-html --save-project
+```
+
+Список доступных сценариев:
+
+```bash
+python -m iva.cli.main demo --list-scenarios
+```
+
+Демо-данные являются синтетическими и не должны использоваться как реальные измерения.
+
 ## CLI Usage
 
 Stage 7 adds a full command-line interface.  Run a complete analysis with:

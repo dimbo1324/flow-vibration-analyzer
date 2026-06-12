@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt  # type: ignore[import-untyped]
+from PySide6.QtCore import Qt, Signal  # type: ignore[import-untyped]
 from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -52,6 +53,10 @@ _RISK_COLOR: dict[str, str] = {
 class OverviewPage(QWidget):
     """Overview dashboard showing the four key metrics and summary charts."""
 
+    open_file_requested = Signal()
+    demo_requested = Signal()
+    open_project_requested = Signal()
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._setup_ui()
@@ -76,6 +81,39 @@ class OverviewPage(QWidget):
         subtitle = QLabel(tr("Analysis summary — dominant metrics at a glance"))
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
+
+        quick_box = QGroupBox("Быстрый старт")
+        quick_layout = QVBoxLayout(quick_box)
+        quick_text = QLabel(
+            "Начните с демонстрационных данных, чтобы увидеть полный расчетный цикл "
+            "без подготовки файла."
+        )
+        quick_text.setWordWrap(True)
+        quick_text.setStyleSheet(f"color: {COLOR_MUTED};")
+        quick_layout.addWidget(quick_text)
+        quick_buttons = QHBoxLayout()
+        self._quick_open_button = QPushButton("Открыть файл данных")
+        self._quick_open_button.setObjectName("quickOpenFileButton")
+        self._quick_demo_button = QPushButton("Запустить демо-анализ")
+        self._quick_demo_button.setObjectName("quickDemoButton")
+        self._quick_project_button = QPushButton("Открыть проект .vibproj")
+        self._quick_project_button.setObjectName("quickOpenProjectButton")
+        self._quick_open_button.clicked.connect(self.open_file_requested.emit)
+        self._quick_demo_button.clicked.connect(self.demo_requested.emit)
+        self._quick_project_button.clicked.connect(self.open_project_requested.emit)
+        quick_buttons.addWidget(self._quick_open_button)
+        quick_buttons.addWidget(self._quick_demo_button)
+        quick_buttons.addWidget(self._quick_project_button)
+        quick_buttons.addStretch()
+        quick_layout.addLayout(quick_buttons)
+        layout.addWidget(quick_box)
+
+        self._demo_marker = QLabel("Демонстрационные синтетические данные")
+        self._demo_marker.setObjectName("overviewDemoMarker")
+        self._demo_marker.setWordWrap(True)
+        self._demo_marker.setStyleSheet(f"color: {COLOR_WARN}; font-weight: bold;")
+        self._demo_marker.setVisible(False)
+        layout.addWidget(self._demo_marker)
 
         # Metric cards row
         cards_widget = QWidget()
@@ -134,6 +172,12 @@ class OverviewPage(QWidget):
 
     def on_analysis_completed(self, result: AnalysisResult) -> None:
         """Update cards and charts from a completed analysis result."""
+        self._demo_marker.setVisible(result.is_demo)
+        if result.is_demo:
+            self._demo_marker.setText(
+                "Демонстрационные синтетические данные"
+                + (f" — {result.demo_title}" if result.demo_title else "")
+            )
         # Dominant peak
         if result.spectrum and result.spectrum.dominant_peak:
             pk = result.spectrum.dominant_peak
@@ -194,3 +238,4 @@ class OverviewPage(QWidget):
         self._signal_chart.clear()
         self._spectrum_chart.clear()
         self._recommendation_label.setText("Результат анализа пока отсутствует.")
+        self._demo_marker.setVisible(False)

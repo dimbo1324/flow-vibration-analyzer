@@ -117,3 +117,7 @@ class AnalysisResult:
     risk: RiskAssessment | None
     validation: ValidationResult | None
     warnings: tuple[str, ...]
+    is_demo: bool = False
+    demo_scenario_key: str | None = None
+    demo_title: str | None = None
+    demo_description: str | None = None
