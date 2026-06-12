@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from PySide6.QtCore import Qt  # type: ignore[import-untyped]
 from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QGroupBox,
-    QHBoxLayout,
     QHeaderView,
     QLabel,
     QSizePolicy,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -17,8 +18,9 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
 )
 
 from iva.ui.strings_ru import PEAK_INTERPRETATION_LABELS, display_label, tr
-from iva.ui.styles.theme import COLOR_MUTED, COLOR_TEXT, FONT_SIZE_TITLE, SPACING_MD, SPACING_SM
+from iva.ui.styles.theme import COLOR_MUTED, COLOR_TEXT, FONT_SIZE_TITLE, SPACING_MD
 from iva.ui.widgets.chart_widget import ChartWidget
+from iva.ui.widgets.page_state import PageStateBanner
 
 if TYPE_CHECKING:
     from iva.core.models.analysis_result import AnalysisResult
@@ -48,9 +50,13 @@ class SpectrumPage(QWidget):
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
 
+        self._state_banner = PageStateBanner()
+        layout.addWidget(self._state_banner)
+
         # Main content area
-        content_layout = QHBoxLayout()
-        content_layout.setSpacing(SPACING_SM)
+        self._splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._splitter.setObjectName("spectrumPageSplitter")
+        self._splitter.setChildrenCollapsible(False)
 
         # PSD chart
         chart_box = QGroupBox("PSD")
@@ -59,7 +65,7 @@ class SpectrumPage(QWidget):
         self._psd_chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._psd_chart.setMinimumHeight(300)
         chart_layout.addWidget(self._psd_chart)
-        content_layout.addWidget(chart_box, stretch=3)
+        self._splitter.addWidget(chart_box)
 
         # Peaks table
         peaks_box = QGroupBox(tr("Detected Peaks"))
@@ -74,14 +80,20 @@ class SpectrumPage(QWidget):
         self._peaks_table.setMinimumWidth(280)
         self._peaks_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         peaks_layout.addWidget(self._peaks_table)
-        content_layout.addWidget(peaks_box, stretch=2)
+        self._splitter.addWidget(peaks_box)
+        self._splitter.setStretchFactor(0, 3)
+        self._splitter.setStretchFactor(1, 2)
+        self._splitter.setSizes([760, 360])
 
-        layout.addLayout(content_layout)
+        layout.addWidget(self._splitter, stretch=1)
 
     def on_analysis_completed(self, result: AnalysisResult) -> None:
         """Update PSD chart and peaks table from analysis result."""
         if result.spectrum is None:
+            self.set_error_state("Не удалось построить спектральные данные.")
             return
+
+        self.set_result_state()
 
         sp = result.spectrum
         peaks = list(sp.all_peaks) if sp.all_peaks else None
@@ -101,7 +113,24 @@ class SpectrumPage(QWidget):
                     QTableWidgetItem(display_label(PEAK_INTERPRETATION_LABELS, pk.interpretation)),
                 )
 
+    def set_empty_state(self) -> None:
+        """Show the initial page state."""
+        self._state_banner.show_empty()
+
+    def set_running_state(self, message: str = "") -> None:
+        """Show that spectral analysis is in progress."""
+        self._state_banner.show_running(message)
+
+    def set_error_state(self, message: str) -> None:
+        """Show a spectral-page error."""
+        self._state_banner.show_error(message)
+
+    def set_result_state(self) -> None:
+        """Hide the state banner when PSD data is ready."""
+        self._state_banner.show_result()
+
     def clear(self) -> None:
         """Reset the page."""
         self._psd_chart.clear()
         self._peaks_table.setRowCount(0)
+        self.set_empty_state()

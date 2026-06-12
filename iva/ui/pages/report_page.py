@@ -25,6 +25,7 @@ from iva.ui.styles.theme import (
     FONT_SIZE_TITLE,
     SPACING_MD,
 )
+from iva.ui.widgets.page_state import PageStateBanner
 
 if TYPE_CHECKING:
     from iva.core.models.analysis_result import AnalysisResult
@@ -54,6 +55,9 @@ class ReportPage(QWidget):
         subtitle = QLabel(tr("Export analysis results as PDF, HTML, JSON or CSV"))
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
+
+        self._state_banner = PageStateBanner()
+        layout.addWidget(self._state_banner)
 
         # Readiness indicator
         self._readiness_label = QLabel(tr("No analysis result available."))
@@ -269,6 +273,7 @@ class ReportPage(QWidget):
 
     def on_analysis_completed(self, result: AnalysisResult) -> None:
         """Populate summary and enable export buttons."""
+        self.set_result_state()
         self._result = result
         self._demo_marker.setVisible(result.is_demo)
 
@@ -343,6 +348,24 @@ class ReportPage(QWidget):
         self._csv_signal_btn.setEnabled(has_processed)
         self._csv_physics_btn.setEnabled(True)
 
+    def set_empty_state(self) -> None:
+        """Show the initial report-page state."""
+        self._state_banner.show_empty(
+            "Отчёт станет доступен после завершения анализа или демо-сценария."
+        )
+
+    def set_running_state(self, message: str = "") -> None:
+        """Show that report data is being prepared by the analysis."""
+        self._state_banner.show_running(message)
+
+    def set_error_state(self, message: str) -> None:
+        """Show a report-page error."""
+        self._state_banner.show_error(message)
+
+    def set_result_state(self) -> None:
+        """Hide the state banner when exports are ready."""
+        self._state_banner.show_result()
+
     def clear(self) -> None:
         """Reset the page."""
         self._result = None
@@ -361,3 +384,4 @@ class ReportPage(QWidget):
             btn.setEnabled(False)
         self._status_label.setText("")
         self._demo_marker.setVisible(False)
+        self.set_empty_state()
