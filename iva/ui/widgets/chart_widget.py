@@ -15,7 +15,8 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt  # type: ignore[import-untyped]
+from PySide6.QtCore import Qt, Signal  # type: ignore[import-untyped]
+from PySide6.QtGui import QMouseEvent  # type: ignore[import-untyped]
 from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QCheckBox,
     QFileDialog,
@@ -97,6 +98,8 @@ class ChartWidget(QWidget):
     methods become no-ops.
     """
 
+    focus_requested = Signal(object)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._cursor_enabled = False
@@ -106,6 +109,7 @@ class ChartWidget(QWidget):
         self._pan_anchor: tuple[float, float, tuple[float, float], tuple[float, float]] | None = (
             None
         )
+        self._last_plot: tuple[str, tuple[object, ...], dict[str, object]] | None = None
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -271,6 +275,9 @@ class ChartWidget(QWidget):
 
     def _on_button_press(self, event: object) -> None:
         """Start panning with the middle mouse button."""
+        if getattr(event, "dblclick", False) and getattr(event, "button", None) == 1:
+            self.request_focus()
+            return
         if getattr(event, "button", None) != 2 or getattr(event, "inaxes", None) is not self._ax:
             return
         x = getattr(event, "xdata", None)
@@ -295,6 +302,25 @@ class ChartWidget(QWidget):
     def _on_button_release(self, event: object) -> None:
         if getattr(event, "button", None) == 2:
             self._pan_anchor = None
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        """Request focus mode when the Qt widget itself receives a double-click."""
+        self.request_focus()
+        super().mouseDoubleClickEvent(event)
+
+    def request_focus(self) -> None:
+        """Ask the main window to show this chart in focused workspace mode."""
+        self.focus_requested.emit(self)
+
+    def copy_plot_to(self, target: ChartWidget) -> None:
+        """Replot the current chart in *target* without recalculating analysis data."""
+        if self._last_plot is None:
+            target.clear()
+            return
+        plot_type, args, kwargs = self._last_plot
+        plot_method = getattr(target, plot_type, None)
+        if callable(plot_method):
+            plot_method(*args, **kwargs)
 
     def export_png(self, output_path: str | Path) -> Path:
         """Save the current figure as a PNG file.
@@ -351,6 +377,7 @@ class ChartWidget(QWidget):
         """Plot a time-domain signal."""
         if not _MATPLOTLIB_AVAILABLE:
             return
+        self._last_plot = ("plot_signal", (time_array, signal_array), {"label": label})
         self._ax.clear()
         self._ax.plot(time_array, signal_array, color=COLOR_ACCENT, linewidth=0.8, label=label)
         self._ax.set_xlabel(tr("Time (s)"), color=COLOR_MUTED, fontsize=9)
@@ -376,6 +403,11 @@ class ChartWidget(QWidget):
         """Plot two overlaid time-domain signals."""
         if not _MATPLOTLIB_AVAILABLE:
             return
+        self._last_plot = (
+            "plot_two_signals",
+            (time_array, signal_a, signal_b),
+            {"label_a": label_a, "label_b": label_b},
+        )
         self._ax.clear()
         self._ax.plot(time_array, signal_a, color=COLOR_MUTED, linewidth=0.6, label=label_a)
         self._ax.plot(time_array, signal_b, color=COLOR_ACCENT, linewidth=0.8, label=label_b)
@@ -400,6 +432,7 @@ class ChartWidget(QWidget):
         """Plot power spectral density with optional peak markers."""
         if not _MATPLOTLIB_AVAILABLE:
             return
+        self._last_plot = ("plot_psd", (frequencies, psd_values), {"peaks": peaks})
         self._ax.clear()
         self._ax.semilogy(frequencies, psd_values, color=COLOR_ACCENT, linewidth=0.8)
         if peaks:
@@ -432,6 +465,7 @@ class ChartWidget(QWidget):
         """Plot RMS trend over time."""
         if not _MATPLOTLIB_AVAILABLE:
             return
+        self._last_plot = ("plot_rms_trend", (time_array, rms_trend), {})
         self._ax.clear()
         self._ax.plot(time_array, rms_trend, color=COLOR_WARN, linewidth=0.9)
         self._ax.set_xlabel(tr("Time (s)"), color=COLOR_MUTED, fontsize=9)
@@ -451,6 +485,11 @@ class ChartWidget(QWidget):
         """Plot two overlaid profiles (experiment vs CFD)."""
         if not _MATPLOTLIB_AVAILABLE:
             return
+        self._last_plot = (
+            "plot_profiles",
+            (coords, experiment, cfd),
+            {"label_exp": label_exp, "label_cfd": label_cfd},
+        )
         self._ax.clear()
         self._ax.plot(coords, experiment, color=COLOR_ACCENT, linewidth=1.2, label=label_exp)
         self._ax.plot(coords, cfd, color=COLOR_WARN, linewidth=1.2, linestyle="--", label=label_cfd)
@@ -472,5 +511,6 @@ class ChartWidget(QWidget):
             self._ax.clear()
             self._home_xlim = None
             self._home_ylim = None
+            self._last_plot = None
             self._style_axes()
             self._canvas.draw()

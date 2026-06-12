@@ -4,54 +4,40 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from PySide6.QtCore import Qt  # type: ignore[import-untyped]
 from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QGridLayout,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QScrollArea,
+    QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
-from iva.core.models.enums import GeometryType, RiskLevel
+from iva.core.models.enums import GeometryType
 from iva.ui.strings_ru import (
     GEOMETRY_LABELS,
-    RISK_LABELS,
-    display_label,
     source_value,
     tr,
 )
 from iva.ui.styles.theme import (
-    COLOR_BAD,
-    COLOR_GOOD,
     COLOR_MUTED,
     COLOR_TEXT,
-    COLOR_WARN,
     FONT_SIZE_TITLE,
     SPACING_MD,
     SPACING_SM,
 )
 from iva.ui.widgets.metric_card import MetricCard
+from iva.ui.widgets.page_state import PageStateBanner
 from iva.ui.widgets.parameter_form import ParameterForm
+from iva.ui.widgets.risk_card import RiskCard
 
 if TYPE_CHECKING:
     from iva.core.models.analysis_result import AnalysisResult
     from iva.core.models.flow_parameters import FlowParameters
 
 __all__ = ["PhysicsPage"]
-
-_RISK_COLOR: dict[str, str] = {
-    RiskLevel.SAFE: COLOR_GOOD,
-    RiskLevel.WATCH: COLOR_WARN,
-    RiskLevel.CRITICAL: COLOR_BAD,
-}
-
-_RISK_STATUS: dict[str, str] = {
-    RiskLevel.SAFE: "good",
-    RiskLevel.WATCH: "warn",
-    RiskLevel.CRITICAL: "bad",
-}
 
 
 class PhysicsPage(QWidget):
@@ -80,9 +66,13 @@ class PhysicsPage(QWidget):
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
 
+        self._state_banner = PageStateBanner()
+        layout.addWidget(self._state_banner)
+
         # Main row: form left, results right
-        main_row = QHBoxLayout()
-        main_row.setSpacing(SPACING_MD)
+        self._splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._splitter.setObjectName("physicsPageSplitter")
+        self._splitter.setChildrenCollapsible(False)
 
         # Parameter form
         form_box = QGroupBox(tr("Flow Parameters (SI units)"))
@@ -152,7 +142,7 @@ class PhysicsPage(QWidget):
             current=GEOMETRY_LABELS[GeometryType.SINGLE_CYLINDER.value],
         )
         form_layout.addWidget(self._form)
-        main_row.addWidget(form_box, stretch=1)
+        self._splitter.addWidget(form_box)
 
         # Results panel
         results_box = QGroupBox(tr("Computed Results"))
@@ -167,26 +157,23 @@ class PhysicsPage(QWidget):
         self._card_fs = MetricCard(tr("Shedding Freq"))
         self._card_vr = MetricCard(tr("Velocity Ratio"))
         self._card_fr = MetricCard(tr("Frequency Ratio"))
-        self._card_risk = MetricCard(tr("Risk Level"))
 
         metrics_layout.addWidget(self._card_re, 0, 0)
         metrics_layout.addWidget(self._card_st, 0, 1)
         metrics_layout.addWidget(self._card_fs, 1, 0)
         metrics_layout.addWidget(self._card_vr, 1, 1)
-        metrics_layout.addWidget(self._card_fr, 2, 0)
-        metrics_layout.addWidget(self._card_risk, 2, 1)
+        metrics_layout.addWidget(self._card_fr, 2, 0, 1, 2)
         results_layout.addWidget(metrics_widget)
 
-        self._recommendation_label = QLabel(
-            "Введите параметры потока и запустите анализ для расчета результатов."
-        )
-        self._recommendation_label.setWordWrap(True)
-        self._recommendation_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
-        results_layout.addWidget(self._recommendation_label)
-        main_row.addWidget(results_box, stretch=1)
+        self._risk_card = RiskCard()
+        results_layout.addWidget(self._risk_card)
+        results_layout.addStretch()
+        self._splitter.addWidget(results_box)
+        self._splitter.setStretchFactor(0, 2)
+        self._splitter.setStretchFactor(1, 3)
+        self._splitter.setSizes([440, 680])
 
-        layout.addLayout(main_row)
-        layout.addStretch()
+        layout.addWidget(self._splitter, stretch=1)
         scroll.setWidget(content)
 
         outer = QVBoxLayout(self)
@@ -248,8 +235,12 @@ class PhysicsPage(QWidget):
     def on_analysis_completed(self, result: AnalysisResult) -> None:
         """Update metric cards from a completed analysis result."""
         if result.physics is None:
+            self._state_banner.show_empty(
+                "Параметры течения не заданы. Заполните форму для физических расчётов."
+            )
             return
 
+        self.set_result_state()
         ph = result.physics
         self._card_re.set_value(f"{ph.reynolds_number:.3e}", "")
         self._card_st.set_value(f"{ph.strouhal_number:.4f}", "")
@@ -266,13 +257,28 @@ class PhysicsPage(QWidget):
             self._card_fr.set_value("N/A", "")
 
         if result.risk is not None:
-            level = str(result.risk.risk_level)
-            self._card_risk.set_value(
-                display_label(RISK_LABELS, level), "", _RISK_STATUS.get(level)
+            self._risk_card.set_risk(
+                result.risk.risk_level,
+                result.risk.recommendation_text,
             )
-            color = _RISK_COLOR.get(level, COLOR_MUTED)
-            self._recommendation_label.setText(result.risk.recommendation_text)
-            self._recommendation_label.setStyleSheet(f"color: {color}; font-size: 11pt;")
+
+    def set_empty_state(self) -> None:
+        """Show the initial physics-page state."""
+        self._state_banner.show_empty(
+            "Введите параметры потока и запустите анализ для расчёта физических показателей."
+        )
+
+    def set_running_state(self, message: str = "") -> None:
+        """Show that physical result calculation is in progress."""
+        self._state_banner.show_running(message)
+
+    def set_error_state(self, message: str) -> None:
+        """Show a physics-page error."""
+        self._state_banner.show_error(message)
+
+    def set_result_state(self) -> None:
+        """Hide the state banner when physics data is ready."""
+        self._state_banner.show_result()
 
     def clear(self) -> None:
         """Reset all metric cards."""
@@ -282,9 +288,7 @@ class PhysicsPage(QWidget):
             self._card_fs,
             self._card_vr,
             self._card_fr,
-            self._card_risk,
         ):
             card.clear()
-        self._recommendation_label.setText(
-            "Введите параметры потока и запустите анализ для расчета результатов."
-        )
+        self._risk_card.clear()
+        self.set_empty_state()

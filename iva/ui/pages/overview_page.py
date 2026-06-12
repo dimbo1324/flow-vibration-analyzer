@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
 )
 
 from iva.core.models.enums import RiskLevel
-from iva.ui.strings_ru import RISK_LABELS, display_label, tr
+from iva.ui.strings_ru import tr
 from iva.ui.styles.theme import (
     COLOR_BAD,
     COLOR_GOOD,
@@ -31,17 +31,13 @@ from iva.ui.styles.theme import (
 )
 from iva.ui.widgets.chart_widget import ChartWidget
 from iva.ui.widgets.metric_card import MetricCard
+from iva.ui.widgets.page_state import PageStateBanner
+from iva.ui.widgets.risk_card import RiskCard
 
 if TYPE_CHECKING:
     from iva.core.models.analysis_result import AnalysisResult
 
 __all__ = ["OverviewPage"]
-
-_RISK_STATUS: dict[str, str] = {
-    RiskLevel.SAFE: "good",
-    RiskLevel.WATCH: "warn",
-    RiskLevel.CRITICAL: "bad",
-}
 
 _RISK_COLOR: dict[str, str] = {
     RiskLevel.SAFE: COLOR_GOOD,
@@ -108,6 +104,9 @@ class OverviewPage(QWidget):
         quick_layout.addLayout(quick_buttons)
         layout.addWidget(quick_box)
 
+        self._state_banner = PageStateBanner()
+        layout.addWidget(self._state_banner)
+
         self._demo_marker = QLabel("Демонстрационные синтетические данные")
         self._demo_marker.setObjectName("overviewDemoMarker")
         self._demo_marker.setWordWrap(True)
@@ -124,12 +123,12 @@ class OverviewPage(QWidget):
         self._card_peak_freq = MetricCard(tr("Dominant Peak"))
         self._card_rms = MetricCard(tr("Total RMS"))
         self._card_shedding = MetricCard(tr("Shedding Freq"))
-        self._card_risk = MetricCard(tr("Risk Level"))
+        self._risk_card = RiskCard()
 
         cards_layout.addWidget(self._card_peak_freq, 0, 0)
         cards_layout.addWidget(self._card_rms, 0, 1)
         cards_layout.addWidget(self._card_shedding, 0, 2)
-        cards_layout.addWidget(self._card_risk, 0, 3)
+        cards_layout.addWidget(self._risk_card, 0, 3)
 
         layout.addWidget(cards_widget)
 
@@ -172,6 +171,7 @@ class OverviewPage(QWidget):
 
     def on_analysis_completed(self, result: AnalysisResult) -> None:
         """Update cards and charts from a completed analysis result."""
+        self.set_result_state()
         self._demo_marker.setVisible(result.is_demo)
         if result.is_demo:
             self._demo_marker.setText(
@@ -201,11 +201,12 @@ class OverviewPage(QWidget):
 
         # Risk level
         if result.risk:
-            level = str(result.risk.risk_level)
-            status = _RISK_STATUS.get(level, None)
-            self._card_risk.set_value(display_label(RISK_LABELS, level), "", status)
+            self._risk_card.set_risk(
+                result.risk.risk_level,
+                result.risk.recommendation_text,
+            )
         else:
-            self._card_risk.set_value("N/A", "")
+            self._risk_card.clear()
 
         # Charts
         if result.processed_data is not None:
@@ -226,16 +227,33 @@ class OverviewPage(QWidget):
             self._recommendation_label.setText("\n".join(result.warnings))
             self._recommendation_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 12pt;")
 
+    def set_empty_state(self) -> None:
+        """Show the initial overview state while keeping quick start available."""
+        self._state_banner.show_empty()
+
+    def set_running_state(self, message: str = "") -> None:
+        """Show analysis progress on the overview page."""
+        self._state_banner.show_running(message)
+
+    def set_error_state(self, message: str) -> None:
+        """Show a concise overview error state."""
+        self._state_banner.show_error(message)
+
+    def set_result_state(self) -> None:
+        """Hide the state banner once a result is ready."""
+        self._state_banner.show_result()
+
     def clear(self) -> None:
         """Reset all widgets to placeholder state."""
         for card in (
             self._card_peak_freq,
             self._card_rms,
             self._card_shedding,
-            self._card_risk,
         ):
             card.clear()
+        self._risk_card.clear()
         self._signal_chart.clear()
         self._spectrum_chart.clear()
         self._recommendation_label.setText("Результат анализа пока отсутствует.")
         self._demo_marker.setVisible(False)
+        self.set_empty_state()

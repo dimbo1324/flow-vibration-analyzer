@@ -261,6 +261,24 @@ def build_app_stylesheet() -> str:
     QSplitter::handle {{
         background: {COLOR_BORDER};
     }}
+    QSplitter::handle:horizontal {{
+        width: 4px;
+    }}
+    QSplitter::handle:vertical {{
+        height: 4px;
+    }}
+    QProgressBar {{
+        background: {COLOR_PANEL};
+        color: {COLOR_TEXT};
+        border: 1px solid {COLOR_BORDER};
+        border-radius: {RADIUS_SM}px;
+        text-align: center;
+        min-height: 18px;
+    }}
+    QProgressBar::chunk {{
+        background: {COLOR_ACCENT};
+        border-radius: {RADIUS_SM}px;
+    }}
     QCheckBox {{
         color: {COLOR_TEXT};
         spacing: 6px;

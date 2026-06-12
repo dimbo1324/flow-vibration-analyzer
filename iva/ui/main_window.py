@@ -8,9 +8,17 @@ Architecture rules:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThreadPool, Slot  # type: ignore[import-untyped]
+from PySide6.QtCore import (  # type: ignore[import-untyped]
+    QSettings,
+    QSize,
+    Qt,
+    QThreadPool,
+    QTimer,
+    Slot,
+)
 from PySide6.QtGui import QAction, QKeySequence, QShortcut  # type: ignore[import-untyped]
 from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QDialog,
@@ -20,10 +28,15 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QHBoxLayout,
     QLabel,
     QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QMessageBox,
+    QProgressBar,
+    QPushButton,
     QScrollArea,
+    QSplitter,
     QStackedWidget,
+    QStyle,
     QTextEdit,
     QToolBar,
     QVBoxLayout,
@@ -41,14 +54,17 @@ from iva.ui.pages.profiles_page import ProfilesPage
 from iva.ui.pages.report_page import ReportPage
 from iva.ui.pages.signal_page import SignalPage
 from iva.ui.pages.spectrum_page import SpectrumPage
-from iva.ui.strings_ru import RISK_LABELS, display_label, tr
+from iva.ui.strings_ru import tr
 from iva.ui.styles.theme import (
+    COLOR_ACCENT,
     COLOR_BAD,
     COLOR_BORDER,
     COLOR_MUTED,
+    COLOR_PANEL,
     COLOR_SURFACE,
-    COLOR_TEXT,
 )
+from iva.ui.widgets.chart_widget import ChartWidget
+from iva.ui.widgets.inspector_panel import InspectorPanel
 
 __all__ = ["MainWindow"]
 
@@ -60,11 +76,11 @@ class MainWindow(QMainWindow):
 
         ┌──────────────────────────────────────────────┐
         │  Toolbar                                      │
-        ├───────────────┬──────────────────────────────┤
+        ├──────────────────────────────────────────────┤
         │ Error banner  (hidden by default)             │
-        ├───────────────┬──────────────────────────────┤
-        │  Sidebar nav  │  Stacked content pages       │
-        └───────────────┴──────────────────────────────┘
+        ├────────────┬──────────────────────┬──────────┤
+        │ Navigation │ Central workspace    │ Inspector│
+        └────────────┴──────────────────────┴──────────┘
         Status bar
     """
 
@@ -82,9 +98,17 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._session = AnalysisSession()
         self._thread_pool = QThreadPool.globalInstance()
+        self._ui_settings = QSettings("IVA", "Industrial Vibration Analyzer")
+        self._persist_ui_state = os.environ.get("QT_QPA_PLATFORM") != "offscreen"
+        self._sidebar_compact = False
+        self._focus_mode = False
+        self._focus_previous_page_index = 0
+        self._focus_previous_sidebar_visible = True
+        self._focus_previous_inspector_visible = False
         self._setup_ui()
         self._setup_shortcuts()
         self._load_defaults()
+        self._restore_ui_preferences()
         self.setWindowTitle(tr("Industrial Vibration Analyzer (IVA)"))
         self.resize(1400, 900)
 
@@ -133,6 +157,10 @@ class MainWindow(QMainWindow):
         self._action_export_report.setEnabled(False)
         self._action_export_report.triggered.connect(self._export_report_bundle)
 
+        self._action_sidebar = QAction("Свернуть навигацию  (L)", self)
+        self._action_sidebar.setToolTip("Переключить компактный режим навигации (L)")
+        self._action_sidebar.triggered.connect(self._toggle_sidebar)
+
         self._action_inspector = QAction(tr("Inspector  (R)"), self)
         self._action_inspector.setToolTip(tr("Toggle inspector panel (R)"))
         self._action_inspector.triggered.connect(self._toggle_inspector)
@@ -145,10 +173,11 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self._action_save)
         toolbar.addAction(self._action_save_as)
         toolbar.addAction(self._action_export_report)
+        toolbar.addSeparator()
+        toolbar.addAction(self._action_sidebar)
         toolbar.addAction(self._action_inspector)
         self.addToolBar(toolbar)
 
-        # Store current project path for save (non-as)
         self._current_project_path: Path | None = None
 
         # ── Central widget: error banner + sidebar + stack ──────────────
@@ -170,25 +199,51 @@ class MainWindow(QMainWindow):
         self._error_banner.mousePressEvent = self._on_banner_click  # type: ignore[method-assign]
         central_layout.addWidget(self._error_banner)
 
-        # Content row: sidebar + stacked pages
-        content_widget = QWidget()
-        content_layout = QHBoxLayout(content_widget)
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(0)
+        # Workstation shell: navigation + workspace + inspector.
+        self._main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._main_splitter.setObjectName("MainWorkstationSplitter")
+        self._main_splitter.setChildrenCollapsible(False)
 
-        # Sidebar navigation
+        self._sidebar_panel = QWidget()
+        self._sidebar_panel.setObjectName("SidebarPanel")
+        self._sidebar_panel.setMinimumWidth(180)
+        self._sidebar_panel.setMaximumWidth(320)
+        sidebar_layout = QVBoxLayout(self._sidebar_panel)
+        sidebar_layout.setContentsMargins(8, 12, 8, 8)
+        sidebar_layout.setSpacing(8)
+
+        self._sidebar_title = QLabel("РАБОЧИЙ ПРОЦЕСС")
+        self._sidebar_title.setStyleSheet(f"color: {COLOR_MUTED}; font-weight: 700;")
+        sidebar_layout.addWidget(self._sidebar_title)
+
         self._nav = QListWidget()
         self._nav.setObjectName("SidebarNav")
-        self._nav.setFixedWidth(170)
-        self._nav.addItems(self.PAGE_NAMES)
+        self._nav.setIconSize(QSize(22, 22))
+        self._nav.setSpacing(3)
+        standard_icons = (
+            QStyle.StandardPixmap.SP_ComputerIcon,
+            QStyle.StandardPixmap.SP_DialogOpenButton,
+            QStyle.StandardPixmap.SP_MediaPlay,
+            QStyle.StandardPixmap.SP_FileDialogDetailedView,
+            QStyle.StandardPixmap.SP_DriveHDIcon,
+            QStyle.StandardPixmap.SP_FileDialogContentsView,
+            QStyle.StandardPixmap.SP_DialogSaveButton,
+        )
+        for page_name, icon_kind in zip(self.PAGE_NAMES, standard_icons, strict=True):
+            item = QListWidgetItem(self.style().standardIcon(icon_kind), page_name)
+            item.setToolTip(page_name)
+            item.setSizeHint(QSize(0, 44))
+            self._nav.addItem(item)
         self._nav.setStyleSheet(
-            f"QListWidget {{ background: {COLOR_SURFACE};"
-            f" border-right: 1px solid {COLOR_BORDER}; }}"
+            f"QListWidget {{ background: {COLOR_SURFACE};" f" border: 1px solid {COLOR_BORDER}; }}"
         )
         self._nav.currentRowChanged.connect(self._on_nav_changed)
+        sidebar_layout.addWidget(self._nav, stretch=1)
+        self._main_splitter.addWidget(self._sidebar_panel)
 
-        # Stacked pages
+        # Central workspace contains normal pages and a chart-focus view.
         self._stack = QStackedWidget()
+        self._stack.setObjectName("AnalysisPageStack")
         self._pages: list[QWidget] = [
             OverviewPage(),
             ImportPage(),
@@ -202,9 +257,54 @@ class MainWindow(QMainWindow):
             self._stack.addWidget(page)
         self._connect_quick_start_actions()
 
-        content_layout.addWidget(self._nav)
-        content_layout.addWidget(self._stack, stretch=1)
-        central_layout.addWidget(content_widget, stretch=1)
+        self._workspace_stack = QStackedWidget()
+        self._workspace_stack.setObjectName("CentralWorkspace")
+        self._workspace_stack.addWidget(self._stack)
+
+        self._focus_container = QWidget()
+        focus_layout = QVBoxLayout(self._focus_container)
+        focus_layout.setContentsMargins(12, 10, 12, 12)
+        focus_layout.setSpacing(8)
+        focus_header = QHBoxLayout()
+        self._focus_label = QLabel("Режим просмотра графика - Esc для выхода")
+        self._focus_label.setStyleSheet(
+            f"color: {COLOR_ACCENT}; background: {COLOR_PANEL}; padding: 8px;"
+            f" border: 1px solid {COLOR_BORDER}; font-weight: 700;"
+        )
+        focus_exit = QPushButton("Вернуться  (Esc)")
+        focus_exit.clicked.connect(self.exit_chart_focus_mode)
+        focus_header.addWidget(self._focus_label, stretch=1)
+        focus_header.addWidget(focus_exit)
+        focus_layout.addLayout(focus_header)
+        self._focus_chart = ChartWidget()
+        focus_layout.addWidget(self._focus_chart, stretch=1)
+        self._workspace_stack.addWidget(self._focus_container)
+        self._main_splitter.addWidget(self._workspace_stack)
+
+        for chart in self._stack.findChildren(ChartWidget):
+            chart.focus_requested.connect(self.enter_chart_focus_mode)
+
+        # QDockWidget is retained as the compatibility surface, but it lives
+        # inside the splitter as a stable resizable inspector panel.
+        self._inspector_dock = QDockWidget(tr("Inspector"), self._main_splitter)
+        self._inspector_dock.setObjectName("InspectorDock")
+        self._inspector_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        self._inspector_dock.setMinimumWidth(280)
+        self._inspector_dock.setMaximumWidth(420)
+        inspector_scroll = QScrollArea()
+        inspector_scroll.setWidgetResizable(True)
+        self._inspector_panel = InspectorPanel()
+        self._inspector_text = self._inspector_panel._text
+        inspector_scroll.setWidget(self._inspector_panel)
+        self._inspector_dock.setWidget(inspector_scroll)
+        self._main_splitter.addWidget(self._inspector_dock)
+        self._inspector_dock.hide()
+
+        self._main_splitter.setStretchFactor(0, 0)
+        self._main_splitter.setStretchFactor(1, 1)
+        self._main_splitter.setStretchFactor(2, 0)
+        self._main_splitter.setSizes([240, 1040, 0])
+        central_layout.addWidget(self._main_splitter, stretch=1)
 
         self.setCentralWidget(central)
 
@@ -213,37 +313,18 @@ class MainWindow(QMainWindow):
         self._status_label.setStyleSheet(f"color: {COLOR_MUTED};")
         self.statusBar().addWidget(self._status_label)
 
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setObjectName("analysisProgressBar")
+        self._progress_bar.setRange(0, 100)
+        self._progress_bar.setValue(0)
+        self._progress_bar.setTextVisible(True)
+        self._progress_bar.setFixedWidth(190)
+        self._progress_bar.hide()
+        self.statusBar().addPermanentWidget(self._progress_bar)
+
         self._progress_label = QLabel("")
-        self._progress_label.setStyleSheet(f"color: {COLOR_MUTED};")
+        self._progress_label.setStyleSheet(f"color: {COLOR_MUTED}; min-width: 38px;")
         self.statusBar().addPermanentWidget(self._progress_label)
-
-        # ── Inspector dock ──────────────────────────────────────────────
-        self._inspector_dock = QDockWidget(tr("Inspector"), self)
-        self._inspector_dock.setObjectName("InspectorDock")
-        self._inspector_dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea)
-        self._inspector_dock.setMinimumWidth(220)
-
-        inspector_scroll = QScrollArea()
-        inspector_scroll.setWidgetResizable(True)
-        inspector_content = QWidget()
-        inspector_layout = QVBoxLayout(inspector_content)
-        inspector_layout.setContentsMargins(8, 8, 8, 8)
-
-        self._inspector_text = QLabel(
-            "Результат анализа пока отсутствует.\n\n" "Запустите анализ, чтобы увидеть подробности."
-        )
-        self._inspector_text.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-        self._inspector_text.setWordWrap(True)
-        self._inspector_text.setStyleSheet(
-            f"color: {COLOR_TEXT}; font-size: 11pt; font-family: monospace;"
-        )
-        inspector_layout.addWidget(self._inspector_text)
-        inspector_layout.addStretch()
-        inspector_scroll.setWidget(inspector_content)
-        self._inspector_dock.setWidget(inspector_scroll)
-
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._inspector_dock)
-        self._inspector_dock.hide()
 
         # Select first page
         self._nav.setCurrentRow(0)
@@ -273,6 +354,10 @@ class MainWindow(QMainWindow):
         sc_side.activated.connect(self._toggle_sidebar)  # type: ignore[attr-defined]
         sc_insp = QShortcut(QKeySequence("R"), self)
         sc_insp.activated.connect(self._toggle_inspector)  # type: ignore[attr-defined]
+        self._shortcut_focus = QShortcut(QKeySequence("F"), self)
+        self._shortcut_focus.activated.connect(self._toggle_chart_focus_mode)  # type: ignore[attr-defined]
+        self._shortcut_escape = QShortcut(QKeySequence("Esc"), self)
+        self._shortcut_escape.activated.connect(self.exit_chart_focus_mode)  # type: ignore[attr-defined]
 
     # ------------------------------------------------------------------
     # Default settings
@@ -284,6 +369,17 @@ class MainWindow(QMainWindow):
             self._session.settings = settings
         except Exception:  # noqa: BLE001
             pass  # Use dataclass defaults on any failure
+
+    def _restore_ui_preferences(self) -> None:
+        sidebar_compact = False
+        inspector_visible = False
+        if self._persist_ui_state:
+            sidebar_compact = bool(self._ui_settings.value("ui/sidebar_compact", False, type=bool))
+            inspector_visible = bool(
+                self._ui_settings.value("ui/inspector_visible", False, type=bool)
+            )
+        self._set_sidebar_compact(sidebar_compact, persist=False)
+        self._set_inspector_visible(inspector_visible, persist=False)
 
     def _connect_quick_start_actions(self) -> None:
         overview_page = self._pages[0]
@@ -355,7 +451,7 @@ class MainWindow(QMainWindow):
             self.show_error_banner(err)
             return
 
-        self._start_analysis_worker(tr("Running analysis…"))
+        self._start_analysis_worker("Выполняется анализ...")
 
     @Slot()
     @Slot(str)
@@ -383,7 +479,7 @@ class MainWindow(QMainWindow):
             if isinstance(physics_page, PhysicsPage) and flow_parameters is not None:
                 physics_page.set_flow_parameters(flow_parameters)
             self._nav.setCurrentRow(0)
-            self._start_analysis_worker("Демонстрационный анализ запущен")
+            self._start_analysis_worker("Выполняется демонстрационный анализ...")
         except IVAError as exc:
             self.show_error_banner(exc)
         except Exception as exc:  # noqa: BLE001
@@ -398,6 +494,10 @@ class MainWindow(QMainWindow):
     def _start_analysis_worker(self, status_text: str) -> None:
         self._action_run.setEnabled(False)
         self._status_label.setText(status_text)
+        self._progress_bar.setValue(0)
+        self._progress_bar.show()
+        self._progress_label.setText("0%")
+        self._set_pages_running_state(status_text)
         self._hide_error_banner()
         worker = AnalysisWorker(self._session)
         worker.signals.progress_updated.connect(self._on_progress)
@@ -412,6 +512,8 @@ class MainWindow(QMainWindow):
 
     @Slot(int)
     def _on_progress(self, value: int) -> None:
+        self._progress_bar.setValue(value)
+        self._progress_bar.show()
         self._progress_label.setText(f"{value}%")
 
     @Slot(object)
@@ -422,36 +524,51 @@ class MainWindow(QMainWindow):
             return
         self._session.result = result
         self._action_run.setEnabled(True)
-        self._progress_label.setText("")
+        self._progress_bar.setValue(100)
+        self._progress_label.setText("100%")
         self._status_label.setText(tr("Analysis complete"))
         # Enable save/export now that we have a result
         self._action_save.setEnabled(True)
         self._action_save_as.setEnabled(True)
         self._action_export_report.setEnabled(True)
         if result.is_demo:
-            self._status_label.setText("Демонстрационный анализ завершен")
+            self._status_label.setText("Демонстрационный анализ завершён")
         self._update_all_pages(result)
         self._update_inspector(result)
+        QTimer.singleShot(1400, self._hide_completed_progress)
 
     @Slot(object)
     def _on_analysis_error(self, error: object) -> None:
         self._action_run.setEnabled(True)
-        self._progress_label.setText("")
+        self._reset_progress()
         if isinstance(error, IVAError):
+            self._set_pages_error_state(error.user_message)
             self.show_error_banner(error)
         else:
+            self._set_pages_error_state("Не удалось построить данные для страницы.")
             self._status_label.setText(tr("Analysis failed"))
 
     @Slot(str)
     def _on_unexpected_error(self, message: str) -> None:
         self._action_run.setEnabled(True)
-        self._progress_label.setText("")
+        self._reset_progress()
+        self._set_pages_error_state("Не удалось построить данные для страницы.")
         self._status_label.setText(tr("Analysis failed"))
         QMessageBox.critical(
             self,
             tr("Unexpected Error"),
             f"Во время анализа произошла непредвиденная ошибка:\n\n{message}",
         )
+
+    def _hide_completed_progress(self) -> None:
+        if self._progress_bar.value() >= 100:
+            self._progress_bar.hide()
+            self._progress_label.clear()
+
+    def _reset_progress(self) -> None:
+        self._progress_bar.setValue(0)
+        self._progress_bar.hide()
+        self._progress_label.clear()
 
     # ------------------------------------------------------------------
     # Error banner
@@ -504,35 +621,27 @@ class MainWindow(QMainWindow):
             if hasattr(page, "on_analysis_completed"):
                 page.on_analysis_completed(result)  # type: ignore[arg-type]
 
+    def _set_pages_running_state(self, message: str) -> None:
+        for page in self._pages:
+            if hasattr(page, "set_running_state"):
+                page.set_running_state(message)  # type: ignore[attr-defined]
+
+    def _set_pages_error_state(self, message: str) -> None:
+        for page in self._pages:
+            if hasattr(page, "set_error_state"):
+                page.set_error_state(message)  # type: ignore[attr-defined]
+
+    def _set_pages_empty_state(self) -> None:
+        for page in self._pages:
+            if hasattr(page, "set_empty_state"):
+                page.set_empty_state()  # type: ignore[attr-defined]
+
     def _update_inspector(self, result: object) -> None:
         from iva.core.models.analysis_result import AnalysisResult
 
         if not isinstance(result, AnalysisResult):
             return
-        lines: list[str] = []
-        if result.is_demo:
-            lines.append("ДЕМО: синтетические данные")
-            if result.demo_title:
-                lines.append(result.demo_title)
-            lines.append("")
-        if result.spectrum and result.spectrum.dominant_peak:
-            pk = result.spectrum.dominant_peak
-            lines.append(f"Пик: {pk.frequency_hz:.2f} Hz")
-            lines.append(f"  амплитуда: {pk.amplitude:.4g}")
-        if result.spectrum:
-            lines.append(f"RMS: {result.spectrum.rms_total:.4g}")
-        if result.physics:
-            ph = result.physics
-            lines.append(f"Re: {ph.reynolds_number:.2e}")
-            lines.append(f"St: {ph.strouhal_number:.4f}")
-            lines.append(f"fs: {ph.calculated_shedding_frequency_hz:.3f} Hz")
-        if result.risk:
-            lines.append(f"Риск: {display_label(RISK_LABELS, result.risk.risk_level)}")
-        if result.warnings:
-            lines.append(f"\nПредупреждения: {len(result.warnings)}")
-        self._inspector_text.setText(
-            "\n".join(lines) if lines else "Анализ завершен — подробности отсутствуют"
-        )
+        self._inspector_panel.update_result(result, self._current_project_path)
 
     # ------------------------------------------------------------------
     # Navigation helpers
@@ -543,13 +652,106 @@ class MainWindow(QMainWindow):
         self._stack.setCurrentIndex(index)
 
     def _toggle_sidebar(self) -> None:
-        self._nav.setVisible(not self._nav.isVisible())
+        if self._focus_mode:
+            return
+        self._set_sidebar_compact(not self._sidebar_compact)
+
+    def _set_sidebar_compact(self, compact: bool, persist: bool = True) -> None:
+        self._sidebar_compact = compact
+        width = 64 if compact else 240
+        self._sidebar_panel.setMinimumWidth(width if compact else 180)
+        self._sidebar_panel.setMaximumWidth(width if compact else 320)
+        self._sidebar_title.setText("IVA" if compact else "РАБОЧИЙ ПРОЦЕСС")
+        self._sidebar_title.setAlignment(
+            Qt.AlignmentFlag.AlignCenter if compact else Qt.AlignmentFlag.AlignLeft
+        )
+        for index, page_name in enumerate(self.PAGE_NAMES):
+            item = self._nav.item(index)
+            if item is None:
+                continue
+            item.setText("" if compact else page_name)
+            item.setToolTip(page_name)
+            item.setTextAlignment(
+                Qt.AlignmentFlag.AlignCenter
+                if compact
+                else Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+            )
+        self._action_sidebar.setText(
+            "Развернуть навигацию  (L)" if compact else "Свернуть навигацию  (L)"
+        )
+        sizes = self._main_splitter.sizes()
+        central_width = max(sizes[1] if len(sizes) > 1 else 900, 400)
+        inspector_width = sizes[2] if len(sizes) > 2 else 0
+        self._main_splitter.setSizes([width, central_width, inspector_width])
+        if persist and self._persist_ui_state:
+            self._ui_settings.setValue("ui/sidebar_compact", compact)
 
     def _toggle_inspector(self) -> None:
-        self._inspector_dock.setVisible(not self._inspector_dock.isVisible())
+        if self._focus_mode:
+            return
+        self._set_inspector_visible(self._inspector_dock.isHidden())
+
+    def _set_inspector_visible(self, visible: bool, persist: bool = True) -> None:
+        self._inspector_dock.setVisible(visible)
+        self._action_inspector.setText(
+            "Скрыть инспектор  (R)" if visible else "Показать инспектор  (R)"
+        )
+        sizes = self._main_splitter.sizes()
+        sidebar_width = 64 if self._sidebar_compact else 240
+        central_width = max(sizes[1] if len(sizes) > 1 else 900, 400)
+        self._main_splitter.setSizes([sidebar_width, central_width, 320 if visible else 0])
+        if persist and self._persist_ui_state:
+            self._ui_settings.setValue("ui/inspector_visible", visible)
+
+    def _toggle_chart_focus_mode(self) -> None:
+        if self._focus_mode:
+            self.exit_chart_focus_mode()
+        else:
+            self.enter_chart_focus_mode()
+
+    @Slot(object)
+    def enter_chart_focus_mode(self, chart: object | None = None) -> None:
+        """Show a page chart in the central focus workspace without recalculation."""
+        if self._focus_mode:
+            return
+        source_chart = chart if isinstance(chart, ChartWidget) else None
+        if source_chart is None:
+            page = self._stack.currentWidget()
+            charts = page.findChildren(ChartWidget) if page is not None else []
+            source_chart = charts[0] if charts else None
+        if source_chart is None:
+            self._status_label.setText("На текущей странице нет графика для просмотра")
+            return
+
+        self._focus_previous_page_index = self._stack.currentIndex()
+        self._focus_previous_sidebar_visible = not self._sidebar_panel.isHidden()
+        self._focus_previous_inspector_visible = not self._inspector_dock.isHidden()
+        source_chart.copy_plot_to(self._focus_chart)
+        self._focus_mode = True
+        self._sidebar_panel.hide()
+        self._inspector_dock.hide()
+        self._workspace_stack.setCurrentWidget(self._focus_container)
+        self._status_label.setText("Режим просмотра графика - Esc для выхода")
+
+    @Slot()
+    def exit_chart_focus_mode(self) -> None:
+        """Restore the page, sidebar, and inspector state saved before focus mode."""
+        if not self._focus_mode:
+            return
+        self._workspace_stack.setCurrentWidget(self._stack)
+        self._stack.setCurrentIndex(self._focus_previous_page_index)
+        self._sidebar_panel.setVisible(self._focus_previous_sidebar_visible)
+        self._focus_mode = False
+        self._set_sidebar_compact(self._sidebar_compact, persist=False)
+        self._set_inspector_visible(
+            self._focus_previous_inspector_visible,
+            persist=False,
+        )
+        self._status_label.setText(tr("Ready"))
 
     def _new_session(self) -> None:
         """Clear the current session (Ctrl+N)."""
+        self.exit_chart_focus_mode()
         self._session.clear()
         self._current_project_path = None
         self._action_save.setEnabled(False)
@@ -558,7 +760,8 @@ class MainWindow(QMainWindow):
         for page in self._pages:
             if hasattr(page, "clear"):
                 page.clear()  # type: ignore[attr-defined]
-        self._inspector_text.clear()
+        self._inspector_panel.clear()
+        self._reset_progress()
         self.setWindowTitle(tr("Industrial Vibration Analyzer (IVA)"))
         self._status_label.setText(tr("New session started"))
         self._hide_error_banner()
@@ -595,6 +798,8 @@ class MainWindow(QMainWindow):
             self._current_project_path = saved
             self.setWindowTitle(f"IVA — {saved.name}")
             self._status_label.setText(f"Проект сохранен: {saved.name}")
+            if self._session.result is not None:
+                self._update_inspector(self._session.result)
         except Exception as exc:  # noqa: BLE001
             err = ExportError(
                 user_message=f"Не удалось сохранить проект: {exc}",
@@ -626,6 +831,9 @@ class MainWindow(QMainWindow):
             if loaded.result is not None:
                 self._update_all_pages(loaded.result)
                 self._update_inspector(loaded.result)
+            else:
+                self._set_pages_empty_state()
+                self._inspector_panel.clear()
             self._hide_error_banner()
         except Exception as exc:  # noqa: BLE001
             from iva.core.models.exceptions import IVAError as _IVAError

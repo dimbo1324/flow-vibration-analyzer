@@ -5,12 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from PySide6.QtCore import Qt  # type: ignore[import-untyped]
 from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -27,6 +29,7 @@ from iva.ui.styles.theme import (
     SPACING_MD,
 )
 from iva.ui.widgets.chart_widget import ChartWidget
+from iva.ui.widgets.page_state import PageStateBanner
 
 if TYPE_CHECKING:
     from iva.core.models.analysis_result import AnalysisResult
@@ -58,9 +61,28 @@ class ProfilesPage(QWidget):
         subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
         layout.addWidget(subtitle)
 
+        self._state_banner = PageStateBanner()
+        layout.addWidget(self._state_banner)
+
+        self._splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._splitter.setObjectName("profilesPageSplitter")
+        self._splitter.setChildrenCollapsible(False)
+
+        chart_box = QGroupBox("Эксперимент / CFD")
+        chart_layout = QVBoxLayout(chart_box)
+        self._chart = ChartWidget()
+        self._chart.setMinimumHeight(300)
+        chart_layout.addWidget(self._chart)
+        self._splitter.addWidget(chart_box)
+
+        side_panel = QWidget()
+        side_layout = QVBoxLayout(side_panel)
+        side_layout.setContentsMargins(0, 0, 0, 0)
+        side_layout.setSpacing(SPACING_MD)
+
         # File load buttons
         btn_box = QGroupBox(tr("Load Profile Files"))
-        btn_layout = QHBoxLayout(btn_box)
+        btn_layout = QVBoxLayout(btn_box)
 
         self._load_exp_btn = QPushButton(tr("Load Experiment CSV…"))
         self._load_exp_btn.setToolTip(
@@ -82,18 +104,16 @@ class ProfilesPage(QWidget):
         self._cfd_file_label = QLabel(tr("No CFD file"))
         self._cfd_file_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 10pt;")
 
-        btn_layout.addWidget(self._load_exp_btn)
-        btn_layout.addWidget(self._exp_file_label)
-        btn_layout.addWidget(self._load_cfd_btn)
-        btn_layout.addWidget(self._cfd_file_label)
-        btn_layout.addStretch()
+        exp_row = QHBoxLayout()
+        exp_row.addWidget(self._load_exp_btn)
+        exp_row.addWidget(self._exp_file_label, stretch=1)
+        cfd_row = QHBoxLayout()
+        cfd_row.addWidget(self._load_cfd_btn)
+        cfd_row.addWidget(self._cfd_file_label, stretch=1)
+        btn_layout.addLayout(exp_row)
+        btn_layout.addLayout(cfd_row)
         btn_layout.addWidget(self._compare_btn)
-        layout.addWidget(btn_box)
-
-        # Chart
-        self._chart = ChartWidget()
-        self._chart.setMinimumHeight(250)
-        layout.addWidget(self._chart)
+        side_layout.addWidget(btn_box)
 
         # Validation metrics
         self._validation_box = QGroupBox(tr("Validation Metrics"))
@@ -105,14 +125,19 @@ class ProfilesPage(QWidget):
         self._metrics_table.setMinimumHeight(120)
         val_layout.addWidget(self._metrics_table)
         self._validation_box.setVisible(False)
-        layout.addWidget(self._validation_box)
+        side_layout.addWidget(self._validation_box)
 
         # Status label
         self._status_label = QLabel("")
         self._status_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 10pt;")
-        layout.addWidget(self._status_label)
+        side_layout.addWidget(self._status_label)
+        side_layout.addStretch()
 
-        layout.addStretch()
+        self._splitter.addWidget(side_panel)
+        self._splitter.setStretchFactor(0, 3)
+        self._splitter.setStretchFactor(1, 1)
+        self._splitter.setSizes([780, 360])
+        layout.addWidget(self._splitter, stretch=1)
 
     # ------------------------------------------------------------------
     # Slots
@@ -163,9 +188,11 @@ class ProfilesPage(QWidget):
                 val.cfd_array,
             )
             self._set_status(tr("Comparison complete."), ok=True)
+            self.set_result_state()
         except Exception as exc:  # noqa: BLE001
             self._set_status(f"Ошибка сравнения: {exc}", ok=False)
             self._validation_box.setVisible(False)
+            self.set_error_state("Не удалось сравнить экспериментальный и CFD-профили.")
 
     def _show_metrics(self, val: object) -> None:
         """Populate the metrics table from a ValidationResult."""
@@ -200,8 +227,12 @@ class ProfilesPage(QWidget):
         """Show validation metrics if available in the analysis result."""
         if result.validation is None:
             self._validation_box.setVisible(False)
+            self._state_banner.show_empty(
+                "Профили сравнения не загружены. Добавьте экспериментальные и CFD-данные."
+            )
             return
 
+        self.set_result_state()
         val = result.validation
         self._show_metrics(val)
         self._chart.plot_profiles(
@@ -209,6 +240,24 @@ class ProfilesPage(QWidget):
             val.experiment_array,
             val.cfd_array,
         )
+
+    def set_empty_state(self) -> None:
+        """Show the initial page state."""
+        self._state_banner.show_empty(
+            "Результаты сравнения пока отсутствуют. Загрузите профили или выполните анализ."
+        )
+
+    def set_running_state(self, message: str = "") -> None:
+        """Show that the current analysis is running."""
+        self._state_banner.show_running(message)
+
+    def set_error_state(self, message: str) -> None:
+        """Show a profile-page error."""
+        self._state_banner.show_error(message)
+
+    def set_result_state(self) -> None:
+        """Hide the state banner when comparison data is available."""
+        self._state_banner.show_result()
 
     def clear(self) -> None:
         """Reset the page."""
@@ -223,3 +272,4 @@ class ProfilesPage(QWidget):
         self._cfd_file_label.setText(tr("No CFD file"))
         self._cfd_file_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 10pt;")
         self._compare_btn.setEnabled(False)
+        self.set_empty_state()
