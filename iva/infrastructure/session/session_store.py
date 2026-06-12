@@ -43,6 +43,10 @@ def save_project(session: AnalysisSession, file_path: str | Path) -> Path:
         "_vibproj_version": VIBPROJ_SCHEMA_VERSION,
         "_saved_at": datetime.now(tz=UTC).isoformat(),
         "output_dir": str(session.output_dir) if session.output_dir is not None else None,
+        "is_demo": session.is_demo,
+        "demo_scenario_key": session.demo_scenario_key,
+        "demo_title": session.demo_title,
+        "demo_description": session.demo_description,
         "settings": _settings_to_dict(session.settings),
         "role_assignment": _role_assignment_to_dict(session.role_assignment),
         "result": analysis_result_to_dict(session.result),
@@ -120,6 +124,12 @@ def load_project(file_path: str | Path) -> AnalysisSession:
         result=result,
         warnings=list(result.warnings),
         output_dir=output_dir,
+        is_demo=bool(payload.get("is_demo", result.is_demo)),
+        demo_scenario_key=_optional_text(
+            payload.get("demo_scenario_key", result.demo_scenario_key)
+        ),
+        demo_title=_optional_text(payload.get("demo_title", result.demo_title)),
+        demo_description=_optional_text(payload.get("demo_description", result.demo_description)),
     )
     logger.info("load_project: loaded session %s from '%s'", result.session_id, source.name)
     return session
@@ -223,3 +233,7 @@ def _role_assignment_from_dict(raw: Any) -> ColumnRoleAssignment | None:  # noqa
             else None
         ),
     )
+
+
+def _optional_text(value: Any) -> str | None:  # noqa: ANN401
+    return str(value) if value is not None else None

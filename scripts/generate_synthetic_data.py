@@ -1,25 +1,46 @@
-"""Deterministic synthetic signal generator for the Industrial Vibration Analyzer.
+"""CLI wrapper around :mod:`iva.core.synthetic` signal generators."""
 
-Run directly to create development/demo CSV files::
-
-    python scripts/generate_synthetic_data.py
-
-Functions are importable without any side effects; file generation only
-happens inside the ``if __name__ == "__main__":`` block (or ``generate_all``
-when called explicitly with a base directory).
-"""
+# ruff: noqa: E402 - direct script execution requires adding the repository root first.
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-# ---------------------------------------------------------------------------
-# Generator functions
-# ---------------------------------------------------------------------------
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from iva.core.synthetic import (
+    generate_clean_sine as _generate_clean_sine,
+)
+from iva.core.synthetic import (
+    generate_demo_signal,
+    list_demo_scenarios,
+)
+from iva.core.synthetic import (
+    generate_noisy_sine as _generate_noisy_sine,
+)
+from iva.core.synthetic import (
+    generate_risk_scenario as _generate_risk_scenario,
+)
+from iva.core.synthetic import (
+    generate_with_gaps as _generate_with_gaps,
+)
+from iva.core.synthetic import (
+    generate_with_harmonics as _generate_with_harmonics,
+)
+from iva.core.synthetic import (
+    generate_with_outliers as _generate_with_outliers,
+)
+
+
+def _frame(time_s: np.ndarray, signal: np.ndarray) -> pd.DataFrame:
+    return pd.DataFrame({"time_s": time_s, "signal": signal})
 
 
 def generate_clean_sine(
@@ -28,21 +49,8 @@ def generate_clean_sine(
     sampling_rate_hz: float,
     amplitude: float,
 ) -> pd.DataFrame:
-    """Generate a pure, noise-free sinusoidal signal.
-
-    Args:
-        frequency_hz: Frequency of the sine wave in Hz.
-        duration_s: Total duration of the signal in seconds.
-        sampling_rate_hz: Number of samples per second.
-        amplitude: Peak amplitude of the signal.
-
-    Returns:
-        DataFrame with columns ``time_s`` and ``signal``.
-    """
-    n = int(duration_s * sampling_rate_hz)
-    t = np.linspace(0.0, duration_s, n, endpoint=False)
-    signal = amplitude * np.sin(2.0 * np.pi * frequency_hz * t)
-    return pd.DataFrame({"time_s": t, "signal": signal})
+    """Backward-compatible DataFrame wrapper for a clean sine wave."""
+    return _frame(*_generate_clean_sine(frequency_hz, duration_s, sampling_rate_hz, amplitude))
 
 
 def generate_noisy_sine(
@@ -53,28 +61,17 @@ def generate_noisy_sine(
     snr_db: float,
     seed: int | None = None,
 ) -> pd.DataFrame:
-    """Generate a sinusoidal signal with additive Gaussian noise.
-
-    Args:
-        frequency_hz: Frequency of the sine wave in Hz.
-        duration_s: Total duration in seconds.
-        sampling_rate_hz: Number of samples per second.
-        amplitude: Peak amplitude of the sine component.
-        snr_db: Signal-to-noise ratio in decibels.
-        seed: Optional random seed for reproducibility.
-
-    Returns:
-        DataFrame with columns ``time_s`` and ``signal``.
-    """
-    rng = np.random.default_rng(seed)
-    n = int(duration_s * sampling_rate_hz)
-    t = np.linspace(0.0, duration_s, n, endpoint=False)
-    sine = amplitude * np.sin(2.0 * np.pi * frequency_hz * t)
-    # Signal power = amplitude^2 / 2
-    signal_power = (amplitude**2) / 2.0
-    noise_power = signal_power / (10.0 ** (snr_db / 10.0))
-    noise = rng.normal(0.0, np.sqrt(noise_power), n)
-    return pd.DataFrame({"time_s": t, "signal": sine + noise})
+    """Backward-compatible DataFrame wrapper for a noisy sine wave."""
+    return _frame(
+        *_generate_noisy_sine(
+            frequency_hz,
+            duration_s,
+            sampling_rate_hz,
+            amplitude,
+            snr_db,
+            seed,
+        )
+    )
 
 
 def generate_with_harmonics(
@@ -84,26 +81,16 @@ def generate_with_harmonics(
     sampling_rate_hz: float,
     amplitude: float,
 ) -> pd.DataFrame:
-    """Generate a signal composed of a fundamental frequency and its harmonics.
-
-    Each harmonic k has amplitude = amplitude / k (natural roll-off).
-
-    Args:
-        fundamental_hz: Fundamental frequency in Hz.
-        n_harmonics: Number of harmonics to include (1 = fundamental only).
-        duration_s: Total duration in seconds.
-        sampling_rate_hz: Number of samples per second.
-        amplitude: Amplitude of the fundamental component.
-
-    Returns:
-        DataFrame with columns ``time_s`` and ``signal``.
-    """
-    n = int(duration_s * sampling_rate_hz)
-    t = np.linspace(0.0, duration_s, n, endpoint=False)
-    signal = np.zeros(n)
-    for k in range(1, n_harmonics + 1):
-        signal += (amplitude / k) * np.sin(2.0 * np.pi * k * fundamental_hz * t)
-    return pd.DataFrame({"time_s": t, "signal": signal})
+    """Preserve the original script argument order for harmonic signals."""
+    return _frame(
+        *_generate_with_harmonics(
+            fundamental_hz,
+            duration_s,
+            sampling_rate_hz,
+            amplitude,
+            n_harmonics,
+        )
+    )
 
 
 def generate_with_outliers(
@@ -112,25 +99,12 @@ def generate_with_outliers(
     magnitude: float,
     seed: int | None = None,
 ) -> pd.DataFrame:
-    """Insert isolated spike outliers into a copy of ``base_signal``.
-
-    Args:
-        base_signal: Source DataFrame with ``time_s`` and ``signal`` columns.
-        n_outliers: Number of outlier points to inject.
-        magnitude: Absolute value of the injected outlier spikes.
-        seed: Optional random seed.
-
-    Returns:
-        A new DataFrame with the same structure but with outlier values.
-    """
-    rng = np.random.default_rng(seed)
-    df = base_signal.copy()
-    n = len(df)
-    if n_outliers > 0 and n > 0:
-        indices = rng.choice(n, size=min(n_outliers, n), replace=False)
-        signs = rng.choice([-1.0, 1.0], size=len(indices))
-        df.iloc[indices, df.columns.get_loc("signal")] = magnitude * signs
-    return df
+    """Preserve the original DataFrame API for injecting outliers."""
+    frame = base_signal.copy()
+    frame["signal"] = _generate_with_outliers(
+        frame["signal"].to_numpy(dtype=np.float64), n_outliers, magnitude, seed
+    )
+    return frame
 
 
 def generate_with_gaps(
@@ -138,24 +112,12 @@ def generate_with_gaps(
     gap_fraction: float,
     seed: int | None = None,
 ) -> pd.DataFrame:
-    """Replace a random fraction of signal values with NaN to simulate gaps.
-
-    Args:
-        base_signal: Source DataFrame with ``time_s`` and ``signal`` columns.
-        gap_fraction: Fraction of samples to set to NaN (0.0 to 1.0).
-        seed: Optional random seed.
-
-    Returns:
-        A new DataFrame with NaN values at random positions in ``signal``.
-    """
-    rng = np.random.default_rng(seed)
-    df = base_signal.copy()
-    n = len(df)
-    n_gaps = int(n * gap_fraction)
-    if n_gaps > 0:
-        indices = rng.choice(n, size=n_gaps, replace=False)
-        df.iloc[indices, df.columns.get_loc("signal")] = np.nan
-    return df
+    """Preserve the original DataFrame API for inserting gaps."""
+    frame = base_signal.copy()
+    frame["signal"] = _generate_with_gaps(
+        frame["signal"].to_numpy(dtype=np.float64), gap_fraction, seed
+    )
+    return frame
 
 
 def generate_risk_scenario(
@@ -166,152 +128,135 @@ def generate_risk_scenario(
     amplitude: float,
     seed: int | None = None,
 ) -> pd.DataFrame:
-    """Generate a synthetic vibration signal with two close frequency components.
-
-    The two components (shedding and structural) are placed near each other
-    to produce a signal representative of a near-resonance scenario.  This
-    function generates a *signal* only — it does NOT assess risk, compute
-    physics coefficients or implement lock-in logic.
-
-    Args:
-        shedding_hz: Frequency of the vortex shedding component.
-        natural_hz: Frequency of the structural response component.
-        duration_s: Total duration in seconds.
-        sampling_rate_hz: Number of samples per second.
-        amplitude: Peak amplitude of each frequency component.
-        seed: Optional random seed for optional noise.
-
-    Returns:
-        DataFrame with columns ``time_s`` and ``signal``.
-    """
-    rng = np.random.default_rng(seed)
-    n = int(duration_s * sampling_rate_hz)
-    t = np.linspace(0.0, duration_s, n, endpoint=False)
-    shedding_component = amplitude * np.sin(2.0 * np.pi * shedding_hz * t)
-    structural_component = (amplitude * 0.5) * np.sin(2.0 * np.pi * natural_hz * t)
-    noise = rng.normal(0.0, amplitude * 0.05, n)
-    signal = shedding_component + structural_component + noise
-    return pd.DataFrame({"time_s": t, "signal": signal})
+    """Backward-compatible DataFrame wrapper for a near-resonance signal."""
+    return _frame(
+        *_generate_risk_scenario(
+            shedding_hz,
+            natural_hz,
+            duration_s,
+            sampling_rate_hz,
+            amplitude,
+            seed,
+        )
+    )
 
 
-# ---------------------------------------------------------------------------
-# File generation helper
-# ---------------------------------------------------------------------------
+def _write_frame(frame: pd.DataFrame, path: Path, created: list[Path]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(path, index=False)
+    created.append(path)
 
 
 def generate_all(base_dir: Path | None = None) -> None:
-    """Generate all demo and synthetic data files.
-
-    Args:
-        base_dir: Repository root.  If None, the parent of this script's
-            directory is used.
-    """
-    if base_dir is None:
-        base_dir = Path(__file__).resolve().parent.parent
-
-    synthetic_dir = base_dir / "data" / "synthetic"
-    examples_dir = base_dir / "data" / "examples"
-    synthetic_dir.mkdir(parents=True, exist_ok=True)
-    examples_dir.mkdir(parents=True, exist_ok=True)
-
-    fs = 1000.0  # Hz
-    dur = 10.0  # seconds
-
+    """Regenerate the tracked development and example synthetic CSV files."""
+    root = base_dir or Path(__file__).resolve().parent.parent
+    synthetic_dir = root / "data" / "synthetic"
+    examples_dir = root / "data" / "examples"
     created: list[Path] = []
 
-    # -- Synthetic: full-length signals ------------------------------------
+    fs = 1000.0
+    duration = 10.0
+    clean = generate_clean_sine(40.0, duration, fs, 1.0)
+    _write_frame(clean, synthetic_dir / "clean_sine.csv", created)
+    _write_frame(
+        generate_noisy_sine(40.0, duration, fs, 1.0, 20.0, 42),
+        synthetic_dir / "noisy_sine.csv",
+        created,
+    )
+    _write_frame(
+        generate_with_harmonics(40.0, 3, duration, fs, 1.0),
+        synthetic_dir / "harmonics.csv",
+        created,
+    )
+    _write_frame(
+        generate_with_outliers(clean, 20, 5.0, 42),
+        synthetic_dir / "with_outliers.csv",
+        created,
+    )
+    _write_frame(
+        generate_with_gaps(clean, 0.05, 42),
+        synthetic_dir / "with_gaps.csv",
+        created,
+    )
+    _write_frame(
+        generate_risk_scenario(35.0, 38.0, duration, fs, 1.0, 42),
+        synthetic_dir / "risk_scenario.csv",
+        created,
+    )
 
-    df = generate_clean_sine(40.0, dur, fs, 1.0)
-    p = synthetic_dir / "clean_sine.csv"
-    df.to_csv(p, index=False)
-    created.append(p)
-
-    df = generate_noisy_sine(40.0, dur, fs, 1.0, snr_db=20.0, seed=42)
-    p = synthetic_dir / "noisy_sine.csv"
-    df.to_csv(p, index=False)
-    created.append(p)
-
-    df = generate_with_harmonics(40.0, 3, dur, fs, 1.0)
-    p = synthetic_dir / "harmonics.csv"
-    df.to_csv(p, index=False)
-    created.append(p)
-
-    base = generate_clean_sine(40.0, dur, fs, 1.0)
-    df = generate_with_outliers(base, n_outliers=20, magnitude=5.0, seed=42)
-    p = synthetic_dir / "with_outliers.csv"
-    df.to_csv(p, index=False)
-    created.append(p)
-
-    df = generate_with_gaps(base, gap_fraction=0.05, seed=42)
-    p = synthetic_dir / "with_gaps.csv"
-    df.to_csv(p, index=False)
-    created.append(p)
-
-    df = generate_risk_scenario(35.0, 38.0, dur, fs, 1.0, seed=42)
-    p = synthetic_dir / "risk_scenario.csv"
-    df.to_csv(p, index=False)
-    created.append(p)
-
-    # -- Examples: shorter files for Git tracking -------------------------
-    # Keep examples small (≤ 1 000 rows each) so they are comfortable in Git.
-
-    ex_fs = 500.0
-    ex_dur = 6.0
-
-    df = generate_clean_sine(40.0, ex_dur, ex_fs, 1.0)
-    p = examples_dir / "example_clean_sine.csv"
-    df.to_csv(p, index=False)
-    created.append(p)
-
-    df = generate_noisy_sine(40.0, ex_dur, ex_fs, 1.0, snr_db=15.0, seed=0)
-    p = examples_dir / "example_noisy_sine.csv"
-    df.to_csv(p, index=False)
-    created.append(p)
-
-    base_ex = generate_clean_sine(40.0, ex_dur, ex_fs, 1.0)
-    df = generate_with_gaps(base_ex, gap_fraction=0.10, seed=7)
-    p = examples_dir / "example_with_gaps.csv"
-    df.to_csv(p, index=False)
-    created.append(p)
-
-    df = generate_risk_scenario(35.0, 38.0, ex_dur, ex_fs, 1.0, seed=3)
-    p = examples_dir / "example_risk_like_signal.csv"
-    df.to_csv(p, index=False)
-    created.append(p)
-
-    # -- README for examples ----------------------------------------------
+    example_fs = 500.0
+    example_duration = 6.0
+    example_clean = generate_clean_sine(40.0, example_duration, example_fs, 1.0)
+    _write_frame(example_clean, examples_dir / "example_clean_sine.csv", created)
+    _write_frame(
+        generate_noisy_sine(40.0, example_duration, example_fs, 1.0, 15.0, 0),
+        examples_dir / "example_noisy_sine.csv",
+        created,
+    )
+    _write_frame(
+        generate_with_gaps(example_clean, 0.10, 7),
+        examples_dir / "example_with_gaps.csv",
+        created,
+    )
+    _write_frame(
+        generate_risk_scenario(35.0, 38.0, example_duration, example_fs, 1.0, 3),
+        examples_dir / "example_risk_like_signal.csv",
+        created,
+    )
 
     readme = examples_dir / "README.md"
     readme.write_text(
         "# IVA Example Data Files\n\n"
-        "Small demonstration CSV files for the Industrial Vibration Analyzer.\n"
-        "Each file has two columns: `time_s` (seconds) and `signal` (arbitrary units).\n\n"
-        "| File | Description |\n"
-        "|---|---|\n"
-        "| `example_clean_sine.csv` | Pure 40 Hz sine wave, 6 s at 500 Hz — "
-        "ideal for verifying spectral peak detection |\n"
-        "| `example_noisy_sine.csv` | 40 Hz sine with Gaussian noise (SNR 15 dB) — "
-        "typical sensor recording |\n"
-        "| `example_with_gaps.csv` | Clean 40 Hz sine with 10% random NaN gaps — "
-        "tests gap-handling in the validator |\n"
-        "| `example_risk_like_signal.csv` | Two close frequencies (35 Hz + 38 Hz) "
-        "representing a near-resonance scenario |\n\n"
-        "These files are generated by `scripts/generate_synthetic_data.py`.\n"
-        "Re-run the script to regenerate them.\n",
+        "Small demonstration CSV files generated by `scripts/generate_synthetic_data.py`.\n"
+        "Each file contains `time_s` and `signal` columns.\n",
         encoding="utf-8",
     )
     created.append(readme)
+    _print_created(created, root)
 
+
+def generate_selected_scenario(scenario_key: str, output_dir: Path) -> Path:
+    """Write one built-in demo scenario to a selected output directory."""
+    scenario, columns = generate_demo_signal(scenario_key)
+    destination = output_dir / f"demo_{scenario.key}.csv"
+    _write_frame(pd.DataFrame(columns), destination, [])
+    print(f"Создан демо-сценарий: {scenario.title_ru}")
+    print(destination)
+    return destination
+
+
+def _print_created(created: list[Path], root: Path) -> None:
     print("Generated files:")
-    for p in created:
-        size_kb = p.stat().st_size / 1024
-        print(f"  {p.relative_to(base_dir)}  ({size_kb:.1f} KB)")
+    for path in created:
+        try:
+            display_path = path.relative_to(root)
+        except ValueError:
+            display_path = path
+        print(f"  {display_path}  ({path.stat().st_size / 1024:.1f} KB)")
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Генератор синтетических данных IVA")
+    parser.add_argument(
+        "base_dir",
+        nargs="?",
+        type=Path,
+        help="Корень репозитория для прежнего режима generate_all.",
+    )
+    parser.add_argument("--scenario", choices=[item.key for item in list_demo_scenarios()])
+    parser.add_argument("--output-dir", type=Path, help="Папка для выбранного сценария.")
+    return parser
+
+
+def main() -> int:
+    args = _build_parser().parse_args()
+    if args.scenario:
+        output_dir = args.output_dir or Path("data") / "synthetic"
+        generate_selected_scenario(args.scenario, output_dir)
+    else:
+        generate_all(args.base_dir)
+    return 0
+
 
 if __name__ == "__main__":
-    root = Path(sys.argv[1]) if len(sys.argv) > 1 else None
-    generate_all(root)
+    raise SystemExit(main())

@@ -200,6 +200,7 @@ class MainWindow(QMainWindow):
         ]
         for page in self._pages:
             self._stack.addWidget(page)
+        self._connect_quick_start_actions()
 
         content_layout.addWidget(self._nav)
         content_layout.addWidget(self._stack, stretch=1)
@@ -284,6 +285,16 @@ class MainWindow(QMainWindow):
         except Exception:  # noqa: BLE001
             pass  # Use dataclass defaults on any failure
 
+    def _connect_quick_start_actions(self) -> None:
+        overview_page = self._pages[0]
+        import_page = self._pages[1]
+        if isinstance(overview_page, OverviewPage):
+            overview_page.open_file_requested.connect(self.open_file)
+            overview_page.demo_requested.connect(self.run_demo_analysis)
+            overview_page.open_project_requested.connect(self._open_project)
+        if isinstance(import_page, ImportPage):
+            import_page.demo_requested.connect(self.run_demo_analysis)
+
     # ------------------------------------------------------------------
     # Public slots
     # ------------------------------------------------------------------
@@ -299,6 +310,10 @@ class MainWindow(QMainWindow):
         )
         if path:
             self._session.source_file_path = Path(path)
+            self._session.is_demo = False
+            self._session.demo_scenario_key = None
+            self._session.demo_title = None
+            self._session.demo_description = None
             self._status_label.setText(f"Файл: {Path(path).name}")
             import_page = self._pages[1]
             if isinstance(import_page, ImportPage):
@@ -340,10 +355,50 @@ class MainWindow(QMainWindow):
             self.show_error_banner(err)
             return
 
-        self._action_run.setEnabled(False)
-        self._status_label.setText(tr("Running analysis…"))
-        self._hide_error_banner()
+        self._start_analysis_worker(tr("Running analysis…"))
 
+    @Slot()
+    @Slot(str)
+    def run_demo_analysis(self, scenario_key: str | None = None) -> None:
+        """Prepare a built-in scenario and launch it in the background."""
+        import_page = self._pages[1]
+        selected_key = scenario_key
+        if not selected_key and isinstance(import_page, ImportPage):
+            selected_key = import_page.selected_demo_key()
+        try:
+            from iva.app.demo_service import create_demo_session
+
+            self._session = create_demo_session(selected_key or "clean_40hz")
+            if isinstance(import_page, ImportPage) and self._session.source_file_path is not None:
+                assert self._session.role_assignment is not None
+                import_page.set_demo_session(
+                    self._session.demo_title or "Демо-сценарий",
+                    self._session.demo_description or "",
+                    self._session.source_file_path,
+                    self._session.role_assignment.sampling_rate_hz,
+                    self._session.role_assignment.signal_role,
+                )
+            physics_page = self._pages[4]
+            flow_parameters = self._session.settings.flow_parameters
+            if isinstance(physics_page, PhysicsPage) and flow_parameters is not None:
+                physics_page.set_flow_parameters(flow_parameters)
+            self._nav.setCurrentRow(0)
+            self._start_analysis_worker("Демонстрационный анализ запущен")
+        except IVAError as exc:
+            self.show_error_banner(exc)
+        except Exception as exc:  # noqa: BLE001
+            self.show_error_banner(
+                IVAError(
+                    user_message="Не удалось подготовить демонстрационный анализ.",
+                    technical_details=str(exc),
+                    recovery_hint="Выберите другой демо-сценарий и повторите попытку.",
+                )
+            )
+
+    def _start_analysis_worker(self, status_text: str) -> None:
+        self._action_run.setEnabled(False)
+        self._status_label.setText(status_text)
+        self._hide_error_banner()
         worker = AnalysisWorker(self._session)
         worker.signals.progress_updated.connect(self._on_progress)
         worker.signals.analysis_completed.connect(self._on_analysis_completed)
@@ -373,6 +428,8 @@ class MainWindow(QMainWindow):
         self._action_save.setEnabled(True)
         self._action_save_as.setEnabled(True)
         self._action_export_report.setEnabled(True)
+        if result.is_demo:
+            self._status_label.setText("Демонстрационный анализ завершен")
         self._update_all_pages(result)
         self._update_inspector(result)
 
@@ -453,6 +510,11 @@ class MainWindow(QMainWindow):
         if not isinstance(result, AnalysisResult):
             return
         lines: list[str] = []
+        if result.is_demo:
+            lines.append("ДЕМО: синтетические данные")
+            if result.demo_title:
+                lines.append(result.demo_title)
+            lines.append("")
         if result.spectrum and result.spectrum.dominant_peak:
             pk = result.spectrum.dominant_peak
             lines.append(f"Пик: {pk.frequency_hz:.2f} Hz")

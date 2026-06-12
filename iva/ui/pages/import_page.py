@@ -5,19 +5,22 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt  # type: ignore[import-untyped]
+from PySide6.QtCore import Qt, Signal  # type: ignore[import-untyped]
 from PySide6.QtWidgets import (  # type: ignore[import-untyped]
+    QComboBox,
     QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
 )
 
+from iva.app.demo_service import list_available_demo_scenarios
 from iva.core.models.enums import SignalRole
 from iva.ui.strings_ru import SIGNAL_ROLE_LABELS, source_value, tr
 from iva.ui.styles.theme import (
@@ -42,6 +45,8 @@ __all__ = ["ImportPage"]
 
 class ImportPage(QWidget):
     """Data file import and column role assignment page."""
+
+    demo_requested = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -92,6 +97,34 @@ class ImportPage(QWidget):
         path_row.addWidget(self._path_display)
         file_layout.addLayout(path_row)
         layout.addWidget(file_box)
+
+        demo_box = QGroupBox("Демонстрационные сценарии")
+        demo_layout = QVBoxLayout(demo_box)
+        self._demo_scenarios = {
+            scenario.key: scenario for scenario in list_available_demo_scenarios()
+        }
+        self._demo_selector = QComboBox()
+        self._demo_selector.setObjectName("demoScenarioSelector")
+        for scenario in self._demo_scenarios.values():
+            self._demo_selector.addItem(scenario.title_ru, scenario.key)
+        self._demo_selector.currentIndexChanged.connect(self._update_demo_description)
+        demo_layout.addWidget(self._demo_selector)
+        self._demo_description = QLabel("")
+        self._demo_description.setWordWrap(True)
+        self._demo_description.setStyleSheet(f"color: {COLOR_MUTED};")
+        demo_layout.addWidget(self._demo_description)
+        self._demo_button = QPushButton("Загрузить демо-сценарий")
+        self._demo_button.setObjectName("loadDemoScenarioButton")
+        self._demo_button.clicked.connect(self._emit_demo_requested)
+        demo_layout.addWidget(self._demo_button)
+        self._demo_marker = QLabel("")
+        self._demo_marker.setObjectName("importDemoMarker")
+        self._demo_marker.setWordWrap(True)
+        self._demo_marker.setStyleSheet(f"color: {COLOR_ACCENT}; font-weight: bold;")
+        self._demo_marker.setVisible(False)
+        demo_layout.addWidget(self._demo_marker)
+        layout.addWidget(demo_box)
+        self._update_demo_description()
 
         # Column assignment group
         assign_box = QGroupBox(tr("Column Assignment"))
@@ -150,6 +183,7 @@ class ImportPage(QWidget):
 
     def set_file_path(self, path: Path) -> None:
         """Update the displayed file path."""
+        self._demo_marker.setVisible(False)
         self._path_display.setText(str(path))
         self._drop_zone.setText(f"Выбран файл: {path.name}")
         self._drop_zone.setStyleSheet(
@@ -157,6 +191,36 @@ class ImportPage(QWidget):
             f" color: {COLOR_ACCENT}; font-size: 12pt; padding: {SPACING_LG}px;"
             f" background: {COLOR_PANEL};"
         )
+
+    def selected_demo_key(self) -> str:
+        """Return the key selected in the demo scenario combo box."""
+        return str(self._demo_selector.currentData() or "clean_40hz")
+
+    def set_demo_session(
+        self,
+        title: str,
+        description: str,
+        source_path: Path,
+        sampling_rate_hz: float,
+        signal_role: SignalRole,
+    ) -> None:
+        """Show which synthetic scenario prepared the current session."""
+        self.set_file_path(source_path)
+        self._time_column.setText("time_s")
+        self._signal_column.setText("signal")
+        self._sampling_rate.setValue(sampling_rate_hz)
+        self._conversion_factor.setValue(1.0)
+        self._role_form.set_value("signal_role", SIGNAL_ROLE_LABELS[signal_role.value])
+        self._demo_marker.setText(f"Демонстрационные синтетические данные — {title}")
+        self._demo_marker.setToolTip(description)
+        self._demo_marker.setVisible(True)
+
+    def _update_demo_description(self, _index: int = -1) -> None:
+        scenario = self._demo_scenarios.get(self.selected_demo_key())
+        self._demo_description.setText(scenario.description_ru if scenario else "")
+
+    def _emit_demo_requested(self) -> None:
+        self.demo_requested.emit(self.selected_demo_key())
 
     def get_role_assignment(self) -> ColumnRoleAssignment | None:
         """Build and return a :class:`ColumnRoleAssignment` from form values.
@@ -194,9 +258,16 @@ class ImportPage(QWidget):
         )
 
     def on_analysis_completed(self, result: AnalysisResult) -> None:
-        """No-op — import page does not update on completed analysis."""
+        """Keep the synthetic-data marker synchronized with the result."""
+        self._demo_marker.setVisible(result.is_demo)
+        if result.is_demo:
+            self._demo_marker.setText(
+                "Демонстрационные синтетические данные"
+                + (f" — {result.demo_title}" if result.demo_title else "")
+            )
 
     def clear(self) -> None:
         """Reset the page to its initial state."""
         self._path_display.clear()
         self._drop_zone.setText(tr("Drag and drop a file here\nor use 'Open File' (Ctrl+O)"))
+        self._demo_marker.setVisible(False)

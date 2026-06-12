@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -102,3 +106,23 @@ def test_generate_all_creates_files(tmp_path):
     ]
     for p in expected:
         assert p.exists(), f"Expected file not created: {p}"
+
+
+def test_script_cli_writes_selected_scenario(tmp_path: Path) -> None:
+    """Direct script execution supports --scenario and --output-dir."""
+    script = Path(__file__).parents[3] / "scripts" / "generate_synthetic_data.py"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--scenario",
+            "clean_40hz",
+            "--output-dir",
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "demo_clean_40hz.csv").exists()

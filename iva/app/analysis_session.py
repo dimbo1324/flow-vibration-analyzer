@@ -39,6 +39,10 @@ class AnalysisSession:
     result: AnalysisResult | None = None
     warnings: list[str] = field(default_factory=list)
     output_dir: Path | None = None
+    is_demo: bool = False
+    demo_scenario_key: str | None = None
+    demo_title: str | None = None
+    demo_description: str | None = None
 
     # ------------------------------------------------------------------
     # State queries
@@ -74,4 +78,8 @@ class AnalysisSession:
         self.result = None
         self.warnings = []
         self.output_dir = None
+        self.is_demo = False
+        self.demo_scenario_key = None
+        self.demo_title = None
+        self.demo_description = None
         # settings is preserved intentionally

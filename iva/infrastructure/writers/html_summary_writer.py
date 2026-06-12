@@ -159,6 +159,16 @@ def _render_html(result: AnalysisResult) -> str:
         items = "".join(f"<li>{_e(w)}</li>" for w in result.warnings)
         warnings_block = f"<h2>Предупреждения</h2><ul>{items}</ul>"
 
+    demo_block = ""
+    if result.is_demo:
+        demo_title = _e(result.demo_title or result.demo_scenario_key or "Демо-сценарий")
+        demo_block = f"""
+  <div class="demo-warning">
+    <strong>Демонстрационные синтетические данные — {demo_title}</strong><br>
+    Данные сгенерированы программно и предназначены только для демонстрации работы приложения.
+  </div>
+"""
+
     # ---- peaks section ----------------------------------------------------
     peaks_section = ""
     if peaks_rows:
@@ -196,6 +206,8 @@ def _render_html(result: AnalysisResult) -> str:
     th {{ background: #f5f5f5; width: 220px; }}
     ul {{ padding-left: 1.5em; }}
     .meta {{ color: #666; font-size: 0.9em; }}
+    .demo-warning {{ background: #fff4d6; border: 1px solid #d4a72c;
+                     padding: 0.8em 1em; margin: 1em 0; }}
   </style>
 </head>
 <body>
@@ -206,6 +218,8 @@ def _render_html(result: AnalysisResult) -> str:
     ID сеанса: {session_id}<br>
     MD5: {md5}
   </p>
+
+{demo_block}
 
   <h2>Спектральный анализ</h2>
   <table>

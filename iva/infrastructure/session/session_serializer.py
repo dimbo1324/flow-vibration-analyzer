@@ -42,6 +42,10 @@ def analysis_result_to_dict(result: AnalysisResult) -> dict[str, Any]:
         "source_file_path": str(result.source_file_path),
         "source_file_md5": result.source_file_md5,
         "warnings": list(result.warnings),
+        "is_demo": result.is_demo,
+        "demo_scenario_key": result.demo_scenario_key,
+        "demo_title": result.demo_title,
+        "demo_description": result.demo_description,
         "validated_data": _validated_data_to_dict(result.validated_data),
         "processed_data": _processed_data_to_dict(result.processed_data),
         "spectrum": _spectrum_to_dict(result.spectrum),
@@ -80,6 +84,10 @@ def analysis_result_from_dict(data: Mapping[str, Any]) -> AnalysisResult:
             risk=_risk_from_dict(data.get("risk")),
             validation=_validation_from_dict(data.get("validation")),
             warnings=tuple(str(item) for item in data.get("warnings", [])),
+            is_demo=bool(data.get("is_demo", False)),
+            demo_scenario_key=_optional_text(data.get("demo_scenario_key")),
+            demo_title=_optional_text(data.get("demo_title")),
+            demo_description=_optional_text(data.get("demo_description")),
         )
     except ValidationError:
         raise
@@ -340,3 +348,7 @@ def _optional_number(value: float | None) -> float | None:
 
 def _optional_float(value: Any) -> float | None:  # noqa: ANN401
     return float(value) if value is not None else None
+
+
+def _optional_text(value: Any) -> str | None:  # noqa: ANN401
+    return str(value) if value is not None else None

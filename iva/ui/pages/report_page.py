@@ -60,6 +60,16 @@ class ReportPage(QWidget):
         self._readiness_label.setStyleSheet(f"color: {COLOR_WARN}; font-size: 11pt;")
         layout.addWidget(self._readiness_label)
 
+        self._demo_marker = QLabel(
+            "Демонстрационные синтетические данные. Данные сгенерированы программно "
+            "и предназначены только для демонстрации работы приложения."
+        )
+        self._demo_marker.setObjectName("reportDemoMarker")
+        self._demo_marker.setWordWrap(True)
+        self._demo_marker.setStyleSheet(f"color: {COLOR_WARN}; font-weight: bold;")
+        self._demo_marker.setVisible(False)
+        layout.addWidget(self._demo_marker)
+
         # Export buttons row
         btn_box = QGroupBox(tr("Export"))
         btn_layout = QHBoxLayout(btn_box)
@@ -260,6 +270,7 @@ class ReportPage(QWidget):
     def on_analysis_completed(self, result: AnalysisResult) -> None:
         """Populate summary and enable export buttons."""
         self._result = result
+        self._demo_marker.setVisible(result.is_demo)
 
         # Update readiness indicator
         self._readiness_label.setText(
@@ -270,6 +281,12 @@ class ReportPage(QWidget):
         self._readiness_label.setStyleSheet(f"color: {COLOR_GOOD}; font-size: 11pt;")
 
         lines: list[str] = []
+        if result.is_demo:
+            lines.append("ДЕМОНСТРАЦИОННЫЕ СИНТЕТИЧЕСКИЕ ДАННЫЕ")
+            if result.demo_title:
+                lines.append(f"Сценарий:      {result.demo_title}")
+            lines.append("Данные сгенерированы программно и предназначены только для демонстрации.")
+            lines.append("")
         lines.append(f"ID сеанса:     {result.session_id}")
         lines.append(f"Завершено:     {result.completed_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
         lines.append(f"Исходный файл: {result.source_file_path.name}")
@@ -343,3 +360,4 @@ class ReportPage(QWidget):
         ):
             btn.setEnabled(False)
         self._status_label.setText("")
+        self._demo_marker.setVisible(False)

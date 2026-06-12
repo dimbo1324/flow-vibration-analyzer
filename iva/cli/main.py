@@ -26,6 +26,7 @@ from typing import NoReturn
 
 from iva.app.analysis_runner import AnalysisRunner
 from iva.app.analysis_session import AnalysisSession
+from iva.app.demo_service import create_demo_session, list_available_demo_scenarios
 from iva.app.report_service import export_report_html, export_report_pdf
 from iva.app.session_service import save_current_session
 from iva.app.settings_manager import load_analysis_config_json
@@ -142,6 +143,51 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
         help="Сохранить сеанс как файл .vibproj в папке результатов.",
     )
+
+    demo = subparsers.add_parser(
+        "demo",
+        help="Запустить полный анализ встроенного синтетического сценария.",
+    )
+    demo.add_argument(
+        "--scenario",
+        default="clean_40hz",
+        metavar="КЛЮЧ",
+        help="Ключ демо-сценария (по умолчанию: clean_40hz).",
+    )
+    demo.add_argument(
+        "--list-scenarios",
+        action="store_true",
+        help="Показать доступные демо-сценарии и завершить работу.",
+    )
+    demo.add_argument(
+        "--output",
+        metavar="ПАПКА",
+        help="Папка результатов (по умолчанию: out/cli-runs/demo_<сценарий>).",
+    )
+    demo.add_argument(
+        "--export-pdf",
+        action="store_true",
+        default=False,
+        help="Экспортировать отчет PDF в папку результатов.",
+    )
+    demo.add_argument(
+        "--export-html",
+        action="store_true",
+        default=False,
+        help="Экспортировать полный отчет HTML в папку результатов.",
+    )
+    demo.add_argument(
+        "--save-project",
+        action="store_true",
+        default=False,
+        help="Сохранить демо-сеанс как файл .vibproj.",
+    )
+    demo.add_argument(
+        "--debug",
+        action="store_true",
+        default=False,
+        help="Печатать полную трассировку при ошибке (для отладки).",
+    )
     return parser
 
 
@@ -159,6 +205,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "analyze":
         return _run_analyze(args)
+    if args.command == "demo":
+        return _run_demo(args)
 
     parser.print_help()
     return 1
@@ -231,6 +279,56 @@ def _run_analyze(args: argparse.Namespace) -> int:
         return 2
 
 
+def _run_demo(args: argparse.Namespace) -> int:
+    """Execute the ``demo`` sub-command through the normal analysis pipeline."""
+    try:
+        if args.list_scenarios:
+            print("Доступные демонстрационные сценарии:")
+            for scenario in list_available_demo_scenarios():
+                print(f"  {scenario.key}: {scenario.title_ru}")
+                print(f"    {scenario.description_ru}")
+            return 0
+
+        output_dir = Path(args.output or f"out/cli-runs/demo_{args.scenario}")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        session = create_demo_session(args.scenario, output_dir / "demo-data")
+        result = AnalysisRunner().run(session)
+
+        print("Используется демонстрационный синтетический сигнал")
+        print(f"Сценарий: {session.demo_title}")
+
+        export_analysis_summary_json(result, output_dir / "analysis_summary.json")
+        export_spectrum_csv(result, output_dir / "spectrum.csv")
+        export_signal_csv(result, output_dir / "signal.csv")
+        export_physics_summary_csv(result, output_dir / "physics_summary.csv")
+        export_analysis_summary_html(result, output_dir / "analysis_summary.html")
+
+        if args.export_pdf:
+            path = export_report_pdf(result, output_dir / "report.pdf")
+            print(f"Отчет PDF: {path}")
+        if args.export_html:
+            path = export_report_html(result, output_dir / "report.html")
+            print(f"Отчет HTML: {path}")
+        if args.save_project:
+            path = save_current_session(session, output_dir / "project.vibproj")
+            print(f"Проект сохранен: {path}")
+
+        _print_summary(result, output_dir)
+        return 0
+    except IVAError as exc:
+        print(f"Ошибка: {exc}", file=sys.stderr)
+        if exc.recovery_hint:
+            print(f"Как исправить: {exc.recovery_hint}", file=sys.stderr)
+        if args.debug:
+            traceback.print_exc(file=sys.stderr)
+        return 1
+    except Exception as exc:  # noqa: BLE001
+        print(f"Непредвиденная ошибка: {exc}", file=sys.stderr)
+        if args.debug:
+            traceback.print_exc(file=sys.stderr)
+        return 2
+
+
 def _print_summary(result, output_dir: Path) -> None:  # type: ignore[no-untyped-def]
     """Print a concise analysis summary to stdout."""
     print("=== Анализ IVA завершен ===")
@@ -241,9 +339,15 @@ def _print_summary(result, output_dir: Path) -> None:  # type: ignore[no-untyped
     else:
         print("Доминирующий пик: не обнаружен")
 
+    if result.spectrum is not None:
+        print(f"Общий RMS: {result.spectrum.rms_total:.6g}")
+
     if result.physics is not None:
         print(f"Число Рейнольдса: {result.physics.reynolds_number:.3e}")
         print(f"Число Струхаля: {result.physics.strouhal_number:.4f}")
+        print(
+            "Расчетная частота срыва: " f"{result.physics.calculated_shedding_frequency_hz:.2f} Hz"
+        )
         if result.physics.velocity_ratio is not None:
             print(f"Приведенная скорость (Vr): {result.physics.velocity_ratio:.4f}")
     else:

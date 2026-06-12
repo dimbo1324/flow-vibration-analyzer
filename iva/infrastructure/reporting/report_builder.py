@@ -47,6 +47,15 @@ def build_report_document(result: AnalysisResult) -> ReportDocument:
     sections: list[ReportSection] = []
     tables: list[ReportTable] = []
 
+    if result.is_demo:
+        demo_body = (
+            "Демонстрационные синтетические данные\n"
+            f"Сценарий: {result.demo_title or result.demo_scenario_key or 'демо-сценарий'}\n"
+            "Данные сгенерированы программно и предназначены только для "
+            "демонстрации работы приложения."
+        )
+        sections.append(ReportSection(title="Демонстрационный режим", body=demo_body, level=1))
+
     # ── Section: Overview ──────────────────────────────────────────────────
     overview_body = (
         f"ID сеанса:        {result.session_id}\n"
@@ -233,7 +242,11 @@ def build_report_document(result: AnalysisResult) -> ReportDocument:
 
     return ReportDocument(
         title="Отчет об анализе IVA",
-        subtitle=f"Источник: {result.source_file_path.name}",
+        subtitle=(
+            f"Демонстрационные синтетические данные — {result.demo_title}"
+            if result.is_demo and result.demo_title
+            else f"Источник: {result.source_file_path.name}"
+        ),
         generated_at=datetime.now(tz=UTC),
         sections=tuple(sections),
         tables=tuple(tables),
@@ -244,5 +257,8 @@ def build_report_document(result: AnalysisResult) -> ReportDocument:
             "source_file_md5": result.source_file_md5,
             "completed_at": result.completed_at.isoformat(),
             "iva_version": __version__,
+            "is_demo": str(result.is_demo).lower(),
+            "demo_scenario_key": result.demo_scenario_key or "",
+            "demo_title": result.demo_title or "",
         },
     )
