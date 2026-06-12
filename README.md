@@ -318,6 +318,20 @@ Lower-level quality scripts remain available individually:
 .\scripts\quality.ps1  # lint + tests
 ```
 
+### Cross-platform cleanup
+
+`scripts/clean_project.py` is the Python counterpart of `clean.ps1` for
+non-Windows shells and CI. It removes only a conservative, hardcoded list of
+generated artifacts (caches, `build/`, `dist/`, `out/`, coverage files,
+`__pycache__`); source code, docs, tests, config and demo data are never
+touched. Always preview first:
+
+```bash
+python scripts/clean_project.py --dry-run
+python scripts/clean_project.py --dry-run --keep-logs   # preserve out/ logs
+python scripts/clean_project.py --force                 # delete without prompt
+```
+
 ## Building the Windows Installer
 
 Requires PyInstaller and (for the installer) Inno Setup 6 on Windows:
