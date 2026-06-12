@@ -162,6 +162,7 @@ UI_STRINGS: dict[str, str] = {
     "Reset view": "Сбросить вид",
     "Save PNG": "Сохранить PNG",
     "Inspect cursor": "Координаты курсора",
+    "Chart hints": "Колесо мыши — масштаб · перетаскивание — панорама · F — фокус · Esc — выход",
     "Chart requires matplotlib\n(pip install matplotlib)": (
         "Для графика требуется matplotlib\n(pip install matplotlib)"
     ),

@@ -140,6 +140,10 @@ class ChartWidget(QWidget):
             controls.addWidget(self._png_button)
             controls.addWidget(self._cursor_checkbox)
             controls.addStretch()
+            self._hint_label = QLabel(tr("Chart hints"))
+            self._hint_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 8pt;")
+            self._hint_label.setToolTip(tr("Chart hints"))
+            controls.addWidget(self._hint_label)
             layout.addLayout(controls)
 
             # Add NavigationToolbar if available and not in offscreen mode
