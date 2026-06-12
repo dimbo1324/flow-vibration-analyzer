@@ -337,6 +337,9 @@ python scripts/clean_project.py --force                 # delete without prompt
 Requires PyInstaller and (for the installer) Inno Setup 6 on Windows:
 
 ```bash
+# Install build dependencies (PyInstaller)
+python -m pip install -r requirements-build.txt
+
 # Check build environment
 python scripts/build_installer.py --check-only
 
@@ -348,6 +351,13 @@ python scripts/build_installer.py --skip-tests
 ```
 
 The installer is produced at `dist/release/IVA_Setup_1.0.0.exe`.
+
+Notes for the installed application:
+
+- bundled resources (`config/`, demo examples) are read from the install
+  directory automatically;
+- generated output (logs, demo data, reports) is written to the writable
+  per-user folder `Documents\IVA\` — never into `Program Files`.
 
 ## Development Status
 

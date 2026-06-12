@@ -1,0 +1,5 @@
+# Release build dependencies for Industrial Vibration Analyzer.
+# Used by scripts/build_installer.py and scripts/build-all.ps1:
+#   python -m pip install -r requirements-build.txt
+-r requirements.txt
+pyinstaller>=6.6

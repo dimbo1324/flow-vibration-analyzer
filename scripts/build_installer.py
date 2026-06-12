@@ -81,7 +81,7 @@ def check_environment(version: str) -> None:
     if pyinstaller_path:
         print(f"  PyInstaller: {pyinstaller_path} — available")
     else:
-        print("  PyInstaller: NOT FOUND (install with: pip install pyinstaller)")
+        print("  PyInstaller: NOT FOUND (install with: pip install -r requirements-build.txt)")
 
     iscc = find_iscc()
     if iscc:

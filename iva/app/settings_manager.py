@@ -20,6 +20,7 @@ from iva.core.models.exceptions import ExportError, ProcessingError
 from iva.core.models.flow_parameters import FlowParameters
 from iva.core.models.settings import AnalysisSettings, PreprocessingSettings, SpectralSettings
 from iva.core.models.signal_data import ColumnRoleAssignment
+from iva.infrastructure.diagnostics.output_paths import get_resource_root
 from iva.infrastructure.logging.app_logger import get_logger
 
 logger = get_logger(__name__)
@@ -30,7 +31,10 @@ __all__ = [
     "save_settings",
 ]
 
-_DEFAULT_CONFIG_PATH = Path("config") / "defaults.toml"
+# Resolved against the resource root (repo root in development, the bundle
+# directory in a frozen build) so the file is found regardless of the
+# process working directory.
+_DEFAULT_CONFIG_PATH = get_resource_root() / "config" / "defaults.toml"
 
 
 # ---------------------------------------------------------------------------

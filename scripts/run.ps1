@@ -58,12 +58,29 @@ Write-Status "OK" "Virtual environment activated." "Green"
 $mainPy = Join-Path $repoRoot "main.py"
 if ($SmokeTest) {
     Write-Status "INFO" "Running smoke test ..." "Cyan"
-    $env:QT_QPA_PLATFORM = "offscreen"
-    $env:QT_OPENGL = "software"
-    $env:MPLBACKEND = "Agg"
-    & $venvPython $mainPy --smoke-test
+    # Save/restore: $env: changes are process-wide and would otherwise leak
+    # offscreen mode into the interactive session, breaking later GUI runs.
+    $savedQpa = $env:QT_QPA_PLATFORM
+    $savedOpenGl = $env:QT_OPENGL
+    $savedMpl = $env:MPLBACKEND
+    try {
+        $env:QT_QPA_PLATFORM = "offscreen"
+        $env:QT_OPENGL = "software"
+        $env:MPLBACKEND = "Agg"
+        & $venvPython $mainPy --smoke-test
+    } finally {
+        $env:QT_QPA_PLATFORM = $savedQpa
+        $env:QT_OPENGL = $savedOpenGl
+        $env:MPLBACKEND = $savedMpl
+    }
 } else {
     Write-Status "INFO" "Launching the IVA desktop application ..." "Cyan"
+    if ($env:QT_QPA_PLATFORM -eq "offscreen") {
+        # A leftover offscreen platform (e.g. from an interrupted smoke test)
+        # would make the GUI window invisible — clear it for this launch.
+        Write-Status "WARN" "QT_QPA_PLATFORM=offscreen detected; clearing it for the GUI launch." "Yellow"
+        Remove-Item Env:QT_QPA_PLATFORM -ErrorAction SilentlyContinue
+    }
     & $venvPython $mainPy
 }
 

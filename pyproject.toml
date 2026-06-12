@@ -1,8 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "industrial-vibration-analyzer"
 version = "1.0.0"
 description = "Engineering desktop application for analysis of flow-induced vibrations in heat exchanger equipment."
 requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+# Only the application package is distributable; without this setuptools'
+# flat-layout auto-discovery sees iva/, out/, data/, assets/, config/ as
+# candidate packages and refuses to build (breaks `pip install -e .`).
+include = ["iva*"]
 
 [tool.black]
 line-length = 100
