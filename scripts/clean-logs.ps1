@@ -1,23 +1,23 @@
 #!/usr/bin/env pwsh
 #
-# clean-logs.ps1 - Remove old IVA user logs (Windows).
+# clean-logs.ps1 — Удаление старых пользовательских журналов IVA в Windows.
 #
-# Purpose:
-#   Remove aged *.log files from Documents\IVA\logs and, only when explicitly
-#   requested, remove saved items from Documents\IVA\results.
+# Назначение:
+#   Удалить устаревшие *.log из Documents\IVA\logs. Сохранённые результаты из
+#   Documents\IVA\results удаляются только по отдельному явному запросу.
 #
-# Usage:
+# Использование:
 #   .\scripts\clean-logs.ps1
 #   .\scripts\clean-logs.ps1 -OlderThanDays 7 -DryRun
 #   .\scripts\clean-logs.ps1 -CleanResults
 #   .\scripts\clean-logs.ps1 -CleanResults -Force
 #
-# Safety notes:
-#   - Never deletes outside %USERPROFILE%\Documents\IVA.
-#   - Results require CleanResults and confirmation unless Force is supplied.
-#   - DryRun never deletes anything.
+# Безопасность:
+#   - Пути за пределами %USERPROFILE%\Documents\IVA отклоняются.
+#   - Для результатов нужны CleanResults и подтверждение либо Force.
+#   - DryRun никогда не удаляет файлы.
 #
-# Windows PowerShell 5.1 compatible. PowerShell 7+ is recommended.
+# Поддерживается Windows PowerShell 5.1, рекомендуется PowerShell 7+.
 
 [CmdletBinding()]
 param(

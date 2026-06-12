@@ -1,7 +1,7 @@
-"""Session save / load service — application-layer facade over session store.
+"""Фасад слоя приложения для сохранения и загрузки сеансов.
 
-Architecture rule: no numerical calculations here — only coordination.
-Must NOT import from iva.ui or PySide6.
+Здесь допустима только координация хранилища: численные расчёты и зависимости
+от ``iva.ui``/PySide6 нарушили бы границы архитектуры.
 """
 
 from __future__ import annotations
@@ -21,17 +21,17 @@ __all__ = ["save_current_session", "load_saved_session"]
 
 
 def save_current_session(session: AnalysisSession, path: str | Path) -> Path:
-    """Save *session* to a ``.vibproj`` file and return the saved path.
+    """Сохранить *session* в ``.vibproj`` и вернуть итоговый путь.
 
     Args:
-        session: The current analysis session.  Must have a result set.
-        path: Destination path (extension added automatically if missing).
+        session: Текущий сеанс с уже рассчитанным результатом.
+        path: Путь назначения; расширение добавляется автоматически.
 
     Returns:
-        Resolved path of the saved file.
+        Нормализованный путь сохранённого файла.
 
     Raises:
-        ExportError: If the session has no result or the write fails.
+        ExportError: Если результата нет или запись завершилась ошибкой.
     """
     saved = save_project(session, path)
     logger.info("session_service.save_current_session: saved to '%s'", saved)
@@ -39,19 +39,20 @@ def save_current_session(session: AnalysisSession, path: str | Path) -> Path:
 
 
 def load_saved_session(path: str | Path) -> AnalysisSession:
-    """Load a session from a ``.vibproj`` file.
+    """Загрузить сеанс из файла ``.vibproj``.
 
-    Chart arrays are restored from a bounded, decimated representation; the
-    original source file remains authoritative for a fresh full analysis.
+    Массивы графиков восстанавливаются из ограниченного прореженного
+    представления. Для нового полного расчёта первоисточником остаётся исходный
+    файл данных, а не содержимое сохранённого проекта.
 
     Args:
-        path: Path to the ``.vibproj`` file.
+        path: Путь к файлу ``.vibproj``.
 
     Returns:
-        Reconstructed :class:`AnalysisSession`.
+        Восстановленный ``AnalysisSession``.
 
     Raises:
-        ValidationError: If the file is missing, corrupted, or unsupported.
+        ValidationError: Если файл отсутствует, повреждён или имеет неподдерживаемую схему.
     """
     session = load_project(path)
     logger.info(

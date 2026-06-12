@@ -6,19 +6,19 @@
 #   Выполнить релизную цепочку: очистить артефакты, запустить проверки качества,
 #   затем собрать приложение и установщик через scripts\build_installer.py.
 #
-# Usage:
-#   .\scripts\build-all.ps1                # clean, quality, full build
-#   .\scripts\build-all.ps1 -SkipClean     # do not clean artifacts first
-#   .\scripts\build-all.ps1 -SkipTests     # skip the test phase (lint still runs)
-#   .\scripts\build-all.ps1 -CheckOnly      # verify environment only, no build
+# Использование:
+#   .\scripts\build-all.ps1                # очистка, quality и полная сборка
+#   .\scripts\build-all.ps1 -SkipClean     # не очищать артефакты перед сборкой
+#   .\scripts\build-all.ps1 -SkipTests     # пропустить тесты, сохранив lint
+#   .\scripts\build-all.ps1 -CheckOnly     # только проверить окружение
 #
 # Безопасность:
 #   - Любая ошибка немедленно останавливает цепочку с исходным кодом возврата.
 #   - -CheckOnly ничего не удаляет и не запускает полную сборку.
 #   - Пользовательские абсолютные пути не используются.
 #
-# Compatibility:
-#   Windows PowerShell 5.1 compatible. PowerShell 7+ is recommended.
+# Совместимость:
+#   Поддерживается Windows PowerShell 5.1, рекомендуется PowerShell 7+.
 
 [CmdletBinding()]
 param(

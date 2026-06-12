@@ -1,4 +1,4 @@
-"""Application service for preparing and running built-in demo analyses."""
+"""Подготовка и запуск встроенных демонстрационных анализов."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ __all__ = [
 
 
 def list_available_demo_scenarios() -> tuple[DemoScenario, ...]:
-    """Return the stable list of built-in demonstration scenarios."""
+    """Вернуть стабильный порядок встроенных демо-сценариев для UI и CLI."""
     return list_demo_scenarios()
 
 
@@ -33,7 +33,12 @@ def create_demo_session(
     scenario_key: str,
     output_dir: str | Path | None = None,
 ) -> AnalysisSession:
-    """Generate runtime CSV data and return a fully prepared demo session."""
+    """Создать временный CSV и полностью подготовленный демонстрационный сеанс.
+
+    Демо проходит через обычный файловый и аналитический конвейер, а не через
+    сокращённый путь. Так показ приложения одновременно проверяет реальные
+    границы импорта, валидации и формирования результата.
+    """
     scenario, columns = generate_demo_signal(scenario_key)
     runtime_dir = (
         Path(output_dir)
@@ -71,6 +76,6 @@ def run_demo_analysis(
     scenario_key: str,
     output_dir: str | Path | None = None,
 ) -> AnalysisResult:
-    """Run a built-in demo through the normal analysis pipeline."""
+    """Запустить встроенное демо через штатный конвейер анализа."""
     session = create_demo_session(scenario_key, output_dir)
     return AnalysisRunner().run(session)

@@ -1,9 +1,10 @@
-"""Synchronous analysis runner — thin wrapper over the workflow coordinator.
+"""Синхронный запуск анализа поверх координатора конвейера.
 
-On Stage 7 this is a plain synchronous call.  Stage 8 will add a
-``QRunnable``-based wrapper for background execution in the GUI thread pool.
+Модуль намеренно не содержит вычислений и деталей Qt. Фоновый запуск для GUI
+реализован отдельным ``QRunnable`` в слое ``iva.ui``, поэтому CLI может
+использовать тот же координатор без зависимости от PySide6.
 
-Architecture rule: this module must NOT import from ``iva.ui`` or ``PySide6``.
+Архитектурное правило: импортировать ``iva.ui`` или ``PySide6`` здесь нельзя.
 """
 
 from __future__ import annotations
@@ -19,28 +20,28 @@ __all__ = ["AnalysisRunner"]
 
 
 class AnalysisRunner:
-    """Thin wrapper that executes the analysis pipeline synchronously.
+    """Синхронно выполнить единый конвейер анализа.
 
     Usage::
 
         runner = AnalysisRunner()
         result = runner.run(session)
 
-    This class exists so that Stage 8 can introduce a ``QRunnable``-based
-    subclass without changing the call sites.
+    Класс служит стабильной точкой входа для CLI и GUI: UI оборачивает вызов в
+    рабочий поток, не меняя контракт слоя приложения.
     """
 
     def run(self, session: AnalysisSession) -> AnalysisResult:
-        """Run the pipeline and return the result.
+        """Запустить конвейер и вернуть полностью собранный результат.
 
         Args:
-            session: A prepared :class:`~iva.app.analysis_session.AnalysisSession`.
+            session: Подготовленный сеанс анализа.
 
         Returns:
-            A fully populated :class:`~iva.core.models.analysis_result.AnalysisResult`.
+            Полностью заполненный ``AnalysisResult``.
 
         Raises:
-            IVAError: Any error raised by the pipeline is propagated as-is.
+            IVAError: Доменная ошибка конвейера передаётся вызывающему коду без подмены.
         """
         logger.info("AnalysisRunner.run called for '%s'", session.source_file_path)
         return run_pipeline(session)

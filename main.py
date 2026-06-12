@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Industrial Vibration Analyzer — desktop application entry point."""
+"""Точка входа настольного приложения Industrial Vibration Analyzer."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import sys
 
 
 def main() -> int:
-    """Launch the IVA desktop application.
+    """Запустить настольное приложение IVA.
 
     Returns:
         Exit code (0 on success, 1 on import error).

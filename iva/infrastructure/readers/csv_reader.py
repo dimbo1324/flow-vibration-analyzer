@@ -1,12 +1,11 @@
-"""CSV file reader for the Industrial Vibration Analyzer.
+"""Безопасное чтение CSV-файлов для IVA.
 
 Reads a CSV file into a :class:`~iva.core.models.signal_data.RawFileData`
 container.  Handles automatic detection of delimiter, encoding and header row.
 Comment lines starting with ``#`` are skipped before parsing.
 
-Security note: values starting with ``=``, ``+``, ``-``, ``@`` are treated as
-plain strings by pandas (no formula evaluation) because we pass no special
-option — pandas does not evaluate spreadsheet formulas.
+Значения с ``=``, ``+``, ``-`` или ``@`` остаются строками: pandas не исполняет
+формулы электронных таблиц, поэтому импорт не запускает содержимое файла.
 """
 
 from __future__ import annotations
@@ -24,25 +23,26 @@ from iva.infrastructure.logging.app_logger import get_logger
 
 logger = get_logger(__name__)
 
-# Column name patterns that indicate a time axis.
+# Подсказки используются только для предупреждения, а не для автоматической
+# подмены выбранной пользователем роли столбца.
 _TIME_COLUMN_HINTS = frozenset({"time", "t", "timestamp", "seconds", "time_s"})
 _CANDIDATE_ENCODINGS = ("utf-8", "cp1251", "latin-1")
 _CANDIDATE_DELIMITERS = (",", ";", "\t")
 
 
 def _detect_encoding(file_path: Path) -> str:
-    """Try candidate encodings and return the first that decodes successfully."""
+    """Найти первую кодировку, в которой файл декодируется без ошибки."""
     for enc in _CANDIDATE_ENCODINGS:
         try:
             file_path.read_text(encoding=enc)
             return enc
         except (UnicodeDecodeError, LookupError):
             continue
-    return "utf-8"  # last-resort default
+    return "utf-8"  # Последний безопасный вариант; ошибки заменятся при чтении.
 
 
 def _detect_delimiter(sample: str) -> str:
-    """Use csv.Sniffer to detect delimiter; fall back to comma."""
+    """Определить разделитель через csv.Sniffer с запасным вариантом ``,``."""
     try:
         dialect = csv.Sniffer().sniff(sample, delimiters="".join(_CANDIDATE_DELIMITERS))
         return dialect.delimiter
@@ -51,30 +51,30 @@ def _detect_delimiter(sample: str) -> str:
 
 
 def _has_header(sample: str, delimiter: str) -> bool:
-    """Return True if the sample looks like it has a header row."""
+    """Проверить, похожа ли первая строка образца на заголовок."""
     try:
         return csv.Sniffer().has_header(sample)
     except csv.Error:
-        # Fall back: check if first row values are non-numeric strings.
+        # Запасная эвристика: числовая первая строка, скорее всего, уже данные.
         first_line = sample.splitlines()[0] if sample else ""
         for field in first_line.split(delimiter):
             field = field.strip().strip('"')
             try:
                 float(field)
-                return False  # a number — likely data, not header
+                return False
             except ValueError:
                 pass
         return True
 
 
 def _strip_comments(text: str) -> str:
-    """Remove lines starting with '#' and return the remaining text."""
+    """Удалить служебные строки-комментарии, начинающиеся с ``#``."""
     lines = [line for line in text.splitlines() if not line.lstrip().startswith("#")]
     return "\n".join(lines)
 
 
 def read_csv(file_path: str) -> RawFileData:
-    """Read a CSV file and return a :class:`~iva.core.models.signal_data.RawFileData`.
+    """Прочитать CSV и вернуть контейнер ``RawFileData``.
 
     Args:
         file_path: Absolute or relative path to the CSV file.
@@ -121,7 +121,8 @@ def read_csv(file_path: str) -> RawFileData:
 
     cleaned_text = _strip_comments(raw_text)
 
-    # Use the first 8 KB as a sample for dialect detection.
+    # Для определения диалекта достаточно начала файла; чтение всего текста
+    # повторно было бы лишним для больших записей.
     sample = cleaned_text[:8192]
     delimiter = _detect_delimiter(sample)
     header_present = _has_header(sample, delimiter)
@@ -132,7 +133,7 @@ def read_csv(file_path: str) -> RawFileData:
             io.StringIO(cleaned_text),
             sep=delimiter,
             header=header_row,
-            dtype=str,  # read everything as string first, then let caller convert
+            dtype=str,  # Типы проверяются позже единым валидатором.
             skipinitialspace=True,
         )
     except Exception as exc:
@@ -151,7 +152,8 @@ def read_csv(file_path: str) -> RawFileData:
     column_dtypes = {col: str(df[col].dtype) for col in df.columns}
     row_count = len(df)
 
-    # Warn if no obvious time-like column is present.
+    # Отсутствие очевидного времени не ошибка: пользователь может назначить
+    # нестандартный столбец вручную.
     lower_cols = {c.lower() for c in column_names}
     if not lower_cols.intersection(_TIME_COLUMN_HINTS):
         logger.warning(

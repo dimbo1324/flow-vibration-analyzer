@@ -1,8 +1,8 @@
-"""Lock-in resonance risk assessment (Algorithm 10).
+"""Оценка риска резонансного lock-in по алгоритму 10.
 
-Classifies the current flow regime into one of three risk levels based on
-the proximity of the vortex shedding frequency to the structural natural
-frequency, with an optional amplitude downgrade step.
+Режим относится к одному из трёх уровней по близости частоты срыва вихрей к
+собственной частоте конструкции. Слабая амплитуда может понизить уровень на
+одну ступень, чтобы одно частотное совпадение не создавало ложную тревогу.
 """
 
 from __future__ import annotations
@@ -16,17 +16,15 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["assess_risk"]
 
-# Amplitude threshold: if the dominant spectral peak PSD is below this fraction
-# of the median PSD, the peak is considered "small" and the risk level is
-# downgraded by one step.  Value is dimensionless (ratio, not dB).
+# Порог амплитуды безразмерный: сравнивается отношение PSD, а не значение dB.
 _AMPLITUDE_DOWNGRADE_RATIO: float = 2.0
 
-# Deviation thresholds (dimensionless)
+# Безразмерные границы отклонения закреплены инженерной методикой.
 _THRESHOLD_CRITICAL: float = 0.10
 _THRESHOLD_WATCH: float = 0.30
 
 # ---------------------------------------------------------------------------
-# Russian recommendation texts
+# Русские тексты инженерных рекомендаций
 # ---------------------------------------------------------------------------
 _TEXT_SAFE = (
     "Риск резонанса низкий. Частота срыва вихрей достаточно удалена от "
@@ -70,7 +68,7 @@ def assess_risk(
     physics_result: PhysicsResult,
     spectrum_result: SpectrumResult,
 ) -> RiskAssessment:
-    """Classify the resonance risk and generate a Russian engineering recommendation.
+    """Классифицировать риск и сформировать русскую инженерную рекомендацию.
 
     Algorithm 10 from ``docs/11_algorithms.md``.
 
@@ -105,7 +103,8 @@ def assess_risk(
     """
     import numpy as np
 
-    # --- Step 1: check if fn is available --------------------------------
+    # Без fn полная оценка lock-in невозможна; возвращаем безопасный уровень с
+    # явным предупреждением, а не придумываем отсутствующий параметр.
     fr = physics_result.frequency_ratio
     vr = physics_result.velocity_ratio
 
@@ -120,10 +119,10 @@ def assess_risk(
             ),
         )
 
-    # --- Step 2: deviation -----------------------------------------------
+    # Отклонение отношения частот от единицы является основной метрикой риска.
     deviation: float = abs(fr - 1.0)
 
-    # --- Step 3: classify ------------------------------------------------
+    # Базовая классификация не учитывает амплитуду и следует алгоритму 10.
     factors: list[str] = [
         f"Отношение частот fs/fn = {fr:.4f}",
         f"Отклонение от единицы |fs/fn − 1| = {deviation:.4f}",
@@ -149,7 +148,8 @@ def assess_risk(
             f"уровень {_RISK_LABELS[RiskLevel.CRITICAL]}"
         )
 
-    # --- Step 4: amplitude downgrade -------------------------------------
+    # Слабый доминирующий пик понижает риск только на одну ступень: амплитуда
+    # уточняет, но не отменяет физическое совпадение частот.
     risk = base_risk
     if base_risk in (RiskLevel.WATCH, RiskLevel.CRITICAL):
         dominant = spectrum_result.dominant_peak

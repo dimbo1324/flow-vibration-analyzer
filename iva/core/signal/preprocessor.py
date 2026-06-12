@@ -1,7 +1,6 @@
-"""Signal preprocessing pipeline (Algorithms 1, 3, and the main pipeline).
+"""Конвейер предобработки сигнала по алгоритмам 1 и 3.
 
-Algorithm reference: docs/11_algorithms.md, Algorithms 1 and 3.
-Pipeline order (fixed, per docs/09_processing_pipeline.md):
+Порядок закреплён в docs/09_processing_pipeline.md и не должен меняться:
     1. remove_mean
     2. detect_outliers → replace_outliers
     3. fill_gaps
@@ -19,18 +18,19 @@ from iva.core.models.signal_data import ProcessedSignalData, ValidatedSignalData
 
 logger = logging.getLogger(__name__)
 
-_GAP_WARNING_FRACTION = 0.05  # warn if more than 5 % of samples are filled
+# Предупреждаем, если интерполяция затронула более 5 % отсчётов: формально
+# сигнал остаётся пригодным, но инженер должен учитывать потерю исходных данных.
+_GAP_WARNING_FRACTION = 0.05
 
 
 def remove_mean(signal: np.ndarray) -> np.ndarray:
-    """Subtract the mean from the signal (Algorithm 1).
+    """Удалить постоянную составляющую сигнала по алгоритму 1.
 
     Args:
-        signal: 1-D float array.  NaN values are ignored when computing
-            the mean (``np.nanmean``).
+        signal: Одномерный массив; NaN не участвуют в расчёте среднего.
 
     Returns:
-        New array with zero mean.
+        Новый массив с нулевым средним.
     """
     offset = float(np.nanmean(signal))
     result = signal - offset
@@ -44,10 +44,11 @@ def fill_gaps(
     max_gap_seconds: float,
     sampling_rate_hz: float,
 ) -> np.ndarray:
-    """Fill NaN gaps in the signal (Algorithm 3).
+    """Заполнить пропуски NaN по алгоритму 3.
 
-    Short gaps (≤ *max_gap_seconds*) are filled with linear interpolation.
-    Long gaps and gaps at the edges of the signal are filled with zeros.
+    Короткие интервалы заполняются линейной интерполяцией. Длинные разрывы и
+    пропуски на краях заполняются нулями, поскольку для них нет двух надёжных
+    опорных измерений.
 
     Args:
         signal: 1-D signal array that may contain NaN values.
@@ -67,7 +68,8 @@ def fill_gaps(
 
     n = len(result)
 
-    # Identify contiguous NaN runs as (start, end) index pairs (inclusive).
+    # Непрерывные интервалы NaN обрабатываются целиком, чтобы отдельно оценить
+    # длину каждого разрыва и не скрыть слишком большой провал измерений.
     gaps: list[tuple[int, int]] = []
     in_gap = False
     gap_start = 0
@@ -92,7 +94,8 @@ def fill_gaps(
         is_edge = start == 0 or end == n - 1
 
         if not is_edge and gap_duration <= max_gap_seconds:
-            # Linear interpolation using flanking valid samples
+            # По обе стороны короткого разрыва есть валидные опорные точки,
+            # поэтому экстраполяция не требуется.
             left_idx = start - 1
             right_idx = end + 1
             left_val = result[left_idx]
@@ -126,7 +129,7 @@ def preprocess_signal(
     data: ValidatedSignalData,
     settings: PreprocessingSettings,
 ) -> ProcessedSignalData:
-    """Run the full preprocessing pipeline and return cleaned signal data.
+    """Выполнить фиксированный конвейер и вернуть очищенные данные.
 
     Pipeline order (fixed per docs/09_processing_pipeline.md):
         1. remove_mean
@@ -150,13 +153,14 @@ def preprocess_signal(
     signal = data.signal_array.copy()
     time = data.time_array
 
-    # Step 1: remove mean
+    # Среднее удаляется до выбросов и фильтрации согласно научной методике.
     if settings.remove_mean:
         offset = float(np.nanmean(signal))
         signal = remove_mean(signal)
         log.append(f"Удалено среднее значение: смещение={offset:.6f}")
 
-    # Step 2: outlier detection and replacement
+    # Выбросы заменяются до фильтра, иначе одиночный импульс загрязнит соседние
+    # отсчёты через импульсную характеристику фильтра.
     if settings.remove_outliers:
         outlier_mask = detect_outliers(
             signal,
@@ -170,7 +174,7 @@ def preprocess_signal(
         else:
             log.append("Обработка выбросов: выбросы не обнаружены")
 
-    # Step 3: gap filling
+    # Пропуски заполняются до scipy-фильтрации, которая не поддерживает NaN.
     if settings.fill_gaps:
         max_gap_seconds = settings.max_gap_ms / 1000.0
         signal = fill_gaps(
@@ -181,10 +185,10 @@ def preprocess_signal(
         )
         log.append(f"Заполнены пропуски: максимальный интервал={max_gap_seconds*1000:.1f} ms")
 
-    # Store cleaned signal before filtering
+    # Отдельная копия до фильтра нужна UI и отчётам для сравнения стадий.
     signal_cleaned = signal.copy()
 
-    # Step 4: bandpass filter
+    # Фильтрация опциональна, но всегда завершает преобразование амплитуды.
     signal_filtered = signal_cleaned.copy()
     if settings.apply_bandpass_filter:
         signal_filtered = apply_bandpass_filter(

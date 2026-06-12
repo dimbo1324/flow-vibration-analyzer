@@ -1,4 +1,4 @@
-"""IVA main application window.
+"""Главное окно приложения IVA.
 
 Architecture rules:
 - No numerical calculations here.
@@ -74,7 +74,7 @@ __all__ = ["MainWindow"]
 
 
 class MainWindow(QMainWindow):
-    """IVA top-level application window.
+    """Верхнеуровневое окно IVA.
 
     Layout::
 
@@ -117,7 +117,7 @@ class MainWindow(QMainWindow):
         self.resize(1400, 900)
 
     # ------------------------------------------------------------------
-    # UI construction
+    # Построение интерфейса
     # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
@@ -190,7 +190,7 @@ class MainWindow(QMainWindow):
         central_layout.setContentsMargins(0, 0, 0, 0)
         central_layout.setSpacing(0)
 
-        # Error banner (hidden by default)
+        # Панель ошибки скрыта до первого сбоя.
         self._error_banner = QLabel("")
         self._error_banner.setVisible(False)
         self._error_banner.setWordWrap(True)
@@ -203,7 +203,7 @@ class MainWindow(QMainWindow):
         self._error_banner.mousePressEvent = self._on_banner_click  # type: ignore[method-assign]
         central_layout.addWidget(self._error_banner)
 
-        # Workstation shell: navigation + workspace + inspector.
+        # Рабочая область объединяет навигацию, страницы и инспектор результата.
         self._main_splitter = QSplitter(Qt.Orientation.Horizontal)
         self._main_splitter.setObjectName("MainWorkstationSplitter")
         self._main_splitter.setChildrenCollapsible(False)
@@ -245,7 +245,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(self._nav, stretch=1)
         self._main_splitter.addWidget(self._sidebar_panel)
 
-        # Central workspace contains normal pages and a chart-focus view.
+        # Центральная область содержит обычные страницы и отдельный режим графика.
         self._stack = QStackedWidget()
         self._stack.setObjectName("AnalysisPageStack")
         self._pages: list[QWidget] = [
@@ -288,8 +288,8 @@ class MainWindow(QMainWindow):
         for chart in self._stack.findChildren(ChartWidget):
             chart.focus_requested.connect(self.enter_chart_focus_mode)
 
-        # QDockWidget is retained as the compatibility surface, but it lives
-        # inside the splitter as a stable resizable inspector panel.
+        # QDockWidget сохраняет совместимый API, но живёт внутри splitter как
+        # стабильная панель инспектора с изменяемой шириной.
         self._inspector_dock = QDockWidget(tr("Inspector"), self._main_splitter)
         self._inspector_dock.setObjectName("InspectorDock")
         self._inspector_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
@@ -330,18 +330,18 @@ class MainWindow(QMainWindow):
         self._progress_label.setStyleSheet(f"color: {COLOR_MUTED}; min-width: 38px;")
         self.statusBar().addPermanentWidget(self._progress_label)
 
-        # Select first page
+        # После сборки интерфейса всегда выбирается первая страница.
         self._nav.setCurrentRow(0)
 
-        # Keep a reference to stored IVAError for "Details" click
+        # Ссылка на IVAError нужна для диалога «Подробности».
         self._last_error: IVAError | None = None
 
     # ------------------------------------------------------------------
-    # Keyboard shortcuts
+    # Клавиатурные сокращения
     # ------------------------------------------------------------------
 
     def _setup_shortcuts(self) -> None:
-        # Use the (key, parent, slot) positional form for PySide6 compatibility.
+        # Позиционная форма (key, parent, slot) совместима с поддерживаемыми PySide6.
         sc_open = QShortcut(QKeySequence("Ctrl+O"), self)
         sc_open.activated.connect(self.open_file)  # type: ignore[attr-defined]
         sc_run = QShortcut(QKeySequence("F5"), self)
@@ -364,7 +364,7 @@ class MainWindow(QMainWindow):
         self._shortcut_escape.activated.connect(self.exit_chart_focus_mode)  # type: ignore[attr-defined]
 
     # ------------------------------------------------------------------
-    # Default settings
+    # Настройки по умолчанию
     # ------------------------------------------------------------------
 
     def _load_defaults(self) -> None:
@@ -396,12 +396,12 @@ class MainWindow(QMainWindow):
             import_page.demo_requested.connect(self.run_demo_analysis)
 
     # ------------------------------------------------------------------
-    # Public slots
+    # Публичные слоты
     # ------------------------------------------------------------------
 
     @Slot()
     def open_file(self) -> None:
-        """Open a file-selection dialog and update the session."""
+        """Открыть выбор файла и обновить текущий сеанс."""
         path, _ = QFileDialog.getOpenFileName(
             self,
             tr("Open Data File"),
@@ -422,15 +422,15 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def run_analysis(self) -> None:
-        """Collect form values and launch the analysis worker."""
-        # Pull role assignment from the Import page
+        """Собрать значения форм и запустить фоновый анализ."""
+        # Назначение ролей столбцов принадлежит странице импорта.
         import_page = self._pages[1]
         if isinstance(import_page, ImportPage):
             ra = import_page.get_role_assignment()
             if ra is not None:
                 self._session.role_assignment = ra
 
-        # Pull flow parameters from the Physics page
+        # Физические параметры принадлежат странице физической модели.
         physics_page = self._pages[4]
         if isinstance(physics_page, PhysicsPage):
             fp = physics_page.get_flow_parameters()
@@ -460,7 +460,7 @@ class MainWindow(QMainWindow):
     @Slot()
     @Slot(str)
     def run_demo_analysis(self, scenario_key: str | None = None) -> None:
-        """Prepare a built-in scenario and launch it in the background."""
+        """Подготовить встроенный сценарий и запустить его в фоне."""
         import_page = self._pages[1]
         selected_key = scenario_key
         if not selected_key and isinstance(import_page, ImportPage):
@@ -511,7 +511,7 @@ class MainWindow(QMainWindow):
         self._thread_pool.start(worker)
 
     # ------------------------------------------------------------------
-    # Worker signal handlers
+    # Обработчики сигналов фонового анализа
     # ------------------------------------------------------------------
 
     @Slot(int)
@@ -531,7 +531,7 @@ class MainWindow(QMainWindow):
         self._progress_bar.setValue(100)
         self._progress_label.setText("100%")
         self._status_label.setText(tr("Analysis complete"))
-        # Enable save/export now that we have a result
+        # Сохранение и экспорт допустимы только после появления результата.
         self._action_save.setEnabled(True)
         self._action_save_as.setEnabled(True)
         self._action_export_report.setEnabled(True)
@@ -575,11 +575,11 @@ class MainWindow(QMainWindow):
         self._progress_label.clear()
 
     # ------------------------------------------------------------------
-    # Error banner
+    # Панель ошибок
     # ------------------------------------------------------------------
 
     def show_error_banner(self, error: IVAError) -> None:
-        """Show the error banner with the user-facing message."""
+        """Показать панель ошибки с понятным пользователю сообщением."""
         self._last_error = error
         self._error_banner.setText(f"⚠  {error.user_message}  — нажмите для подробностей")
         self._error_banner.setVisible(True)
@@ -590,7 +590,7 @@ class MainWindow(QMainWindow):
         self._last_error = None
 
     def _on_banner_click(self, _event: object) -> None:  # noqa: ANN001
-        """Show technical error details in a dialog."""
+        """Показать технические подробности ошибки в диалоге."""
         if self._last_error is None:
             return
         dlg = QDialog(self)
@@ -617,7 +617,7 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     # ------------------------------------------------------------------
-    # Page updates
+    # Обновление страниц
     # ------------------------------------------------------------------
 
     def _update_all_pages(self, result: object) -> None:
@@ -648,7 +648,7 @@ class MainWindow(QMainWindow):
         self._inspector_panel.update_result(result, self._current_project_path)
 
     # ------------------------------------------------------------------
-    # Navigation helpers
+    # Навигация
     # ------------------------------------------------------------------
 
     @Slot(int)
@@ -657,7 +657,7 @@ class MainWindow(QMainWindow):
         self._animate_page_transition()
 
     def _animate_page_transition(self) -> None:
-        """Fade the freshly shown page in for a smooth, modern transition.
+        """Плавно проявить только что открытую страницу.
 
         Skipped in offscreen mode (tests/CI): without a running render loop
         the animation would never progress and the page would stay at the
@@ -675,8 +675,8 @@ class MainWindow(QMainWindow):
         animation.setStartValue(0.0)
         animation.setEndValue(1.0)
         animation.setEasingCurve(QEasingCurve.Type.OutCubic)
-        # Remove the effect afterwards: a lingering QGraphicsOpacityEffect
-        # degrades chart canvas rendering quality.
+        # Эффект удаляется после анимации: оставленный QGraphicsOpacityEffect
+        # ухудшает качество отрисовки полотна графика.
         animation.finished.connect(lambda p=page: p.setGraphicsEffect(None))
         animation.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
         self._page_fade_animation = animation
@@ -741,7 +741,7 @@ class MainWindow(QMainWindow):
 
     @Slot(object)
     def enter_chart_focus_mode(self, chart: object | None = None) -> None:
-        """Show a page chart in the central focus workspace without recalculation."""
+        """Показать график страницы в центре без повторного расчёта."""
         if self._focus_mode:
             return
         source_chart = chart if isinstance(chart, ChartWidget) else None
@@ -765,7 +765,7 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def exit_chart_focus_mode(self) -> None:
-        """Restore the page, sidebar, and inspector state saved before focus mode."""
+        """Восстановить страницу и панели, сохранённые до режима фокуса."""
         if not self._focus_mode:
             return
         self._workspace_stack.setCurrentWidget(self._stack)
@@ -780,7 +780,7 @@ class MainWindow(QMainWindow):
         self._status_label.setText(tr("Ready"))
 
     def _new_session(self) -> None:
-        """Clear the current session (Ctrl+N)."""
+        """Очистить текущий сеанс (Ctrl+N)."""
         self.exit_chart_focus_mode()
         self._session.clear()
         self._current_project_path = None
@@ -797,7 +797,7 @@ class MainWindow(QMainWindow):
         self._hide_error_banner()
 
     def _save_project(self) -> None:
-        """Save to existing path or prompt for new path (Ctrl+S)."""
+        """Сохранить по известному пути либо запросить новый (Ctrl+S)."""
         if self._session.result is None:
             self._status_label.setText(tr("Nothing to save — run an analysis first"))
             return
@@ -807,7 +807,7 @@ class MainWindow(QMainWindow):
             self._save_project_as()
 
     def _save_project_as(self) -> None:
-        """Prompt for a path and save (Ctrl+Shift+S)."""
+        """Запросить новый путь и сохранить (Ctrl+Shift+S)."""
         if self._session.result is None:
             self._status_label.setText(tr("Nothing to save — run an analysis first"))
             return
@@ -838,7 +838,7 @@ class MainWindow(QMainWindow):
             self.show_error_banner(err)
 
     def _open_project(self) -> None:
-        """Open a .vibproj session file (Ctrl+Shift+O)."""
+        """Открыть файл сеанса ``.vibproj`` (Ctrl+Shift+O)."""
         path, _ = QFileDialog.getOpenFileName(
             self,
             tr("Open Project"),
@@ -878,7 +878,7 @@ class MainWindow(QMainWindow):
                 self.show_error_banner(err)
 
     def _export_report_bundle(self) -> None:
-        """Export all report formats to a directory."""
+        """Экспортировать все форматы отчёта в выбранный каталог."""
         if self._session.result is None:
             self._status_label.setText(tr("Nothing to export — run an analysis first"))
             return

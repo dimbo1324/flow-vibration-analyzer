@@ -301,6 +301,8 @@ user-specific paths, and keeps the common developer commands in one place.
 .\scripts\iva.ps1 clean -DryRun
 .\scripts\iva.ps1 clean -DryRun -KeepLogs
 .\scripts\iva.ps1 clean -Force
+.\scripts\iva.ps1 clean -DryRun -IncludeVenv
+.\scripts\iva.ps1 clean -Force -IncludeVenv
 
 # CLI demo and non-building release environment check
 .\scripts\iva.ps1 demo
@@ -331,13 +333,23 @@ for focused work and backward compatibility:
 non-Windows shells and CI. It removes only a conservative, hardcoded list of
 generated artifacts (caches, `build/`, `dist/`, `out/`, coverage files,
 `__pycache__`); source code, docs, tests, config and demo data are never
-touched. Always preview first:
+touched. Virtual environments `.venv/`, `venv/` and `env/` are preserved by
+default and enter the plan only with the explicit `--include-venv` flag.
+Always preview first; actual deletion additionally requires `--force`:
 
 ```bash
 python scripts/clean_project.py --dry-run
 python scripts/clean_project.py --dry-run --keep-logs   # preserve out/ logs
 python scripts/clean_project.py --force                 # delete without prompt
+python scripts/clean_project.py --dry-run --include-venv
+python scripts/clean_project.py --force --include-venv  # recreate with setup afterwards
 ```
+
+The same opt-in is available on Windows as `-IncludeVenv`. After removing a
+virtual environment, run `.\scripts\iva.ps1 setup` before other developer
+commands. Cleanup refuses repository roots it cannot validate, paths outside
+the repository, symlinks, source trees, documentation, tests, scripts,
+configuration and example or synthetic data.
 
 ## Building the Windows Installer
 

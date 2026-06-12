@@ -1,4 +1,4 @@
-"""Tests for scripts/clean_project.py — safe cross-platform cleanup."""
+"""Тесты безопасной кроссплатформенной очистки проекта."""
 
 from __future__ import annotations
 
@@ -14,20 +14,25 @@ import clean_project  # noqa: E402
 
 
 def _make_fake_repo(root: Path) -> dict[str, Path]:
-    """Create a miniature repository with sources and generated artifacts."""
+    """Создать мини-репозиторий с исходниками и удаляемыми артефактами."""
     paths: dict[str, Path] = {}
 
-    # Protected source/content files that must never be touched.
+    # Маркеры корня обязательны: очистка не должна работать в случайном каталоге.
+    (root / "pyproject.toml").write_text("[project]\nname='test'\n", encoding="utf-8")
+    (root / "scripts").mkdir()
+
+    # Защищённые файлы не должны исчезнуть ни при каком сочетании флагов.
     paths["source"] = root / "iva" / "core" / "module.py"
     paths["doc"] = root / "docs" / "00_overview.md"
     paths["test"] = root / "tests" / "test_x.py"
     paths["config"] = root / "config" / "defaults.toml"
     paths["example"] = root / "data" / "examples" / "demo.csv"
+    paths["synthetic"] = root / "data" / "synthetic" / "signal.csv"
     for p in paths.values():
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text("content", encoding="utf-8")
 
-    # Generated artifacts that should be removed.
+    # Сгенерированные артефакты должны удаляться с --force.
     paths["pycache"] = root / "iva" / "core" / "__pycache__"
     paths["pycache"].mkdir()
     (paths["pycache"] / "module.cpython-311.pyc").write_text("x", encoding="utf-8")
@@ -39,6 +44,9 @@ def _make_fake_repo(root: Path) -> dict[str, Path]:
     (paths["out"] / "logs" / "run.log").write_text("x", encoding="utf-8")
     paths["coverage"] = root / ".coverage"
     paths["coverage"].write_text("x", encoding="utf-8")
+    paths["venv"] = root / ".venv"
+    (paths["venv"] / "Scripts").mkdir(parents=True)
+    (paths["venv"] / "Scripts" / "python.exe").write_text("x", encoding="utf-8")
     return paths
 
 
@@ -48,7 +56,7 @@ def test_dry_run_deletes_nothing(tmp_path: Path, capsys: pytest.CaptureFixture[s
     assert rc == 0
     out = capsys.readouterr().out
     assert "DRY RUN" in out
-    # Everything still exists, artifacts included.
+    # Dry-run сохраняет и исходники, и артефакты.
     for p in paths.values():
         assert p.exists(), f"dry-run must not delete {p}"
 
@@ -57,13 +65,14 @@ def test_force_removes_artifacts_and_preserves_sources(tmp_path: Path) -> None:
     paths = _make_fake_repo(tmp_path)
     rc = clean_project.main(["--force", "--root", str(tmp_path)])
     assert rc == 0
-    # Artifacts removed.
+    # Обычные артефакты удалены, но дорогое окружение сохраняется по умолчанию.
     assert not paths["pycache"].exists()
     assert not paths["build"].exists()
     assert not paths["out"].exists()
     assert not paths["coverage"].exists()
-    # Protected content untouched.
-    for key in ("source", "doc", "test", "config", "example"):
+    assert paths["venv"].exists()
+    # Защищённое содержимое не затронуто.
+    for key in ("source", "doc", "test", "config", "example", "synthetic"):
         assert paths[key].exists(), f"{key} must survive cleanup"
 
 
@@ -84,6 +93,9 @@ def test_is_safe_to_remove_rejects_protected_paths(tmp_path: Path) -> None:
         tmp_path / "tests" / "test_x.py",
         tmp_path / "config" / "defaults.toml",
         tmp_path / "data" / "examples" / "demo.csv",
+        tmp_path / "data" / "synthetic" / "signal.csv",
+        tmp_path / "scripts",
+        tmp_path / "pyproject.toml",
         tmp_path,  # the root itself
         tmp_path.parent,  # outside the root
     ]
@@ -113,13 +125,89 @@ def test_never_traverses_venv_or_git(tmp_path: Path) -> None:
     assert not clean_project.is_safe_to_remove(cached, tmp_path)
 
 
+def test_real_cleanup_without_force_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    paths = _make_fake_repo(tmp_path)
+
+    rc = clean_project.main(["--root", str(tmp_path)])
+
+    assert rc == 2
+    assert "--force" in capsys.readouterr().err
+    assert paths["build"].exists()
+
+
+def test_include_venv_is_required_to_plan_environment(tmp_path: Path) -> None:
+    paths = _make_fake_repo(tmp_path)
+
+    default_directories, _ = clean_project.collect_targets(tmp_path, keep_logs=False)
+    included_directories, _ = clean_project.collect_targets(
+        tmp_path, keep_logs=False, include_venv=True
+    )
+
+    assert paths["venv"] not in default_directories
+    assert paths["venv"] in included_directories
+    assert not clean_project.is_safe_to_remove(paths["venv"], tmp_path)
+    assert clean_project.is_safe_to_remove(paths["venv"], tmp_path, include_venv=True)
+
+
+def test_force_include_venv_removes_environment(tmp_path: Path) -> None:
+    paths = _make_fake_repo(tmp_path)
+
+    rc = clean_project.main(["--force", "--include-venv", "--root", str(tmp_path)])
+
+    assert rc == 0
+    assert not paths["venv"].exists()
+    assert paths["source"].exists()
+
+
+def test_all_collected_candidates_stay_inside_root(tmp_path: Path) -> None:
+    _make_fake_repo(tmp_path)
+    directories, files = clean_project.collect_targets(tmp_path, keep_logs=False, include_venv=True)
+    for path in [*directories, *files]:
+        assert path.resolve().is_relative_to(tmp_path.resolve())
+
+
+def test_symlink_to_outside_directory_is_refused(tmp_path: Path) -> None:
+    _make_fake_repo(tmp_path)
+    outside = tmp_path.parent / f"{tmp_path.name}-outside"
+    outside.mkdir()
+    linked_build = tmp_path / "reports"
+    try:
+        linked_build.symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"Симлинки недоступны в текущем окружении Windows: {exc}")
+
+    directories, _ = clean_project.collect_targets(tmp_path, keep_logs=False)
+
+    assert linked_build in directories
+    assert not clean_project.is_safe_to_remove(linked_build, tmp_path)
+    assert clean_project.main(["--force", "--root", str(tmp_path)]) == 2
+    assert outside.exists()
+
+
+def test_recursive_python_cache_is_planned(tmp_path: Path) -> None:
+    paths = _make_fake_repo(tmp_path)
+    directories, files = clean_project.collect_targets(tmp_path, keep_logs=False)
+    cached_file = paths["pycache"] / "module.cpython-311.pyc"
+    assert paths["pycache"] in directories
+    assert cached_file not in files  # Каталог уже покрывает вложенный файл.
+
+
+def test_invalid_repository_root_is_refused(tmp_path: Path) -> None:
+    rc = clean_project.main(["--dry-run", "--root", str(tmp_path)])
+    assert rc == 2
+
+
 def test_cli_flags_exist() -> None:
     source = (_SCRIPTS_DIR / "clean_project.py").read_text(encoding="utf-8")
-    for flag in ("--dry-run", "--force", "--keep-logs"):
+    for flag in ("--dry-run", "--force", "--keep-logs", "--include-venv"):
         assert flag in source
 
 
 def test_nothing_to_clean_returns_zero(tmp_path: Path) -> None:
     (tmp_path / "iva").mkdir()
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "pyproject.toml").write_text("[project]\nname='test'\n", encoding="utf-8")
     rc = clean_project.main(["--dry-run", "--root", str(tmp_path)])
     assert rc == 0

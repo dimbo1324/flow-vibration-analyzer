@@ -1,21 +1,21 @@
 #!/usr/bin/env pwsh
 #
-# run.ps1 — Launch the IVA application (Windows)
+# run.ps1 — Запуск приложения IVA в Windows
 #
-# Purpose:
-#   Activate the local virtual environment and start the Industrial Vibration
-#   Analyzer GUI, or run the headless smoke test.
+# Назначение:
+#   Запустить GUI через локальное виртуальное окружение либо выполнить
+#   изолированный smoke-тест без показа окна.
 #
-# Usage:
-#   .\scripts\run.ps1                # launch the desktop GUI
-#   .\scripts\run.ps1 -SmokeTest     # run 'python main.py --smoke-test'
+# Использование:
+#   .\scripts\run.ps1                # запустить настольный интерфейс
+#   .\scripts\run.ps1 -SmokeTest     # выполнить python main.py --smoke-test
 #
-# Safety notes:
-#   - Read-only with respect to the repository; only launches the app.
-#   - No hardcoded user paths; the repository root is detected from this script.
+# Безопасность:
+#   - Скрипт не изменяет репозиторий, а только запускает приложение.
+#   - Корень проекта вычисляется относительно самого скрипта.
 #
-# Compatibility:
-#   Windows PowerShell 5.1 compatible. PowerShell 7+ is recommended.
+# Совместимость:
+#   Поддерживается Windows PowerShell 5.1, рекомендуется PowerShell 7+.
 
 [CmdletBinding()]
 param(
@@ -41,7 +41,7 @@ function Write-Status {
 
 Write-Host "=== IVA Run ===" -ForegroundColor Cyan
 
-# --- 1. Ensure the virtual environment exists -------------------------------
+# --- 1. Проверка виртуального окружения -------------------------------------
 $venvPath = Join-Path $repoRoot ".venv"
 $activateScript = Join-Path $venvPath "Scripts\Activate.ps1"
 $venvPython = Join-Path $venvPath "Scripts\python.exe"

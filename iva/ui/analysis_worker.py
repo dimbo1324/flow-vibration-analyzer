@@ -20,22 +20,22 @@ __all__ = ["AnalysisWorker", "AnalysisWorkerSignals"]
 
 
 class AnalysisWorkerSignals(QObject):
-    """Signals emitted by :class:`AnalysisWorker`."""
+    """Сигналы, которыми :class:`AnalysisWorker` сообщает о ходе работы."""
 
-    #: Emits progress percentage (0–100).
+    #: Прогресс выполнения в процентах (0–100).
     progress_updated = Signal(int)
-    #: Emits the completed :class:`~iva.core.models.analysis_result.AnalysisResult`.
+    #: Готовый :class:`~iva.core.models.analysis_result.AnalysisResult`.
     analysis_completed = Signal(object)
-    #: Emits an :class:`~iva.core.models.exceptions.IVAError` on domain error.
+    #: Доменная ошибка :class:`~iva.core.models.exceptions.IVAError`.
     error_occurred = Signal(object)
-    #: Emits a plain string on unexpected Python exception.
+    #: Текст непредвиденного исключения Python.
     unexpected_error_occurred = Signal(str)
 
 
 class AnalysisWorker(QRunnable):
-    """Runs the analysis pipeline in the Qt global thread pool.
+    """Запустить конвейер анализа в глобальном пуле потоков Qt.
 
-    Usage::
+    Пример::
 
         worker = AnalysisWorker(session)
         worker.signals.analysis_completed.connect(my_slot)

@@ -1,8 +1,8 @@
-"""Excel (.xlsx) file reader for the Industrial Vibration Analyzer.
+"""Безопасное чтение Excel (.xlsx) для IVA.
 
-Uses openpyxl in read_only=True mode as required by
-docs/18_security_and_data_privacy.md to prevent macro execution
-and disable external link resolution.
+``openpyxl`` открывает книгу в ``read_only=True`` и ``data_only=True`` согласно
+docs/18_security_and_data_privacy.md: макросы не исполняются, формулы читаются
+как сохранённые значения.
 """
 
 from __future__ import annotations
@@ -21,21 +21,21 @@ logger = get_logger(__name__)
 
 
 def _is_header_row(row: tuple[Any, ...]) -> bool:
-    """Return True if the row appears to be a header (all non-numeric strings)."""
+    """Проверить, выглядит ли строка как текстовый заголовок."""
     has_string = False
     for cell in row:
         if cell is None:
             continue
         try:
             float(str(cell))
-            return False  # numeric value → data row
+            return False  # Числовое значение указывает на строку данных.
         except (ValueError, TypeError):
             has_string = True
     return has_string
 
 
 def read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData:
-    """Read an Excel .xlsx file and return a :class:`~iva.core.models.signal_data.RawFileData`.
+    """Прочитать лист Excel и вернуть ``RawFileData``.
 
     Opens the workbook in ``read_only=True, data_only=True`` mode (macros are
     never executed; formula results are read as cached values).
@@ -53,7 +53,8 @@ def read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData:
         FileReadError: The file exists but cannot be parsed, or the requested
             sheet does not exist.
     """
-    import openpyxl  # imported here to keep the module importable even if openpyxl is absent
+    # Ленивый импорт сохраняет возможность импортировать модуль без openpyxl.
+    import openpyxl
 
     path = Path(file_path)
     logger.debug("Excel read started: %s", path.name)
@@ -105,7 +106,7 @@ def read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData:
             technical_details=f"Sheet '{sheet_name}' contained no rows.",
         )
 
-    # Determine header presence.
+    # Заголовок определяется эвристически, но имена ролей всё равно назначает пользователь.
     first_row = rows[0]
     if _is_header_row(first_row):
         headers = [str(v) if v is not None else f"column_{i}" for i, v in enumerate(first_row)]
@@ -123,11 +124,9 @@ def read_excel(file_path: str, sheet_name: str | None = None) -> RawFileData:
             technical_details=str(exc),
         ) from exc
 
-    # Normalise dtypes to string for consistency with the CSV reader.  Genuinely
-    # empty cells (openpyxl returns None) are preserved as pd.NA, while real
-    # values are stringified.  Stringifying first and then restoring NA at the
-    # originally-null positions avoids turning a legitimate textual "None" cell
-    # into a missing value.
+    # Типы нормализуются к строкам как в CSV-reader. Настоящие пустые ячейки
+    # восстанавливаются как pd.NA после преобразования, чтобы текст ``"None"``
+    # не был ошибочно принят за пропуск.
     for col in df.columns:
         series = df[col]
         is_null = series.isna()
