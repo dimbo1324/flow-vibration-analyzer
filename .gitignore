@@ -238,3 +238,12 @@ out/
 
 # OS
 Thumbs.db
+
+# Frontend — generated artefacts
+web/frontend/node_modules/
+web/frontend/dist/
+web/frontend/coverage/
+web/frontend/.vite/
+web/frontend/playwright-report/
+web/frontend/test-results/
+web/frontend/.pnpm-store/

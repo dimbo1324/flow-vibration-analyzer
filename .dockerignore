@@ -43,3 +43,9 @@ htmlcov/
 
 # Данные результатов и отчёты (генерируются во время работы)
 data/results/
+
+# Frontend build artefacts — не нужны в Python-образах
+web/frontend/node_modules/
+web/frontend/dist/
+web/frontend/.vite/
+web/frontend/coverage/
