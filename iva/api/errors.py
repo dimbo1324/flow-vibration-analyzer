@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from iva.core.models.exceptions import IVAError, ValidationError
@@ -23,7 +23,7 @@ def api_error_response(
     )
 
 
-def register_error_handlers(app) -> None:  # type: ignore[no-untyped-def]
+def register_error_handlers(app: FastAPI) -> None:
     """Register global exception handlers that never leak tracebacks."""
 
     @app.exception_handler(ValidationError)

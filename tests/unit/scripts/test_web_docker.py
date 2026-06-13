@@ -46,3 +46,8 @@ def test_requirements_web_has_fastapi() -> None:
 def test_requirements_web_has_uvicorn() -> None:
     content = (REPO_ROOT / "requirements-web.txt").read_text(encoding="utf-8")
     assert "uvicorn" in content.lower()
+
+
+def test_requirements_web_has_httpx() -> None:
+    content = (REPO_ROOT / "requirements-web.txt").read_text(encoding="utf-8")
+    assert "httpx" in content.lower()

@@ -97,7 +97,7 @@ async def import_session(file: UploadFile) -> JSONResponse:
 
     # Build compact summary — avoid exposing server paths
     result = session.result
-    summary: dict = {}  # type: ignore[type-arg]
+    summary: dict[str, object] = {}
     if result is not None:
         from iva.api.serializers.analysis_serializer import serialize_analysis_result
 
