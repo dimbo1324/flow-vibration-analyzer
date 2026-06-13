@@ -19,6 +19,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+# scripts/lib/ содержит PowerShell-модули проекта — исключаем из правила выше.
+!scripts/lib/
 parts/
 sdist/
 var/

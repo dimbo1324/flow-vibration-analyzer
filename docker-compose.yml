@@ -1,0 +1,59 @@
+# docker-compose.yml — сервисы для воспроизводимых проверок IVA.
+#
+# Использование:
+#   docker compose run --rm quality    # линтер + тесты
+#   docker compose run --rm test       # только тесты с покрытием
+#   docker compose run --rm cli-demo   # CLI-демо, вывод в out/
+#
+# Docker — опциональный инструмент: он не нужен для разработки GUI на Windows.
+# Основное назначение: воспроизводимые проверки, аналогичные GitHub Actions CI.
+
+services:
+  quality:
+    build: .
+    image: iva-dev
+    environment:
+      QT_QPA_PLATFORM: offscreen
+      QT_OPENGL: software
+      MPLBACKEND: Agg
+    command: >
+      sh -c "
+        echo '[INFO] Запуск проверок качества...' &&
+        python -m black --check . &&
+        python -m ruff check . &&
+        python -m mypy iva main.py &&
+        python -m pytest -m 'not performance' -q
+      "
+
+  test:
+    build: .
+    image: iva-dev
+    environment:
+      QT_QPA_PLATFORM: offscreen
+      QT_OPENGL: software
+      MPLBACKEND: Agg
+    command: >
+      python -m pytest
+        --cov=iva/core
+        --cov-report=term-missing
+        --cov-fail-under=80
+        -m "not performance"
+        -q
+    volumes:
+      - ./out:/app/out
+
+  cli-demo:
+    build: .
+    image: iva-dev
+    environment:
+      QT_QPA_PLATFORM: offscreen
+      QT_OPENGL: software
+      MPLBACKEND: Agg
+    command: >
+      python -m iva.cli.main demo
+        --scenario clean_40hz
+        --output out/cli-runs/demo_docker
+        --export-html
+        --save-project
+    volumes:
+      - ./out:/app/out
