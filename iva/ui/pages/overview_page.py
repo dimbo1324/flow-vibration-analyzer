@@ -23,15 +23,14 @@ from iva.ui.styles.theme import (
     COLOR_BAD,
     COLOR_GOOD,
     COLOR_MUTED,
-    COLOR_TEXT,
     COLOR_WARN,
-    FONT_SIZE_TITLE,
     SPACING_LG,
     SPACING_MD,
     SPACING_SM,
 )
 from iva.ui.widgets.chart_widget import ChartWidget
 from iva.ui.widgets.metric_card import MetricCard
+from iva.ui.widgets.page_header import PageHeader
 from iva.ui.widgets.page_state import PageStateBanner
 from iva.ui.widgets.risk_card import RiskCard
 
@@ -68,16 +67,12 @@ class OverviewPage(QWidget):
         layout.setContentsMargins(SPACING_LG, SPACING_LG, SPACING_LG, SPACING_LG)
         layout.setSpacing(SPACING_MD)
 
-        # Title
-        title = QLabel(tr("01 — Overview"))
-        title.setStyleSheet(
-            f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
+        # Единый заголовок страницы (титул + акцент + подзаголовок + чип).
+        self._header = PageHeader(
+            "Обзор",
+            "Сводка анализа — ключевые показатели режима с первого взгляда",
         )
-        layout.addWidget(title)
-
-        subtitle = QLabel(tr("Analysis summary — dominant metrics at a glance"))
-        subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
-        layout.addWidget(subtitle)
+        layout.addWidget(self._header)
 
         quick_box = QGroupBox("Быстрый старт")
         quick_layout = QVBoxLayout(quick_box)
@@ -142,13 +137,13 @@ class OverviewPage(QWidget):
 
         self._signal_chart = ChartWidget()
         self._signal_chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self._signal_chart.setMinimumHeight(220)
+        self._signal_chart.setMinimumHeight(300)
 
         self._spectrum_chart = ChartWidget()
         self._spectrum_chart.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        self._spectrum_chart.setMinimumHeight(220)
+        self._spectrum_chart.setMinimumHeight(300)
 
         charts_layout.addWidget(self._signal_chart)
         charts_layout.addWidget(self._spectrum_chart)

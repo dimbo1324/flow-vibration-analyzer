@@ -28,12 +28,11 @@ from iva.ui.styles.theme import (
     COLOR_BORDER,
     COLOR_MUTED,
     COLOR_PANEL,
-    COLOR_TEXT,
-    FONT_SIZE_TITLE,
     RADIUS_LG,
     SPACING_LG,
     SPACING_MD,
 )
+from iva.ui.widgets.page_header import PageHeader
 from iva.ui.widgets.parameter_form import ParameterForm
 
 if TYPE_CHECKING:
@@ -62,15 +61,8 @@ class ImportPage(QWidget):
         layout.setSpacing(SPACING_MD)
 
         # Title
-        title = QLabel(tr("02 — Import"))
-        title.setStyleSheet(
-            f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
-        )
-        layout.addWidget(title)
-
-        subtitle = QLabel(tr("Select a data file and assign column roles"))
-        subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
-        layout.addWidget(subtitle)
+        self._header = PageHeader("Импорт данных", "Выбор файла и назначение ролей столбцов")
+        layout.addWidget(self._header)
 
         # File selection group
         file_box = QGroupBox(tr("Data File"))

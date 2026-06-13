@@ -20,11 +20,10 @@ from iva.ui.strings_ru import RISK_LABELS, display_label, tr
 from iva.ui.styles.theme import (
     COLOR_GOOD,
     COLOR_MUTED,
-    COLOR_TEXT,
     COLOR_WARN,
-    FONT_SIZE_TITLE,
     SPACING_MD,
 )
+from iva.ui.widgets.page_header import PageHeader
 from iva.ui.widgets.page_state import PageStateBanner
 
 if TYPE_CHECKING:
@@ -46,15 +45,8 @@ class ReportPage(QWidget):
         layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
         layout.setSpacing(SPACING_MD)
 
-        title = QLabel(tr("07 — Report"))
-        title.setStyleSheet(
-            f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
-        )
-        layout.addWidget(title)
-
-        subtitle = QLabel(tr("Export analysis results as PDF, HTML, JSON or CSV"))
-        subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
-        layout.addWidget(subtitle)
+        self._header = PageHeader("Отчёт", "Экспорт результатов: PDF, HTML, JSON, CSV")
+        layout.addWidget(self._header)
 
         self._state_banner = PageStateBanner()
         layout.addWidget(self._state_banner)
