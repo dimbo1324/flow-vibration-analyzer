@@ -49,3 +49,7 @@ web/frontend/node_modules/
 web/frontend/dist/
 web/frontend/.vite/
 web/frontend/coverage/
+web/frontend/playwright-report/
+web/frontend/test-results/
+web/frontend/.pnpm-store/
+web/frontend/.turbo/

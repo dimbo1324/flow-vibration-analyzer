@@ -249,3 +249,6 @@ web/frontend/.vite/
 web/frontend/playwright-report/
 web/frontend/test-results/
 web/frontend/.pnpm-store/
+web/frontend/.turbo/
+web/frontend/.next/
+web/frontend/.astro/

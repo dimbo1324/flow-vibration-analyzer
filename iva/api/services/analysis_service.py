@@ -1,12 +1,12 @@
-"""Web analysis service — runs the pipeline from an uploaded file.
+"""Веб-сервис анализа — запуск конвейера из загруженного файла.
 
-Thin orchestration layer between the API routes and the existing
-iva.app.analysis_runner.  All calculations remain in iva.core.
+Тонкий оркестрационный слой между маршрутами API и существующим
+iva.app.analysis_runner. Все вычисления остаются в iva.core.
 
-Architecture rules:
-- No PySide6 imports.
-- No scientific calculations.
-- Results stored under out/web/results/{analysis_id}/.
+Архитектурные ограничения:
+- PySide6 не импортируется.
+- Научные вычисления не выполняются.
+- Результаты хранятся в out/web/results/{analysis_id}/.
 """
 
 from __future__ import annotations
@@ -37,18 +37,18 @@ _RESULTS_DIR = Path("out") / "web" / "results"
 
 @dataclass
 class StoredAnalysis:
-    """Holds a completed analysis result and associated metadata."""
+    """Завершённый анализ и связанные метаданные."""
 
     analysis_id: str
     file_id: str | None
     result: AnalysisResult
-    payload: dict  # type: ignore[type-arg]  # pre-serialised JSON-safe dict
+    payload: dict  # type: ignore[type-arg]  # предсериализованный JSON-безопасный словарь
     output_dir: Path
     session: AnalysisSession
 
 
 class _AnalysisService:
-    """Thread-safe store for completed web analyses."""
+    """Потокобезопасное хранилище выполненных веб-анализов."""
 
     def __init__(self) -> None:
         self._lock = Lock()
@@ -60,19 +60,19 @@ class _AnalysisService:
         role_assignment_dict: dict[str, Any],
         settings_dict: dict[str, Any],
     ) -> StoredAnalysis:
-        """Build a session from *file_id* and run the pipeline.
+        """Построить сессию из *file_id* и запустить конвейер анализа.
 
         Args:
-            file_id: ID from upload_store.
-            role_assignment_dict: JSON-parsed role assignment fields.
-            settings_dict: JSON-parsed settings fields.
+            file_id: Идентификатор из upload_store.
+            role_assignment_dict: Поля назначения ролей, разобранные из JSON.
+            settings_dict: Поля настроек, разобранные из JSON.
 
         Returns:
-            A :class:`StoredAnalysis` with the serialised result payload.
+            :class:`StoredAnalysis` с сериализованным результатом.
 
         Raises:
-            ValueError: Unknown file_id.
-            IVAError: Pipeline error (propagated to route layer).
+            ValueError: Неизвестный file_id.
+            IVAError: Ошибка конвейера (пробрасывается в слой маршрутов).
         """
         meta = upload_store.get(file_id)
         if meta is None:
@@ -93,12 +93,12 @@ class _AnalysisService:
             is_demo=False,
         )
 
-        logger.info("analysis_service: running pipeline for file_id=%s", file_id)
+        logger.info("analysis_service: запуск конвейера для file_id=%s", file_id)
         result = AnalysisRunner().run(session)
         session.result = result
 
         payload = serialize_analysis_result(result)
-        # Override analysis_id with the web-assigned UUID
+        # UUID присвоен веб-слоем — перезаписываем поле из сериализатора.
         payload["analysis_id"] = analysis_id
         payload["file_id"] = file_id
         payload["original_name"] = meta.original_name
@@ -114,25 +114,26 @@ class _AnalysisService:
         with self._lock:
             self._store[analysis_id] = stored
 
-        logger.info("analysis_service: stored analysis_id=%s", analysis_id)
+        logger.info("analysis_service: сохранён analysis_id=%s", analysis_id)
         return stored
 
     def get(self, analysis_id: str) -> StoredAnalysis | None:
+        """Вернуть хранимый анализ по идентификатору или None."""
         with self._lock:
             return self._store.get(analysis_id)
 
 
-# Module-level singleton
+# Синглтон уровня модуля.
 analysis_service = _AnalysisService()
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Вспомогательные функции
 # ---------------------------------------------------------------------------
 
 
 def _build_role_assignment(d: dict[str, Any]) -> ColumnRoleAssignment:
-    """Construct ColumnRoleAssignment from a request dict."""
+    """Построить ColumnRoleAssignment из словаря запроса."""
     role_str = d.get("signal_role", "acceleration_y")
     try:
         role = SignalRole(role_str)
@@ -150,7 +151,7 @@ def _build_role_assignment(d: dict[str, Any]) -> ColumnRoleAssignment:
 
 
 def _build_settings(d: dict[str, Any]) -> AnalysisSettings:
-    """Construct AnalysisSettings from a request dict."""
+    """Построить AnalysisSettings из словаря запроса."""
     pre_d = d.get("preprocessing", {}) or {}
     spec_d = d.get("spectral", {}) or {}
     flow_d = d.get("flow_parameters") or {}
@@ -196,6 +197,7 @@ def _build_settings(d: dict[str, Any]) -> AnalysisSettings:
 
 
 def _opt_float(v: Any) -> float | None:
+    """Безопасно преобразовать в float или вернуть None."""
     if v is None:
         return None
     try:

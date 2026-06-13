@@ -280,33 +280,99 @@ python -m iva.cli.main analyze --help
 
 ## Web Interface
 
-An optional FastAPI + React web interface is available for browser-based demo analysis.
-It runs as two Docker Compose services and does not require the desktop GUI.
+An optional FastAPI + React web interface provides full browser-based analysis:
+demo scenarios, CSV/Excel/Parquet file upload, spectral analysis, PDF/HTML/CSV
+report download, and `.vibproj` session save/load.
 
-### Quick start
+It does not require the desktop GUI or Docker for local development.
+
+### Dependencies
+
+Install Python web dependencies (FastAPI, uvicorn, httpx):
 
 ```powershell
-# Requires Docker Desktop running
-.\scripts\iva.ps1 web
-# or equivalently:
-docker compose up --build web-backend web-frontend
+# PowerShell
+.\scripts\iva.ps1 setup-web
+```
+
+```bash
+# Cross-platform
+python scripts/iva.py setup-web
+# or directly:
+python -m pip install -r requirements-web.txt
+```
+
+### Manual launch (recommended for development)
+
+**Backend (FastAPI):**
+
+```powershell
+# PowerShell
+.\scripts\iva.ps1 web-backend
+```
+
+```bash
+# Cross-platform
+python scripts/iva.py web-backend
+# or directly:
+python -m uvicorn iva.api.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+API docs: **http://127.0.0.1:8000/docs**
+
+**Frontend (React/Vite):**
+
+```powershell
+# PowerShell
+.\scripts\iva.ps1 web-frontend
+```
+
+```bash
+# Cross-platform
+python scripts/iva.py web-frontend
+# or directly:
+cd web/frontend && pnpm install && pnpm dev
 ```
 
 Open **http://localhost:5173** in a browser.
+
+### Docker launch
+
+```powershell
+# Requires Docker Desktop running
+docker compose up --build web-backend web-frontend
+```
+
+```powershell
+# Via iva.ps1 dispatcher
+.\scripts\iva.ps1 web
+```
 
 | Service | Port | Description |
 |---------|------|-------------|
 | `web-backend` | 8000 | FastAPI — REST API, `/api/docs` for Swagger UI |
 | `web-frontend` | 5173 | React/Vite SPA (Nginx in production build) |
 
-### Web commands (docker.ps1)
+Docker commands:
 
 ```powershell
 .\scripts\docker.ps1 web-build   # build images
 .\scripts\docker.ps1 web-up      # start in background
 .\scripts\docker.ps1 web-down    # stop services
 .\scripts\docker.ps1 web-logs    # tail logs
+.\scripts\docker.ps1 web-test    # run API tests in Docker
 ```
+
+### File upload workflow
+
+1. Open **http://localhost:5173** → click **«Загрузка файла»**.
+2. Drag-and-drop or select a CSV / Excel / Parquet file (max 100 MB).
+3. Configure columns (`time_s`, signal column, sampling rate) and optional flow parameters.
+4. Click **«Запустить анализ»** → view spectrum chart, metrics, risk badge, warnings.
+5. Download results via **«Экспорт результатов»**:
+   - HTML report, PDF report
+   - Spectrum CSV, Signal CSV, Physics summary CSV
+6. Save session as **`.vibproj`** and reload it later via **«Сессии»**.
 
 ### Architecture notes
 
@@ -315,6 +381,17 @@ Open **http://localhost:5173** in a browser.
 - Arrays sent to the browser are down-sampled server-side to 2000 points maximum.
 - CORS origins are configured via `IVA_API_CORS_ORIGINS` environment variable.
 - All web-generated files land under `out/web/` (gitignored).
+- Uploaded files are stored with UUID names — original filenames are never used as server paths.
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `ModuleNotFoundError: No module named 'fastapi'` | Run `python -m pip install -r requirements-web.txt` |
+| `ModuleNotFoundError: No module named 'pnpm'` | Run `corepack enable` then `corepack prepare pnpm@latest --activate` |
+| Port 8000 busy | Stop the other process or run uvicorn on another port |
+| Port 5173 busy | Edit `web/frontend/vite.config.ts` → `server.port` |
+| Docker unavailable | Use manual launch (no Docker required for local development) |
 
 ## Windows helper scripts
 
