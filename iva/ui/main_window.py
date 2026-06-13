@@ -115,7 +115,17 @@ class MainWindow(QMainWindow):
         self._load_defaults()
         self._restore_ui_preferences()
         self.setWindowTitle(tr("Industrial Vibration Analyzer (IVA)"))
-        self.resize(1400, 900)
+        from PySide6.QtWidgets import QApplication  # type: ignore[import-untyped]
+
+        screen = QApplication.primaryScreen()
+        if screen is not None:
+            available = screen.availableGeometry()
+            w = min(1440, max(1180, available.width() - 80))
+            h = min(900, max(720, available.height() - 80))
+            self.resize(w, h)
+        else:
+            self.resize(1440, 900)
+        self.setMinimumSize(1100, 660)
 
     # ------------------------------------------------------------------
     # Построение интерфейса
@@ -127,32 +137,30 @@ class MainWindow(QMainWindow):
         toolbar.setMovable(False)
         toolbar.setObjectName("MainToolbar")
 
-        self._action_open = QAction(tr("Open File  (Ctrl+O)"), self)
-        self._action_open.setToolTip(tr("Open a data file (Ctrl+O)"))
+        self._action_open = QAction("Открыть файл", self)
+        self._action_open.setToolTip("Открыть файл данных (Ctrl+O)")
         self._action_open.triggered.connect(self.open_file)
 
-        self._action_run = QAction(tr("Run Analysis  (F5)"), self)
-        self._action_run.setToolTip(tr("Run the full analysis pipeline (F5)"))
+        self._action_run = QAction("Запустить анализ", self)
+        self._action_run.setToolTip("Запустить полный расчётный цикл (F5)")
         self._action_run.triggered.connect(self.run_analysis)
 
-        self._action_save = QAction(tr("Save Project  (Ctrl+S)"), self)
-        self._action_save.setToolTip(tr("Save project session as .vibproj file (Ctrl+S)"))
+        self._action_save = QAction("Сохранить", self)
+        self._action_save.setToolTip("Сохранить проект в файл .vibproj (Ctrl+S)")
         self._action_save.setEnabled(False)
         self._action_save.triggered.connect(self._save_project)
 
-        self._action_save_as = QAction(tr("Save Project As…  (Ctrl+Shift+S)"), self)
-        self._action_save_as.setToolTip(tr("Save project session with a new name (Ctrl+Shift+S)"))
+        self._action_save_as = QAction("Сохранить как…", self)
+        self._action_save_as.setToolTip("Сохранить проект с новым именем (Ctrl+Shift+S)")
         self._action_save_as.setEnabled(False)
         self._action_save_as.triggered.connect(self._save_project_as)
 
-        self._action_open_project = QAction(tr("Open Project  (Ctrl+Shift+O)"), self)
-        self._action_open_project.setToolTip(
-            tr("Open a saved .vibproj session file (Ctrl+Shift+O)")
-        )
+        self._action_open_project = QAction("Открыть проект", self)
+        self._action_open_project.setToolTip("Открыть сохранённый сеанс .vibproj (Ctrl+Shift+O)")
         self._action_open_project.triggered.connect(self._open_project)
 
-        self._action_new_session = QAction(tr("New Session  (Ctrl+N)"), self)
-        self._action_new_session.setToolTip(tr("Clear current session (Ctrl+N)"))
+        self._action_new_session = QAction("Новый сеанс", self)
+        self._action_new_session.setToolTip("Очистить текущий сеанс (Ctrl+N)")
         self._action_new_session.triggered.connect(self._new_session)
 
         self._action_export_report = QAction(tr("Export Report Bundle…"), self)
@@ -162,12 +170,12 @@ class MainWindow(QMainWindow):
         self._action_export_report.setEnabled(False)
         self._action_export_report.triggered.connect(self._export_report_bundle)
 
-        self._action_sidebar = QAction("Свернуть навигацию  (L)", self)
-        self._action_sidebar.setToolTip("Переключить компактный режим навигации (L)")
+        self._action_sidebar = QAction("Свернуть навигацию", self)
+        self._action_sidebar.setToolTip("Компактный режим навигации (L)")
         self._action_sidebar.triggered.connect(self._toggle_sidebar)
 
-        self._action_inspector = QAction(tr("Inspector  (R)"), self)
-        self._action_inspector.setToolTip(tr("Toggle inspector panel (R)"))
+        self._action_inspector = QAction("Инспектор", self)
+        self._action_inspector.setToolTip("Показать/скрыть панель инспектора (R)")
         self._action_inspector.triggered.connect(self._toggle_inspector)
 
         toolbar.addAction(self._action_new_session)
@@ -211,8 +219,8 @@ class MainWindow(QMainWindow):
 
         self._sidebar_panel = QWidget()
         self._sidebar_panel.setObjectName("SidebarPanel")
-        self._sidebar_panel.setMinimumWidth(180)
-        self._sidebar_panel.setMaximumWidth(320)
+        self._sidebar_panel.setMinimumWidth(160)
+        self._sidebar_panel.setMaximumWidth(260)
         sidebar_layout = QVBoxLayout(self._sidebar_panel)
         sidebar_layout.setContentsMargins(8, 12, 8, 8)
         sidebar_layout.setSpacing(8)
@@ -250,7 +258,7 @@ class MainWindow(QMainWindow):
         for page_name, icon_kind in zip(self.PAGE_NAMES, standard_icons, strict=True):
             item = QListWidgetItem(self.style().standardIcon(icon_kind), page_name)
             item.setToolTip(page_name)
-            item.setSizeHint(QSize(0, 44))
+            item.setSizeHint(QSize(0, 36))
             self._nav.addItem(item)
         # Прозрачный фон и без рамки: так применяется глобальный стиль
         # QListWidget#SidebarNav из темы с акцентной «рейкой» активного пункта.
@@ -321,7 +329,7 @@ class MainWindow(QMainWindow):
         self._main_splitter.setStretchFactor(0, 0)
         self._main_splitter.setStretchFactor(1, 1)
         self._main_splitter.setStretchFactor(2, 0)
-        self._main_splitter.setSizes([240, 1040, 0])
+        self._main_splitter.setSizes([200, 1080, 0])
         central_layout.addWidget(self._main_splitter, stretch=1)
 
         self.setCentralWidget(central)
@@ -702,9 +710,9 @@ class MainWindow(QMainWindow):
 
     def _set_sidebar_compact(self, compact: bool, persist: bool = True) -> None:
         self._sidebar_compact = compact
-        width = 64 if compact else 240
-        self._sidebar_panel.setMinimumWidth(width if compact else 180)
-        self._sidebar_panel.setMaximumWidth(width if compact else 320)
+        width = 64 if compact else 200
+        self._sidebar_panel.setMinimumWidth(width if compact else 160)
+        self._sidebar_panel.setMaximumWidth(width if compact else 260)
         # В компактном режиме бренд сжимается до ромба, а подпись секции
         # прячется — иначе текст обрезается на узкой панели 64px.
         self._sidebar_brand.setText("◆" if compact else "◆  IVA")
@@ -726,9 +734,7 @@ class MainWindow(QMainWindow):
                 if compact
                 else Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
             )
-        self._action_sidebar.setText(
-            "Развернуть навигацию  (L)" if compact else "Свернуть навигацию  (L)"
-        )
+        self._action_sidebar.setText("Развернуть навигацию" if compact else "Свернуть навигацию")
         sizes = self._main_splitter.sizes()
         central_width = max(sizes[1] if len(sizes) > 1 else 900, 400)
         inspector_width = sizes[2] if len(sizes) > 2 else 0
@@ -743,11 +749,9 @@ class MainWindow(QMainWindow):
 
     def _set_inspector_visible(self, visible: bool, persist: bool = True) -> None:
         self._inspector_dock.setVisible(visible)
-        self._action_inspector.setText(
-            "Скрыть инспектор  (R)" if visible else "Показать инспектор  (R)"
-        )
+        self._action_inspector.setText("Скрыть инспектор" if visible else "Показать инспектор")
         sizes = self._main_splitter.sizes()
-        sidebar_width = 64 if self._sidebar_compact else 240
+        sidebar_width = 64 if self._sidebar_compact else 200
         central_width = max(sizes[1] if len(sizes) > 1 else 900, 400)
         self._main_splitter.setSizes([sidebar_width, central_width, 320 if visible else 0])
         if persist and self._persist_ui_state:

@@ -125,19 +125,28 @@ class ChartWidget(QWidget):
             self._canvas.mpl_connect("motion_notify_event", self._on_pan_motion)
 
             controls = QHBoxLayout()
-            self._reset_button = QPushButton(tr("Reset view"))
+            controls.setSpacing(4)
+            controls.setContentsMargins(0, 0, 0, 0)
+            self._reset_button = QPushButton("↺")
+            self._reset_button.setFixedWidth(28)
+            self._reset_button.setToolTip(tr("Reset view"))
             self._reset_button.clicked.connect(self.reset_view)
-            self._png_button = QPushButton(tr("Save PNG"))
+            self._png_button = QPushButton("PNG")
+            self._png_button.setFixedWidth(42)
+            self._png_button.setToolTip(tr("Save PNG"))
             self._png_button.clicked.connect(self._save_png_dialog)
             self._cursor_checkbox = QCheckBox(tr("Inspect cursor"))
+            self._cursor_checkbox.setToolTip(tr("Chart hints"))
             self._cursor_checkbox.toggled.connect(self.enable_cursor_inspection)
             controls.addWidget(self._reset_button)
             controls.addWidget(self._png_button)
             controls.addWidget(self._cursor_checkbox)
             controls.addStretch()
+            # _hint_label is preserved (hidden) so tests can read its text.
             self._hint_label = QLabel(tr("Chart hints"))
             self._hint_label.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 8pt;")
             self._hint_label.setToolTip(tr("Chart hints"))
+            self._hint_label.setVisible(False)
             controls.addWidget(self._hint_label)
             layout.addLayout(controls)
 
@@ -145,10 +154,14 @@ class ChartWidget(QWidget):
             _is_offscreen = os.environ.get("QT_QPA_PLATFORM") == "offscreen"
             if _TOOLBAR_AVAILABLE and not _is_offscreen:
                 try:
+                    from PySide6.QtCore import QSize  # type: ignore[import-untyped]
+
                     self._toolbar = NavigationToolbar2QT(self._canvas, self)  # type: ignore[possibly-undefined]
+                    self._toolbar.setIconSize(QSize(16, 16))
+                    self._toolbar.setMaximumHeight(30)
                     self._toolbar.setStyleSheet(
                         f"background: {COLOR_SURFACE}; color: {COLOR_TEXT};"
-                        f" border-bottom: 1px solid #333;"
+                        f" border: none; spacing: 1px;"
                     )
                     toolbar_labels = {
                         "Home": "Исходный вид",

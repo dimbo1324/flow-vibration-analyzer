@@ -26,7 +26,7 @@ class PageStateBanner(QLabel):
         self.setObjectName("pageStateBanner")
         self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.setWordWrap(True)
-        self.setMinimumHeight(42)
+        self.setMinimumHeight(32)
         self.show_empty()
 
     def show_empty(self, message: str = "") -> None:

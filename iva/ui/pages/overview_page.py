@@ -24,7 +24,6 @@ from iva.ui.styles.theme import (
     COLOR_GOOD,
     COLOR_MUTED,
     COLOR_WARN,
-    SPACING_LG,
     SPACING_MD,
     SPACING_SM,
 )
@@ -64,8 +63,8 @@ class OverviewPage(QWidget):
 
         content = QWidget()
         layout = QVBoxLayout(content)
-        layout.setContentsMargins(SPACING_LG, SPACING_LG, SPACING_LG, SPACING_LG)
-        layout.setSpacing(SPACING_MD)
+        layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
+        layout.setSpacing(SPACING_SM)
 
         # Единый заголовок страницы (титул + акцент + подзаголовок + чип).
         self._header = PageHeader(
@@ -137,13 +136,13 @@ class OverviewPage(QWidget):
 
         self._signal_chart = ChartWidget()
         self._signal_chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self._signal_chart.setMinimumHeight(300)
+        self._signal_chart.setMinimumHeight(200)
 
         self._spectrum_chart = ChartWidget()
         self._spectrum_chart.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        self._spectrum_chart.setMinimumHeight(300)
+        self._spectrum_chart.setMinimumHeight(200)
 
         charts_layout.addWidget(self._signal_chart)
         charts_layout.addWidget(self._spectrum_chart)

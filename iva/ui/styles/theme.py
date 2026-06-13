@@ -35,7 +35,7 @@ FONT_SIZE_BASE = 13
 FONT_SIZE_LARGE = 15
 FONT_SIZE_TITLE = 18
 FONT_SIZE_DISPLAY = 22  # page headers (large, calm hierarchy)
-FONT_SIZE_HERO = 26  # hero metric values (big numbers over words)
+FONT_SIZE_HERO = 22  # hero metric values (big numbers over words)
 FONT_WEIGHT_NORMAL = 400
 FONT_WEIGHT_MEDIUM = 500
 FONT_WEIGHT_BOLD = 700
@@ -50,6 +50,15 @@ RADIUS_SM = 6
 RADIUS_MD = 10
 RADIUS_LG = 14
 RADIUS_XL = 18
+
+# ── Compact density tokens (engineering workstation mode) ─────────────────────
+PANEL_PADDING_COMPACT = 8
+BUTTON_HEIGHT_COMPACT = 28
+TOOLBAR_HEIGHT_COMPACT = 32
+SIDEBAR_WIDTH_EXPANDED = 200
+SIDEBAR_WIDTH_COMPACT = 64
+INPUT_HEIGHT_COMPACT = 28
+CHART_TOOLBAR_ICON_SIZE = 16
 
 # ── Motion tokens (milliseconds) ──────────────────────────────────────────────
 ANIM_FAST_MS = 140
@@ -152,9 +161,9 @@ def build_app_stylesheet() -> str:
         padding: 2px;
     }}
     QListWidget#SidebarNav::item {{
-        padding: 11px 14px;
+        padding: 7px 10px;
         border-radius: {RADIUS_MD}px;
-        margin: 2px 2px;
+        margin: 1px 2px;
         border-left: 3px solid transparent;
         color: {COLOR_MUTED};
     }}
@@ -175,7 +184,7 @@ def build_app_stylesheet() -> str:
         color: {COLOR_TEXT};
         border: 1px solid {COLOR_BORDER};
         border-radius: {RADIUS_MD}px;
-        padding: 8px 18px;
+        padding: 5px 14px;
         font-size: {FONT_SIZE_BASE}pt;
         font-weight: 500;
     }}
@@ -230,8 +239,8 @@ def build_app_stylesheet() -> str:
         color: {COLOR_TEXT};
         border: 1px solid {COLOR_BORDER};
         border-radius: {RADIUS_MD}px;
-        padding: 7px 10px;
-        min-height: 18px;
+        padding: 4px 8px;
+        min-height: 14px;
         selection-background-color: {COLOR_ACCENT};
     }}
     QLineEdit:hover, QDoubleSpinBox:hover, QSpinBox:hover, QComboBox:hover {{
@@ -261,14 +270,14 @@ def build_app_stylesheet() -> str:
         color: {COLOR_MUTED};
         border: 1px solid {COLOR_BORDER};
         border-radius: {RADIUS_LG}px;
-        margin-top: 14px;
-        padding: 14px;
+        margin-top: 10px;
+        padding: 10px;
         font-weight: 600;
     }}
     QGroupBox::title {{
         subcontrol-origin: margin;
         subcontrol-position: top left;
-        left: 14px;
+        left: 10px;
         padding: 2px 8px;
         color: {COLOR_MUTED};
         background: {COLOR_PANEL};
@@ -379,20 +388,20 @@ def build_app_stylesheet() -> str:
     QToolBar {{
         background: {COLOR_SURFACE};
         border-bottom: 1px solid {COLOR_BORDER};
-        spacing: 4px;
-        padding: 6px 8px;
+        spacing: 2px;
+        padding: 3px 6px;
     }}
     QToolBar::separator {{
         background: {COLOR_BORDER};
         width: 1px;
-        margin: 4px 6px;
+        margin: 3px 4px;
     }}
     QToolBar QToolButton {{
         background: transparent;
         color: {COLOR_TEXT};
         border: 1px solid transparent;
         border-radius: {RADIUS_SM}px;
-        padding: 6px 12px;
+        padding: 3px 8px;
     }}
     QToolBar QToolButton:hover {{
         background: {COLOR_PANEL};

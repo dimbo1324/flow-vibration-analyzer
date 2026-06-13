@@ -16,7 +16,7 @@ from iva.ui.styles.theme import (
     FONT_SIZE_HERO,
     FONT_SIZE_SMALL,
     RADIUS_LG,
-    SPACING_MD,
+    SPACING_SM,
     STATUS_COLOR_MAP,
 )
 
@@ -46,8 +46,8 @@ class MetricCard(QWidget):
         # :hover state would never be visible.
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
-        layout.setSpacing(4)
+        layout.setContentsMargins(SPACING_SM, SPACING_SM, SPACING_SM, SPACING_SM)
+        layout.setSpacing(2)
 
         self._label = QLabel(label.upper())
         self._label.setStyleSheet(
@@ -72,7 +72,7 @@ class MetricCard(QWidget):
             f" MetricCard:hover {{ background: {COLOR_SURFACE_HOVER};"
             f" border-color: {COLOR_ACCENT}; }}"
         )
-        self.setMinimumSize(150, 104)
+        self.setMinimumSize(110, 78)
 
     @staticmethod
     def _value_style(color: str) -> str:
