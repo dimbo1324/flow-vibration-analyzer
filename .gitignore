@@ -228,6 +228,8 @@ __marimo__/
 # IVA project — generated results and reports
 data/results/
 reports/
+# Exception: source feature dir named reports is not a generated artefact
+!/web/frontend/src/features/reports/
 
 # IVA runtime output directory (logs, diagnostics, workflow runs, test results)
 out/

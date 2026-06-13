@@ -13,7 +13,10 @@ from fastapi import FastAPI
 from iva.api.errors import register_error_handlers
 from iva.api.routes.analysis import router as analysis_router
 from iva.api.routes.demo import router as demo_router
+from iva.api.routes.files import router as files_router
 from iva.api.routes.health import router as health_router
+from iva.api.routes.reports import router as reports_router
+from iva.api.routes.sessions import router as sessions_router
 from iva.api.security import configure_cors
 
 app = FastAPI(
@@ -30,4 +33,7 @@ register_error_handlers(app)
 
 app.include_router(health_router)
 app.include_router(demo_router)
+app.include_router(files_router)
 app.include_router(analysis_router)
+app.include_router(reports_router)
+app.include_router(sessions_router)
