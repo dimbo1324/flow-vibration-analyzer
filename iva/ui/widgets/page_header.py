@@ -56,8 +56,8 @@ class PageHeader(QWidget):
         # который мгновенно задаёт начало смыслового блока.
         self._accent_bar = QFrame()
         self._accent_bar.setObjectName("pageHeaderAccent")
-        self._accent_bar.setFixedWidth(4)
-        self._accent_bar.setMinimumHeight(38)
+        self._accent_bar.setFixedWidth(3)
+        self._accent_bar.setMinimumHeight(28)
         self._accent_bar.setStyleSheet(f"background: {COLOR_ACCENT}; border-radius: 2px;")
         root.addWidget(self._accent_bar)
 
@@ -68,7 +68,7 @@ class PageHeader(QWidget):
         self._title_label = QLabel(title)
         self._title_label.setObjectName("pageHeaderTitle")
         self._title_label.setStyleSheet(
-            f"color: {COLOR_TEXT}; font-size: {FONT_SIZE_DISPLAY}pt; font-weight: 800;"
+            f"color: {COLOR_TEXT}; font-size: {FONT_SIZE_DISPLAY - 5}pt; font-weight: 800;"
         )
         text_col.addWidget(self._title_label)
 

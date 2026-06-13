@@ -71,10 +71,10 @@ class ImportPage(QWidget):
         # Drop zone
         self._drop_zone = QLabel(tr("Drag and drop a file here\nor use 'Open File' (Ctrl+O)"))
         self._drop_zone.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._drop_zone.setMinimumHeight(80)
+        self._drop_zone.setMinimumHeight(60)
         self._drop_zone.setStyleSheet(
             f"border: 2px dashed {COLOR_BORDER}; border-radius: {RADIUS_LG}px;"
-            f" color: {COLOR_MUTED}; font-size: 12pt; padding: {SPACING_LG}px;"
+            f" color: {COLOR_MUTED}; font-size: 11pt; padding: {SPACING_MD}px;"
         )
         file_layout.addWidget(self._drop_zone)
 
