@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from iva.api.errors import api_error_response
 from iva.api.services.analysis_service import analysis_service
+from iva.api.utils import validate_resource_id
 from iva.app.session_service import load_saved_session, save_current_session
 from iva.core.models.exceptions import ExportError, ValidationError
 
@@ -31,8 +32,9 @@ async def export_session(analysis_id: str) -> FileResponse | JSONResponse:
     if stored is None:
         return api_error_response(404, "ANALYSIS_NOT_FOUND", "Результат анализа не найден.")
 
-    # Validate analysis_id to prevent path traversal
-    if analysis_id != Path(analysis_id).name:
+    try:
+        validate_resource_id(analysis_id)
+    except ValueError:
         return api_error_response(400, "INVALID_ID", "Некорректный идентификатор.")
 
     sessions_dir = (_SESSIONS_DIR / analysis_id).resolve()

@@ -55,7 +55,7 @@ def _timed_step(name: str) -> Generator[None, None, None]:
 
 def _compute_md5(file_path: Path) -> str:
     """Вернуть MD5 содержимого файла для аудита воспроизводимости."""
-    h = hashlib.md5()
+    h = hashlib.md5(usedforsecurity=False)
     with open(file_path, "rb") as fh:
         for chunk in iter(lambda: fh.read(65536), b""):
             h.update(chunk)

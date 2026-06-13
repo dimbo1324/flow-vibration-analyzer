@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from iva.api.errors import api_error_response
+from iva.api.limiter import limiter
 from iva.api.schemas.upload import UploadAnalysisRequest
 from iva.api.services.analysis_service import analysis_service
 from iva.core.models.exceptions import IVAError, ValidationError
@@ -21,7 +22,8 @@ router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 
 
 @router.post("/upload")
-async def run_upload_analysis(body: UploadAnalysisRequest) -> JSONResponse:
+@limiter.limit("30/minute")
+async def run_upload_analysis(request: Request, body: UploadAnalysisRequest) -> JSONResponse:
     """Run the analysis pipeline on a previously uploaded file."""
     role_dict = body.role_assignment.model_dump()
     settings_dict = body.settings.model_dump()

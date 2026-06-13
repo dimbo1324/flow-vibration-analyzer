@@ -13,6 +13,8 @@ export function useDemoScenarios() {
       const raw = await apiFetch<unknown>('/demo-scenarios')
       return DemoScenariosResponseSchema.parse(raw)
     },
+    retry: 2,
+    retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 5000),
   })
 }
 
