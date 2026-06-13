@@ -191,10 +191,17 @@ class ChartWidget(QWidget):
             return
         bg = _hex_to_rgb_float(COLOR_BG)
         self._ax.set_facecolor(bg)
-        self._ax.tick_params(colors=COLOR_MUTED, labelsize=9)
-        for spine in self._ax.spines.values():
-            spine.set_edgecolor(COLOR_MUTED)
-            spine.set_alpha(0.4)
+        self._ax.tick_params(colors=COLOR_MUTED, labelsize=9, length=3)
+        # Современный «облегчённый» вид осей: убираем верхнюю и правую рамки,
+        # оставляем тонкую сетку по Y — данные читаются легче и без визуального
+        # шума. Сетка рисуется под линиями графика (axisbelow).
+        for side in ("top", "right"):
+            self._ax.spines[side].set_visible(False)
+        for side in ("bottom", "left"):
+            self._ax.spines[side].set_edgecolor(COLOR_MUTED)
+            self._ax.spines[side].set_alpha(0.35)
+        self._ax.grid(True, axis="y", color=COLOR_MUTED, alpha=0.12, linewidth=0.8)
+        self._ax.set_axisbelow(True)
 
     # ------------------------------------------------------------------
     # Интерактивное управление графиком

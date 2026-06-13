@@ -16,8 +16,9 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
 )
 
 from iva.ui.strings_ru import tr
-from iva.ui.styles.theme import COLOR_MUTED, COLOR_TEXT, FONT_SIZE_TITLE, SPACING_MD
+from iva.ui.styles.theme import COLOR_MUTED, SPACING_MD
 from iva.ui.widgets.chart_widget import ChartWidget
+from iva.ui.widgets.page_header import PageHeader
 from iva.ui.widgets.page_state import PageStateBanner
 
 if TYPE_CHECKING:
@@ -38,15 +39,10 @@ class SignalPage(QWidget):
         layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
         layout.setSpacing(SPACING_MD)
 
-        title = QLabel(tr("03 — Signal"))
-        title.setStyleSheet(
-            f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
+        self._header = PageHeader(
+            "Сигнал", "Временная область — очищенный и отфильтрованный сигнал"
         )
-        layout.addWidget(title)
-
-        subtitle = QLabel(tr("Time-domain signal — cleaned and filtered"))
-        subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
-        layout.addWidget(subtitle)
+        layout.addWidget(self._header)
 
         self._state_banner = PageStateBanner()
         layout.addWidget(self._state_banner)

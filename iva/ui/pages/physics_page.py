@@ -8,7 +8,6 @@ from PySide6.QtCore import Qt  # type: ignore[import-untyped]
 from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QGridLayout,
     QGroupBox,
-    QLabel,
     QScrollArea,
     QSplitter,
     QVBoxLayout,
@@ -22,13 +21,11 @@ from iva.ui.strings_ru import (
     tr,
 )
 from iva.ui.styles.theme import (
-    COLOR_MUTED,
-    COLOR_TEXT,
-    FONT_SIZE_TITLE,
     SPACING_MD,
     SPACING_SM,
 )
 from iva.ui.widgets.metric_card import MetricCard
+from iva.ui.widgets.page_header import PageHeader
 from iva.ui.widgets.page_state import PageStateBanner
 from iva.ui.widgets.parameter_form import ParameterForm
 from iva.ui.widgets.risk_card import RiskCard
@@ -56,15 +53,8 @@ class PhysicsPage(QWidget):
         layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
         layout.setSpacing(SPACING_MD)
 
-        title = QLabel(tr("05 — Physics"))
-        title.setStyleSheet(
-            f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
-        )
-        layout.addWidget(title)
-
-        subtitle = QLabel(tr("Flow and geometry parameters — dimensionless criteria"))
-        subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
-        layout.addWidget(subtitle)
+        self._header = PageHeader("Физика", "Параметры потока и геометрии — безразмерные критерии")
+        layout.addWidget(self._header)
 
         self._state_banner = PageStateBanner()
         layout.addWidget(self._state_banner)

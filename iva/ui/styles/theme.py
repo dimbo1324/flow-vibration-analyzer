@@ -22,6 +22,8 @@ COLOR_DIM = "#5b6678"  # dimmed / inactive elements
 COLOR_ACCENT = "#7aa2f7"  # accent blue (actions/links)
 COLOR_ACCENT_HOVER = "#92b4ff"  # accent hover state
 COLOR_ACCENT_SOFT = "rgba(122, 162, 247, 0.16)"  # translucent accent fill
+COLOR_ACCENT_2 = "#5ad1c8"  # secondary accent (teal) for visual variety
+COLOR_ACCENT_2_SOFT = "rgba(90, 209, 200, 0.14)"  # translucent secondary fill
 COLOR_GOOD = "#7fd1a0"  # safe/good status (green)
 COLOR_WARN = "#e0b15e"  # warning status (amber)
 COLOR_BAD = "#ef7d8e"  # critical/error status (red)
@@ -32,6 +34,7 @@ FONT_SIZE_SMALL = 11
 FONT_SIZE_BASE = 13
 FONT_SIZE_LARGE = 15
 FONT_SIZE_TITLE = 18
+FONT_SIZE_DISPLAY = 22  # page headers (large, calm hierarchy)
 FONT_SIZE_HERO = 26  # hero metric values (big numbers over words)
 FONT_WEIGHT_NORMAL = 400
 FONT_WEIGHT_MEDIUM = 500
@@ -113,6 +116,14 @@ def build_app_stylesheet() -> str:
         padding: 6px 10px;
         font-size: {FONT_SIZE_SMALL}pt;
     }}
+
+    /* ── Sidebar shell ─────────────────────────────────────────────── */
+    QWidget#SidebarPanel {{
+        background: {COLOR_SURFACE};
+        border-right: 1px solid {COLOR_BORDER};
+    }}
+
+    /* ── Navigation list ──────────────────────────────────────────── */
     QListWidget {{
         background: {COLOR_SURFACE};
         border: 1px solid {COLOR_BORDER};
@@ -134,6 +145,31 @@ def build_app_stylesheet() -> str:
     QListWidget::item:hover:!selected {{
         background: {COLOR_SURFACE_HOVER};
     }}
+    /* The workflow navigation gets a modern "active rail" indicator. */
+    QListWidget#SidebarNav {{
+        background: transparent;
+        border: none;
+        padding: 2px;
+    }}
+    QListWidget#SidebarNav::item {{
+        padding: 11px 14px;
+        border-radius: {RADIUS_MD}px;
+        margin: 2px 2px;
+        border-left: 3px solid transparent;
+        color: {COLOR_MUTED};
+    }}
+    QListWidget#SidebarNav::item:hover:!selected {{
+        background: {COLOR_SURFACE_HOVER};
+        color: {COLOR_TEXT};
+    }}
+    QListWidget#SidebarNav::item:selected {{
+        background: {COLOR_ACCENT_SOFT};
+        border-left: 3px solid {COLOR_ACCENT};
+        color: {COLOR_ACCENT};
+        font-weight: 700;
+    }}
+
+    /* ── Buttons ──────────────────────────────────────────────────── */
     QPushButton {{
         background: {COLOR_PANEL};
         color: {COLOR_TEXT};
@@ -171,46 +207,83 @@ def build_app_stylesheet() -> str:
         color: {COLOR_DIM};
         border-color: {COLOR_BORDER};
     }}
+    /* Quiet "ghost" button for secondary actions. */
+    QPushButton[subtle="true"] {{
+        background: transparent;
+        border-color: transparent;
+        color: {COLOR_MUTED};
+    }}
+    QPushButton[subtle="true"]:hover {{
+        background: {COLOR_SURFACE_HOVER};
+        color: {COLOR_TEXT};
+        border-color: {COLOR_BORDER};
+    }}
+
     QLabel {{
         color: {COLOR_TEXT};
         background: transparent;
     }}
+
+    /* ── Inputs ───────────────────────────────────────────────────── */
     QLineEdit, QDoubleSpinBox, QSpinBox, QComboBox {{
         background: {COLOR_SURFACE};
         color: {COLOR_TEXT};
         border: 1px solid {COLOR_BORDER};
         border-radius: {RADIUS_MD}px;
         padding: 7px 10px;
+        min-height: 18px;
         selection-background-color: {COLOR_ACCENT};
+    }}
+    QLineEdit:hover, QDoubleSpinBox:hover, QSpinBox:hover, QComboBox:hover {{
+        border-color: {COLOR_DIM};
     }}
     QLineEdit:focus, QDoubleSpinBox:focus, QSpinBox:focus, QComboBox:focus {{
         border-color: {COLOR_ACCENT};
+        background: {COLOR_PANEL};
     }}
     QComboBox::drop-down {{
         border: none;
         padding-right: 8px;
     }}
     QComboBox QAbstractItemView {{
-        background: {COLOR_SURFACE};
+        background: {COLOR_PANEL};
         color: {COLOR_TEXT};
         border: 1px solid {COLOR_BORDER};
-        selection-background-color: {COLOR_ACCENT};
-        selection-color: {COLOR_BG};
+        border-radius: {RADIUS_SM}px;
+        padding: 4px;
+        selection-background-color: {COLOR_ACCENT_SOFT};
+        selection-color: {COLOR_ACCENT};
     }}
+
+    /* ── Cards / group boxes ──────────────────────────────────────── */
     QGroupBox {{
+        background: {COLOR_SURFACE};
         color: {COLOR_MUTED};
         border: 1px solid {COLOR_BORDER};
-        border-radius: {RADIUS_MD}px;
-        margin-top: 8px;
-        padding: 8px;
+        border-radius: {RADIUS_LG}px;
+        margin-top: 14px;
+        padding: 14px;
+        font-weight: 600;
     }}
     QGroupBox::title {{
         subcontrol-origin: margin;
-        padding: 0 4px;
+        subcontrol-position: top left;
+        left: 14px;
+        padding: 2px 8px;
         color: {COLOR_MUTED};
+        background: {COLOR_PANEL};
+        border: 1px solid {COLOR_BORDER};
+        border-radius: {RADIUS_SM}px;
     }}
+    QFrame[card="true"] {{
+        background: {COLOR_SURFACE};
+        border: 1px solid {COLOR_BORDER};
+        border-radius: {RADIUS_LG}px;
+    }}
+
     QScrollArea {{
         border: none;
+        background: transparent;
     }}
     QScrollBar:vertical {{
         background: transparent;
@@ -270,40 +343,56 @@ def build_app_stylesheet() -> str:
     }}
     QDockWidget::title {{
         background: {COLOR_PANEL};
-        padding: 4px 8px;
+        padding: 6px 10px;
         border-bottom: 1px solid {COLOR_BORDER};
+        font-weight: 600;
     }}
     QTabWidget::pane {{
         border: 1px solid {COLOR_BORDER};
+        border-radius: {RADIUS_MD}px;
+        top: -1px;
     }}
     QTabBar::tab {{
-        background: {COLOR_SURFACE};
+        background: transparent;
         color: {COLOR_MUTED};
-        border: 1px solid {COLOR_BORDER};
-        padding: 6px 12px;
+        border: none;
+        padding: 8px 16px;
+        margin-right: 2px;
+        border-bottom: 2px solid transparent;
+    }}
+    QTabBar::tab:hover {{
+        color: {COLOR_TEXT};
     }}
     QTabBar::tab:selected {{
-        background: {COLOR_PANEL};
-        color: {COLOR_TEXT};
+        color: {COLOR_ACCENT};
         border-bottom: 2px solid {COLOR_ACCENT};
+        font-weight: 600;
     }}
     QStatusBar {{
         background: {COLOR_SURFACE};
         color: {COLOR_MUTED};
         border-top: 1px solid {COLOR_BORDER};
     }}
+    QStatusBar::item {{
+        border: none;
+    }}
     QToolBar {{
         background: {COLOR_SURFACE};
         border-bottom: 1px solid {COLOR_BORDER};
         spacing: 4px;
-        padding: 2px 4px;
+        padding: 6px 8px;
+    }}
+    QToolBar::separator {{
+        background: {COLOR_BORDER};
+        width: 1px;
+        margin: 4px 6px;
     }}
     QToolBar QToolButton {{
         background: transparent;
         color: {COLOR_TEXT};
         border: 1px solid transparent;
         border-radius: {RADIUS_SM}px;
-        padding: 4px 10px;
+        padding: 6px 12px;
     }}
     QToolBar QToolButton:hover {{
         background: {COLOR_PANEL};
@@ -317,25 +406,32 @@ def build_app_stylesheet() -> str:
         background: {COLOR_SURFACE};
         color: {COLOR_TEXT};
         border: 1px solid {COLOR_BORDER};
-        border-radius: {RADIUS_SM}px;
+        border-radius: {RADIUS_MD}px;
         font-size: {FONT_SIZE_SMALL}pt;
     }}
     QTableWidget {{
         background: {COLOR_SURFACE};
+        alternate-background-color: {COLOR_PANEL};
         color: {COLOR_TEXT};
         border: 1px solid {COLOR_BORDER};
-        gridline-color: {COLOR_BORDER};
+        border-radius: {RADIUS_MD}px;
+        gridline-color: transparent;
+    }}
+    QTableWidget::item {{
+        padding: 4px 6px;
     }}
     QTableWidget::item:selected {{
-        background: {COLOR_ACCENT};
-        color: {COLOR_BG};
+        background: {COLOR_ACCENT_SOFT};
+        color: {COLOR_ACCENT};
     }}
     QHeaderView::section {{
         background: {COLOR_PANEL};
         color: {COLOR_MUTED};
-        border: 1px solid {COLOR_BORDER};
-        padding: 4px 6px;
+        border: none;
+        border-bottom: 1px solid {COLOR_BORDER};
+        padding: 7px 8px;
         font-size: {FONT_SIZE_SMALL}pt;
+        font-weight: 600;
     }}
     QSplitter::handle {{
         background: transparent;
@@ -358,19 +454,23 @@ def build_app_stylesheet() -> str:
         min-height: 10px;
     }}
     QProgressBar::chunk {{
-        background: {COLOR_ACCENT};
         border-radius: 5px;
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+            stop:0 {COLOR_ACCENT}, stop:1 {COLOR_ACCENT_2});
     }}
     QCheckBox {{
         color: {COLOR_TEXT};
         spacing: 6px;
     }}
     QCheckBox::indicator {{
-        width: 14px;
-        height: 14px;
+        width: 16px;
+        height: 16px;
         border: 1px solid {COLOR_BORDER};
-        border-radius: 3px;
+        border-radius: 4px;
         background: {COLOR_SURFACE};
+    }}
+    QCheckBox::indicator:hover {{
+        border-color: {COLOR_ACCENT};
     }}
     QCheckBox::indicator:checked {{
         background: {COLOR_ACCENT};

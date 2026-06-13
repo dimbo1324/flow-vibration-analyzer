@@ -8,7 +8,6 @@ from PySide6.QtCore import Qt  # type: ignore[import-untyped]
 from PySide6.QtWidgets import (  # type: ignore[import-untyped]
     QGroupBox,
     QHeaderView,
-    QLabel,
     QSizePolicy,
     QSplitter,
     QTableWidget,
@@ -18,8 +17,9 @@ from PySide6.QtWidgets import (  # type: ignore[import-untyped]
 )
 
 from iva.ui.strings_ru import PEAK_INTERPRETATION_LABELS, display_label, tr
-from iva.ui.styles.theme import COLOR_MUTED, COLOR_TEXT, FONT_SIZE_TITLE, SPACING_MD
+from iva.ui.styles.theme import SPACING_MD
 from iva.ui.widgets.chart_widget import ChartWidget
+from iva.ui.widgets.page_header import PageHeader
 from iva.ui.widgets.page_state import PageStateBanner
 
 if TYPE_CHECKING:
@@ -40,15 +40,8 @@ class SpectrumPage(QWidget):
         layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
         layout.setSpacing(SPACING_MD)
 
-        title = QLabel(tr("04 — Spectrum"))
-        title.setStyleSheet(
-            f"font-size: {FONT_SIZE_TITLE}pt; font-weight: bold; color: {COLOR_TEXT};"
-        )
-        layout.addWidget(title)
-
-        subtitle = QLabel(tr("Power spectral density — Welch method"))
-        subtitle.setStyleSheet(f"color: {COLOR_MUTED}; font-size: 11pt;")
-        layout.addWidget(subtitle)
+        self._header = PageHeader("Спектр", "Спектральная плотность мощности — метод Уэлча")
+        layout.addWidget(self._header)
 
         self._state_banner = PageStateBanner()
         layout.addWidget(self._state_banner)

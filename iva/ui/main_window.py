@@ -65,7 +65,8 @@ from iva.ui.styles.theme import (
     COLOR_BORDER,
     COLOR_MUTED,
     COLOR_PANEL,
-    COLOR_SURFACE,
+    FONT_SIZE_SMALL,
+    FONT_SIZE_TITLE,
 )
 from iva.ui.widgets.chart_widget import ChartWidget
 from iva.ui.widgets.inspector_panel import InspectorPanel
@@ -216,14 +217,27 @@ class MainWindow(QMainWindow):
         sidebar_layout.setContentsMargins(8, 12, 8, 8)
         sidebar_layout.setSpacing(8)
 
+        # Бренд-марка приложения: акцентный ромб + крупное «IVA». Это даёт
+        # узнаваемый «продуктовый» вид и якорь в верхней части навигации.
+        self._sidebar_brand = QLabel("◆  IVA")
+        self._sidebar_brand.setObjectName("SidebarBrand")
+        self._sidebar_brand.setStyleSheet(
+            f"color: {COLOR_ACCENT}; font-size: {FONT_SIZE_TITLE}pt;"
+            f" font-weight: 800; padding: 4px 6px;"
+        )
+        sidebar_layout.addWidget(self._sidebar_brand)
+
         self._sidebar_title = QLabel("РАБОЧИЙ ПРОЦЕСС")
-        self._sidebar_title.setStyleSheet(f"color: {COLOR_MUTED}; font-weight: 700;")
+        self._sidebar_title.setStyleSheet(
+            f"color: {COLOR_MUTED}; font-size: {FONT_SIZE_SMALL - 1}pt;"
+            f" font-weight: 700; letter-spacing: 1.5px; padding: 2px 6px;"
+        )
         sidebar_layout.addWidget(self._sidebar_title)
 
         self._nav = QListWidget()
         self._nav.setObjectName("SidebarNav")
-        self._nav.setIconSize(QSize(22, 22))
-        self._nav.setSpacing(3)
+        self._nav.setIconSize(QSize(20, 20))
+        self._nav.setSpacing(2)
         standard_icons = (
             QStyle.StandardPixmap.SP_ComputerIcon,
             QStyle.StandardPixmap.SP_DialogOpenButton,
@@ -238,9 +252,9 @@ class MainWindow(QMainWindow):
             item.setToolTip(page_name)
             item.setSizeHint(QSize(0, 44))
             self._nav.addItem(item)
-        self._nav.setStyleSheet(
-            f"QListWidget {{ background: {COLOR_SURFACE};" f" border: 1px solid {COLOR_BORDER}; }}"
-        )
+        # Прозрачный фон и без рамки: так применяется глобальный стиль
+        # QListWidget#SidebarNav из темы с акцентной «рейкой» активного пункта.
+        self._nav.setStyleSheet("QListWidget#SidebarNav { background: transparent; border: none; }")
         self._nav.currentRowChanged.connect(self._on_nav_changed)
         sidebar_layout.addWidget(self._nav, stretch=1)
         self._main_splitter.addWidget(self._sidebar_panel)
@@ -691,7 +705,13 @@ class MainWindow(QMainWindow):
         width = 64 if compact else 240
         self._sidebar_panel.setMinimumWidth(width if compact else 180)
         self._sidebar_panel.setMaximumWidth(width if compact else 320)
-        self._sidebar_title.setText("IVA" if compact else "РАБОЧИЙ ПРОЦЕСС")
+        # В компактном режиме бренд сжимается до ромба, а подпись секции
+        # прячется — иначе текст обрезается на узкой панели 64px.
+        self._sidebar_brand.setText("◆" if compact else "◆  IVA")
+        self._sidebar_brand.setAlignment(
+            Qt.AlignmentFlag.AlignCenter if compact else Qt.AlignmentFlag.AlignLeft
+        )
+        self._sidebar_title.setText("" if compact else "РАБОЧИЙ ПРОЦЕСС")
         self._sidebar_title.setAlignment(
             Qt.AlignmentFlag.AlignCenter if compact else Qt.AlignmentFlag.AlignLeft
         )
