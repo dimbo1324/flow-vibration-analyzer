@@ -351,6 +351,63 @@ commands. Cleanup refuses repository roots it cannot validate, paths outside
 the repository, symlinks, source trees, documentation, tests, scripts,
 configuration and example or synthetic data.
 
+#### Блокировка `.venv` на Windows
+
+Если очистка запущена интерпретатором из `.venv` (например, через
+`.\scripts\iva.ps1 clean -Force -IncludeVenv`), Windows удерживает
+`python.exe` и не позволяет удалить директорию. Скрипт определяет этот
+случай автоматически: использует базовый системный Python для запуска
+`clean_project.py` вместо `.venv`-интерпретатора, что позволяет удалить
+`.venv` без ошибок. Если системного Python нет — скрипт сообщит об этом
+и выведет команду для ручного удаления:
+
+```powershell
+Remove-Item -Recurse -Force .venv
+```
+
+После удаления окружения переустановите его командой:
+
+```powershell
+.\scripts\iva.ps1 setup
+```
+
+## Docker-автоматизация (опционально)
+
+Docker — **опциональный** инструмент для разработчика. Он не нужен для
+повседневной работы на Windows и не поддерживает запуск GUI PySide6. Его
+назначение: воспроизводимые проверки в Linux-среде, близкой к GitHub Actions CI.
+
+### Когда Docker полезен
+
+- Линтер, mypy, тесты в чистом Linux-окружении.
+- Проверка CLI-демо без локального `.venv`.
+- Воспроизведение ошибок CI, которые не проявляются на Windows.
+
+### Команды
+
+```powershell
+# Собрать образ (однократно или после изменения зависимостей)
+.\scripts\docker.ps1 build
+
+# Линтер + mypy + тесты (аналог CI)
+.\scripts\docker.ps1 quality
+
+# Тесты с отчётом о покрытии
+.\scripts\docker.ps1 test
+
+# CLI-демо, результаты сохраняются в ./out/cli-runs/demo_docker/
+.\scripts\docker.ps1 cli-demo
+
+# Интерактивная оболочка внутри контейнера
+.\scripts\docker.ps1 shell
+
+# Удалить образ и тома Docker
+.\scripts\docker.ps1 clean
+```
+
+Если Docker не установлен, скрипт выведет понятное сообщение и ссылку на
+установку. Отсутствие Docker не влияет на локальные и CI-проверки.
+
 ## Building the Windows Installer
 
 Requires PyInstaller and (for the installer) Inno Setup 6 on Windows:
