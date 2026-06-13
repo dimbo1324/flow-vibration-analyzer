@@ -43,7 +43,7 @@ class UploadedFileMeta:
     uploaded_at: datetime
     sha256: str
 
-    def to_response_dict(self) -> dict:  # type: ignore[type-arg]
+    def to_response_dict(self) -> dict[str, str | int]:
         """Вернуть безопасный для фронтенда словарь (без абсолютных путей)."""
         return {
             "file_id": self.file_id,
@@ -133,7 +133,7 @@ class _UploadStore:
             pass
         return True
 
-    def preview(self, file_id: str, max_rows: int = 10) -> dict | None:  # type: ignore[type-arg]
+    def preview(self, file_id: str, max_rows: int = 10) -> dict[str, object] | None:
         """Вернуть имена столбцов и первые *max_rows* строк файла.
 
         Возвращает None, если файл не найден. Генерирует исключение при ошибке чтения.
