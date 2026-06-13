@@ -1,13 +1,12 @@
-"""In-process upload store for managing uploaded files.
+"""In-process хранилище загруженных файлов.
 
-Files are written to out/web/uploads/ and metadata is kept in memory.
-The store survives the lifetime of the server process; restart clears it.
+Файлы сохраняются в out/web/uploads/, метаданные хранятся в памяти.
+Хранилище живёт весь процесс сервера — перезапуск очищает его.
 
-Architecture rules:
-- No PySide6 imports.
-- No scientific calculations.
-- Paths returned to callers are absolute; paths sent to the frontend MUST NOT
-  include absolute server paths (the route layer strips them).
+Архитектурные ограничения:
+- PySide6 не импортируется.
+- Научные вычисления не выполняются.
+- Серверные абсолютные пути никогда не передаются фронтенду.
 """
 
 from __future__ import annotations
@@ -22,30 +21,30 @@ from threading import Lock
 
 __all__ = ["UploadedFileMeta", "upload_store"]
 
-# Configurable cap — default 100 MB
+# Максимальный размер файла; настраивается через переменную среды.
 _MAX_UPLOAD_BYTES: int = int(os.environ.get("IVA_WEB_MAX_UPLOAD_MB", "100")) * 1024 * 1024
 
-# Where uploaded files land
+# Каталог для сохранения загруженных файлов (внутри out/, который исключён из .git).
 _UPLOAD_DIR = Path("out") / "web" / "uploads"
 
-# Allowed extensions (lower-case)
+# Допустимые расширения файлов (в нижнем регистре).
 ALLOWED_EXTENSIONS: frozenset[str] = frozenset({".csv", ".txt", ".xlsx", ".parquet"})
 
 
 @dataclass
 class UploadedFileMeta:
-    """Metadata for one uploaded file stored in the upload store."""
+    """Метаданные одного загруженного файла."""
 
     file_id: str
-    original_name: str  # sanitised — no path components
-    saved_path: Path  # absolute server path (never sent to frontend)
+    original_name: str  # санированное имя без компонентов пути
+    saved_path: Path  # абсолютный путь на сервере — никогда не возвращается фронтенду
     size_bytes: int
     extension: str
     uploaded_at: datetime
     sha256: str
 
     def to_response_dict(self) -> dict:  # type: ignore[type-arg]
-        """Return a frontend-safe dict (no absolute paths)."""
+        """Вернуть безопасный для фронтенда словарь (без абсолютных путей)."""
         return {
             "file_id": self.file_id,
             "original_name": self.original_name,
@@ -56,38 +55,34 @@ class UploadedFileMeta:
 
 
 class _UploadStore:
-    """Thread-safe in-memory store for uploaded-file metadata."""
+    """Потокобезопасное in-memory хранилище метаданных загруженных файлов."""
 
     def __init__(self) -> None:
         self._lock = Lock()
         self._store: dict[str, UploadedFileMeta] = {}
-
-    # ------------------------------------------------------------------
-    # Write path
-    # ------------------------------------------------------------------
 
     def accept(
         self,
         data: bytes,
         original_filename: str,
     ) -> UploadedFileMeta:
-        """Validate *data*, persist it, and return metadata.
+        """Проверить *data*, сохранить файл на диск и вернуть метаданные.
 
         Args:
-            data: Raw bytes of the uploaded file.
-            original_filename: Browser-supplied name (may be unsafe — sanitised here).
+            data: Байты загруженного файла.
+            original_filename: Имя файла от браузера (может быть небезопасным — санируется здесь).
 
         Returns:
-            Metadata for the stored file.
+            Метаданные сохранённого файла.
 
         Raises:
-            ValueError: Extension not allowed or file too large.
+            ValueError: Расширение не разрешено или файл слишком большой.
         """
         if len(data) > _MAX_UPLOAD_BYTES:
             max_mb = _MAX_UPLOAD_BYTES // (1024 * 1024)
             raise ValueError(f"Файл превышает допустимый размер {max_mb} МБ.")
 
-        # Sanitise filename: take only the basename, strip path separators
+        # Берём только basename: убираем компоненты пути и двойные точки.
         safe_name = Path(original_filename).name.replace("..", "").strip()
         if not safe_name:
             safe_name = "upload"
@@ -96,7 +91,7 @@ class _UploadStore:
         if ext not in ALLOWED_EXTENSIONS:
             supported = ", ".join(sorted(ALLOWED_EXTENSIONS))
             raise ValueError(
-                f"Формат файла '{ext}' не поддерживается. " f"Поддерживаемые форматы: {supported}."
+                f"Формат файла '{ext}' не поддерживается. Поддерживаемые форматы: {supported}."
             )
 
         file_id = str(uuid.uuid4())
@@ -121,17 +116,13 @@ class _UploadStore:
 
         return meta
 
-    # ------------------------------------------------------------------
-    # Read path
-    # ------------------------------------------------------------------
-
     def get(self, file_id: str) -> UploadedFileMeta | None:
-        """Return metadata for *file_id*, or None if unknown."""
+        """Вернуть метаданные по *file_id* или None, если файл неизвестен."""
         with self._lock:
             return self._store.get(file_id)
 
     def delete(self, file_id: str) -> bool:
-        """Remove metadata and the file on disk. Returns True if found."""
+        """Удалить метаданные и файл на диске. Возвращает True, если файл был найден."""
         with self._lock:
             meta = self._store.pop(file_id, None)
         if meta is None:
@@ -143,9 +134,9 @@ class _UploadStore:
         return True
 
     def preview(self, file_id: str, max_rows: int = 10) -> dict | None:  # type: ignore[type-arg]
-        """Return column names and first *max_rows* rows for *file_id*.
+        """Вернуть имена столбцов и первые *max_rows* строк файла.
 
-        Returns None if the file is unknown. Raises on read failure.
+        Возвращает None, если файл не найден. Генерирует исключение при ошибке чтения.
         """
         meta = self.get(file_id)
         if meta is None:
@@ -163,11 +154,11 @@ class _UploadStore:
                 df = pd.read_parquet(meta.saved_path)
                 df = df.head(max_rows)
             else:
-                raise ValueError(f"Cannot preview extension '{ext}'")
+                raise ValueError(f"Предпросмотр расширения '{ext}' не поддерживается.")
         except Exception as exc:
-            raise RuntimeError(f"Preview failed: {exc}") from exc
+            raise RuntimeError(f"Предпросмотр не удался: {exc}") from exc
 
-        # Replace NaN with None for JSON safety
+        # NaN заменяем на None для корректной сериализации в JSON.
         rows = df.where(df.notna(), other=None).to_dict(orient="records")
         return {
             "columns": list(df.columns),
@@ -176,5 +167,5 @@ class _UploadStore:
         }
 
 
-# Module-level singleton
+# Синглтон уровня модуля.
 upload_store = _UploadStore()

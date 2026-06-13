@@ -32,9 +32,10 @@ param(
     # Команда (см. список ниже). По умолчанию печатается справка.
     [Parameter(Position = 0)]
     [ValidateSet(
-        "help", "setup", "run", "smoke", "lint", "test", "quality",
+        "help", "setup", "setup-web", "run", "smoke", "lint", "test", "quality",
         "check", "diagnose", "clean", "clean-logs", "demo",
-        "build-check", "build", "all", "web"
+        "build-check", "build", "all",
+        "web", "web-backend", "web-frontend"
     )]
     [string]$Command = "help",
 
@@ -91,6 +92,7 @@ function Show-Help {
     Write-Host ""
     Write-Host "Команды:"
     Write-Host "  setup         Создать окружение и установить зависимости"
+    Write-Host "  setup-web     Установить веб-зависимости (FastAPI, uvicorn, httpx)"
     Write-Host "  run           Запустить графический интерфейс"
     Write-Host "  smoke         Безоконный smoke-тест приложения"
     Write-Host "  lint          Проверки стиля и типов (black, ruff, mypy)"
@@ -104,7 +106,9 @@ function Show-Help {
     Write-Host "  build-check   Проверка окружения сборки (без сборки)"
     Write-Host "  build         Полная сборка приложения и установщика"
     Write-Host "  all           Безопасная цепочка: smoke, quality, check, demo, build-check"
-    Write-Host "  web           Запустить веб-интерфейс (FastAPI + React) через Docker Compose"
+    Write-Host "  web           Запустить веб-интерфейс через Docker Compose"
+    Write-Host "  web-backend   Запустить FastAPI бэкенд (без Docker, порт 8000)"
+    Write-Host "  web-frontend  Запустить React фронтенд (pnpm dev, порт 5173)"
     Write-Host ""
     Write-Host "Совет: перед разрушительной очисткой используйте 'clean -DryRun'." -ForegroundColor Yellow
 }
@@ -177,5 +181,54 @@ switch ($Command) {
         exit 0
     }
     "web"         { Invoke-Script "docker.ps1" @{ Command = "web-up" }; exit $LASTEXITCODE }
+    "setup-web" {
+        Write-IvaStatus "INFO" "Установка веб-зависимостей (FastAPI, uvicorn, httpx) ..."
+        $webReqs = Join-Path $PSScriptRoot ".." "requirements-web.txt"
+        & $venvPython -m pip install -r $webReqs
+        if ($LASTEXITCODE -ne 0) {
+            Write-IvaStatus "FAILED" "Установка веб-зависимостей завершилась с ошибкой."
+            exit 1
+        }
+        Write-IvaStatus "OK" "Веб-зависимости установлены."
+        & $venvPython -c "import fastapi; import uvicorn; import httpx; print('web deps ok')"
+        exit $LASTEXITCODE
+    }
+    "web-backend" {
+        Write-IvaStatus "INFO" "Запуск FastAPI бэкенда на http://127.0.0.1:8000 ..."
+        Write-Host "  Документация API: http://127.0.0.1:8000/docs" -ForegroundColor Cyan
+        Write-Host "  Нажмите Ctrl+C для остановки." -ForegroundColor Yellow
+        Push-Location $repoRoot
+        try {
+            & $venvPython -m uvicorn iva.api.main:app --reload --host 127.0.0.1 --port 8000
+        } finally {
+            Pop-Location
+        }
+        exit $LASTEXITCODE
+    }
+    "web-frontend" {
+        $frontendDir = Join-Path $repoRoot "web" "frontend"
+        if (-not (Test-Path $frontendDir)) {
+            Write-IvaStatus "FAILED" "Каталог web/frontend не найден."
+            exit 1
+        }
+        Push-Location $frontendDir
+        try {
+            Write-IvaStatus "INFO" "Проверка зависимостей фронтенда ..."
+            if (-not (Test-Path "node_modules")) {
+                Write-IvaStatus "INFO" "node_modules не найден — запуск pnpm install ..."
+                & pnpm install
+                if ($LASTEXITCODE -ne 0) {
+                    Write-IvaStatus "FAILED" "pnpm install завершился с ошибкой."
+                    exit 1
+                }
+            }
+            Write-IvaStatus "INFO" "Запуск React фронтенда на http://localhost:5173 ..."
+            Write-Host "  Нажмите Ctrl+C для остановки." -ForegroundColor Yellow
+            & pnpm dev
+        } finally {
+            Pop-Location
+        }
+        exit $LASTEXITCODE
+    }
     default       { Show-Help; exit 1 }
 }

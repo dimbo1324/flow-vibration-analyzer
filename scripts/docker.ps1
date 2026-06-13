@@ -31,7 +31,7 @@
 param(
     [Parameter(Position = 0)]
     [ValidateSet("build", "quality", "test", "cli-demo", "shell", "clean", "help",
-                 "web-build", "web-up", "web-down", "web-logs")]
+                 "web-build", "web-up", "web-down", "web-logs", "web-test")]
     [string]$Command = "help"
 )
 
@@ -96,6 +96,7 @@ function Show-DockerHelp {
     Write-Host "  web-up     Запустить web-backend и web-frontend (фон)"
     Write-Host "  web-down   Остановить web-backend и web-frontend"
     Write-Host "  web-logs   Просмотр логов web-backend и web-frontend"
+    Write-Host "  web-test   Запустить API-тесты в Docker (без GUI)"
     Write-Host ""
     Write-Host "Примечание: Docker — опциональный инструмент." -ForegroundColor Yellow
     Write-Host "Для обычной разработки используйте: .\scripts\iva.ps1 quality"
@@ -194,6 +195,16 @@ try {
             Test-DockerAvailable
             Write-DockerStatus "INFO" "Просмотр логов web-backend и web-frontend ..."
             & docker compose logs -f web-backend web-frontend
+        }
+        "web-test" {
+            Test-DockerAvailable
+            Write-DockerStatus "INFO" "Запуск API-тестов в Docker ..."
+            & docker compose run --rm quality sh -c "python -m pytest tests/unit/api tests/integration/test_api_demo.py tests/integration/test_api_file_upload_analysis.py tests/integration/test_api_reports_sessions.py -q"
+            if ($LASTEXITCODE -ne 0) {
+                Write-DockerStatus "FAILED" "Веб-тесты завершились с ошибкой (код $LASTEXITCODE)."
+                exit $LASTEXITCODE
+            }
+            Write-DockerStatus "OK" "Веб-тесты пройдены."
         }
         default {
             Show-DockerHelp

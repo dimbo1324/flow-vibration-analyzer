@@ -13,8 +13,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.11/3.12 cover the declared minimum target; 3.13 exercises the
-        # NumPy 2.x / pandas 2.x era so newer-major behaviour is tested in CI.
+        # 3.11/3.12 — объявленный минимальный таргет;
+        # 3.13 проверяет совместимость с NumPy 2.x / pandas 2.x.
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
@@ -30,6 +30,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
+
+      - name: Install web/API dependencies
+        run: |
+          python -m pip install -r requirements-web.txt
+
+      - name: Verify web dependencies
+        run: |
+          python -c "import fastapi; import uvicorn; import httpx; print('web deps ok')"
 
       - name: Install Linux Qt runtime dependencies
         if: runner.os == 'Linux'
@@ -111,3 +119,38 @@ jobs:
           name: iva-out-${{ matrix.python-version }}-${{ github.run_id }}
           path: out/
           if-no-files-found: ignore
+
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend dependencies
+        working-directory: web/frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript typecheck
+        working-directory: web/frontend
+        run: pnpm typecheck
+
+      - name: ESLint
+        working-directory: web/frontend
+        run: pnpm lint
+
+      - name: Vitest tests
+        working-directory: web/frontend
+        run: pnpm test --run
+
+      - name: Production build
+        working-directory: web/frontend
+        run: pnpm build
