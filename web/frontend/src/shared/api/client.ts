@@ -26,5 +26,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     throw new ApiError(code, message, details, response.status)
   }
 
-  return response.json() as Promise<T>
+  try {
+    return await response.json() as T
+  } catch {
+    throw new ApiError('PARSE_ERROR', `HTTP ${response.status}: неверный формат ответа сервера`, null, response.status)
+  }
 }

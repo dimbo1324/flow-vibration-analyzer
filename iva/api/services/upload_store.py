@@ -30,6 +30,35 @@ _UPLOAD_DIR = Path("out") / "web" / "uploads"
 # Допустимые расширения файлов (в нижнем регистре).
 ALLOWED_EXTENSIONS: frozenset[str] = frozenset({".csv", ".txt", ".xlsx", ".parquet"})
 
+# Magic bytes for binary formats.
+_XLSX_MAGIC = b"PK"  # XLSX is a ZIP archive
+_PARQUET_MAGIC = b"PAR1"
+
+
+def _validate_content_bytes(data: bytes, ext: str) -> None:
+    """Check file content matches the declared extension.
+
+    Raises:
+        ValueError: Content is inconsistent with the declared extension.
+    """
+    if ext in {".csv", ".txt"}:
+        sample = data[:4096]
+        for encoding in ("utf-8", "cp1251", "latin-1"):
+            try:
+                sample.decode(encoding)
+                return
+            except UnicodeDecodeError:
+                continue
+        raise ValueError(
+            "Файл не является текстовым. Убедитесь, что файл имеет формат CSV или TXT."
+        )
+    elif ext == ".xlsx":
+        if not data[:2] == _XLSX_MAGIC:
+            raise ValueError("Файл не является корректным Excel-файлом (.xlsx).")
+    elif ext == ".parquet":
+        if len(data) < 8 or data[:4] != _PARQUET_MAGIC or data[-4:] != _PARQUET_MAGIC:
+            raise ValueError("Файл не является корректным Parquet-файлом.")
+
 
 @dataclass
 class UploadedFileMeta:
@@ -93,6 +122,8 @@ class _UploadStore:
             raise ValueError(
                 f"Формат файла '{ext}' не поддерживается. Поддерживаемые форматы: {supported}."
             )
+
+        _validate_content_bytes(data, ext)
 
         file_id = str(uuid.uuid4())
         sha256 = hashlib.sha256(data).hexdigest()

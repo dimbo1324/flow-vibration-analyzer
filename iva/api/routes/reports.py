@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from iva.api.errors import api_error_response
 from iva.api.services.analysis_service import analysis_service
+from iva.api.utils import validate_resource_id
 from iva.app.report_service import (
     export_report_html,
     export_report_pdf,
@@ -31,18 +32,9 @@ router = APIRouter(prefix="/api/analysis", tags=["reports"])
 _REPORTS_DIR = Path("out") / "web" / "reports"
 
 
-def _get_stored(analysis_id: str) -> JSONResponse | None:
-    """Return an error JSONResponse if analysis_id is unknown, else None."""
-    if analysis_service.get(analysis_id) is None:
-        return api_error_response(404, "ANALYSIS_NOT_FOUND", "Результат анализа не найден.")
-    return None
-
-
 def _report_dir(analysis_id: str) -> Path:
+    validate_resource_id(analysis_id)
     d = (_REPORTS_DIR / analysis_id).resolve()
-    # Prevent path traversal: analysis_id must not contain separators
-    if analysis_id != Path(analysis_id).name:
-        raise ValueError("Invalid analysis_id")
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -50,10 +42,9 @@ def _report_dir(analysis_id: str) -> Path:
 @router.get("/{analysis_id}/reports/html", response_model=None)
 async def download_html_report(analysis_id: str) -> FileResponse | JSONResponse:
     """Generate (or reuse) and stream an HTML report."""
-    if err := _get_stored(analysis_id):
-        return err
     stored = analysis_service.get(analysis_id)
-    assert stored is not None  # checked above
+    if stored is None:
+        return api_error_response(404, "ANALYSIS_NOT_FOUND", "Результат анализа не найден.")
 
     try:
         report_dir = _report_dir(analysis_id)
@@ -75,10 +66,9 @@ async def download_html_report(analysis_id: str) -> FileResponse | JSONResponse:
 @router.get("/{analysis_id}/reports/pdf", response_model=None)
 async def download_pdf_report(analysis_id: str) -> FileResponse | JSONResponse:
     """Generate (or reuse) and stream a PDF report."""
-    if err := _get_stored(analysis_id):
-        return err
     stored = analysis_service.get(analysis_id)
-    assert stored is not None
+    if stored is None:
+        return api_error_response(404, "ANALYSIS_NOT_FOUND", "Результат анализа не найден.")
 
     try:
         report_dir = _report_dir(analysis_id)
@@ -108,10 +98,9 @@ async def download_pdf_report(analysis_id: str) -> FileResponse | JSONResponse:
 @router.get("/{analysis_id}/exports/spectrum", response_model=None)
 async def export_spectrum(analysis_id: str) -> FileResponse | JSONResponse:
     """Export spectrum data as CSV."""
-    if err := _get_stored(analysis_id):
-        return err
     stored = analysis_service.get(analysis_id)
-    assert stored is not None
+    if stored is None:
+        return api_error_response(404, "ANALYSIS_NOT_FOUND", "Результат анализа не найден.")
 
     try:
         report_dir = _report_dir(analysis_id)
@@ -132,10 +121,9 @@ async def export_spectrum(analysis_id: str) -> FileResponse | JSONResponse:
 @router.get("/{analysis_id}/exports/signal", response_model=None)
 async def export_signal(analysis_id: str) -> FileResponse | JSONResponse:
     """Export signal data as CSV."""
-    if err := _get_stored(analysis_id):
-        return err
     stored = analysis_service.get(analysis_id)
-    assert stored is not None
+    if stored is None:
+        return api_error_response(404, "ANALYSIS_NOT_FOUND", "Результат анализа не найден.")
 
     try:
         report_dir = _report_dir(analysis_id)
@@ -156,10 +144,9 @@ async def export_signal(analysis_id: str) -> FileResponse | JSONResponse:
 @router.get("/{analysis_id}/exports/physics", response_model=None)
 async def export_physics(analysis_id: str) -> FileResponse | JSONResponse:
     """Export physics summary as CSV."""
-    if err := _get_stored(analysis_id):
-        return err
     stored = analysis_service.get(analysis_id)
-    assert stored is not None
+    if stored is None:
+        return api_error_response(404, "ANALYSIS_NOT_FOUND", "Результат анализа не найден.")
 
     try:
         report_dir = _report_dir(analysis_id)

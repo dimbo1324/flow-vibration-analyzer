@@ -8,9 +8,12 @@ Architecture rules (enforced by tests/unit/api/test_api_architecture.py):
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 
-from iva.api.errors import register_error_handlers
+from iva.api.errors import api_error_response, register_error_handlers
+from iva.api.limiter import limiter
 from iva.api.routes.analysis import router as analysis_router
 from iva.api.routes.demo import router as demo_router
 from iva.api.routes.files import router as files_router
@@ -27,6 +30,15 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
 )
+
+app.state.limiter = limiter
+
+
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return api_error_response(429, "RATE_LIMITED", "Слишком много запросов. Повторите позже.")
+
+
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)  # type: ignore[arg-type]
 
 configure_cors(app)
 register_error_handlers(app)

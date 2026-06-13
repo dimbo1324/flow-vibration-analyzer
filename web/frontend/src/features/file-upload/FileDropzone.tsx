@@ -55,6 +55,8 @@ export function FileDropzone({ onFile, disabled }: FileDropzoneProps) {
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
         role="button"
+        aria-label="Зона загрузки файла. Нажмите или перетащите файл для загрузки."
+        aria-disabled={disabled}
         tabIndex={disabled ? -1 : 0}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click() }}
         className={[

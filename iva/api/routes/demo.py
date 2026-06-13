@@ -9,10 +9,11 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from iva.api.errors import api_error_response
+from iva.api.limiter import limiter
 from iva.api.schemas.demo import DemoRequest, DemoScenarioItem, DemoScenariosResponse
 from iva.api.serializers.analysis_serializer import serialize_analysis_result
 from iva.app.analysis_runner import AnalysisRunner
@@ -42,7 +43,8 @@ async def get_demo_scenarios() -> DemoScenariosResponse:
 
 
 @router.post("/api/analysis/demo")
-async def run_demo_analysis(body: DemoRequest) -> JSONResponse:
+@limiter.limit("60/minute")
+async def run_demo_analysis(request: Request, body: DemoRequest) -> JSONResponse:
     """Run a built-in demo scenario and return the full analysis result."""
     if body.scenario_key not in _VALID_KEYS:
         return api_error_response(

@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from iva.api.errors import api_error_response
+from iva.api.limiter import limiter
 from iva.api.services.upload_store import upload_store
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,8 @@ router = APIRouter(prefix="/api/files", tags=["files"])
 
 
 @router.post("/upload", response_model=None)
-async def upload_file(file: UploadFile) -> JSONResponse:
+@limiter.limit("60/minute")
+async def upload_file(request: Request, file: UploadFile) -> JSONResponse:
     """Accept a multipart file upload, validate and store it."""
     if file.filename is None:
         return api_error_response(400, "NO_FILE", "Файл не выбран.")
