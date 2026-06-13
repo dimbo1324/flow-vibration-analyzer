@@ -30,7 +30,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("build", "quality", "test", "cli-demo", "shell", "clean", "help")]
+    [ValidateSet("build", "quality", "test", "cli-demo", "shell", "clean", "help",
+                 "web-build", "web-up", "web-down", "web-logs")]
     [string]$Command = "help"
 )
 
@@ -89,6 +90,12 @@ function Show-DockerHelp {
     Write-Host "  cli-demo   CLI-демо анализа, вывод в ./out/"
     Write-Host "  shell      Интерактивная оболочка внутри контейнера"
     Write-Host "  clean      Удалить образ и тома Docker"
+    Write-Host ""
+    Write-Host "Веб-команды:"
+    Write-Host "  web-build  Собрать образы web-backend и web-frontend"
+    Write-Host "  web-up     Запустить web-backend и web-frontend (фон)"
+    Write-Host "  web-down   Остановить web-backend и web-frontend"
+    Write-Host "  web-logs   Просмотр логов web-backend и web-frontend"
     Write-Host ""
     Write-Host "Примечание: Docker — опциональный инструмент." -ForegroundColor Yellow
     Write-Host "Для обычной разработки используйте: .\scripts\iva.ps1 quality"
@@ -152,6 +159,41 @@ try {
             & docker compose down --volumes --remove-orphans 2>&1 | Out-Null
             & docker rmi iva-dev 2>&1 | Out-Null
             Write-DockerStatus "OK" "Образ и тома Docker удалены."
+        }
+        "web-build" {
+            Test-DockerAvailable
+            Write-DockerStatus "INFO" "Сборка образов web-backend и web-frontend ..."
+            & docker compose build web-backend web-frontend
+            if ($LASTEXITCODE -ne 0) {
+                Write-DockerStatus "FAILED" "Сборка веб-образов завершилась с ошибкой."
+                exit 1
+            }
+            Write-DockerStatus "OK" "Веб-образы собраны."
+        }
+        "web-up" {
+            Test-DockerAvailable
+            Write-DockerStatus "INFO" "Запуск web-backend и web-frontend ..."
+            & docker compose up -d web-backend web-frontend
+            if ($LASTEXITCODE -ne 0) {
+                Write-DockerStatus "FAILED" "Запуск веб-сервисов завершился с ошибкой."
+                exit 1
+            }
+            Write-DockerStatus "OK" "Веб-сервисы запущены. Откройте http://localhost:5173"
+        }
+        "web-down" {
+            Test-DockerAvailable
+            Write-DockerStatus "INFO" "Остановка web-backend и web-frontend ..."
+            & docker compose stop web-backend web-frontend
+            if ($LASTEXITCODE -ne 0) {
+                Write-DockerStatus "FAILED" "Остановка веб-сервисов завершилась с ошибкой."
+                exit 1
+            }
+            Write-DockerStatus "OK" "Веб-сервисы остановлены."
+        }
+        "web-logs" {
+            Test-DockerAvailable
+            Write-DockerStatus "INFO" "Просмотр логов web-backend и web-frontend ..."
+            & docker compose logs -f web-backend web-frontend
         }
         default {
             Show-DockerHelp

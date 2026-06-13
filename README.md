@@ -278,6 +278,44 @@ The CLI remains fully available and independent of the GUI:
 python -m iva.cli.main analyze --help
 ```
 
+## Web Interface
+
+An optional FastAPI + React web interface is available for browser-based demo analysis.
+It runs as two Docker Compose services and does not require the desktop GUI.
+
+### Quick start
+
+```powershell
+# Requires Docker Desktop running
+.\scripts\iva.ps1 web
+# or equivalently:
+docker compose up --build web-backend web-frontend
+```
+
+Open **http://localhost:5173** in a browser.
+
+| Service | Port | Description |
+|---------|------|-------------|
+| `web-backend` | 8000 | FastAPI — REST API, `/api/docs` for Swagger UI |
+| `web-frontend` | 5173 | React/Vite SPA (Nginx in production build) |
+
+### Web commands (docker.ps1)
+
+```powershell
+.\scripts\docker.ps1 web-build   # build images
+.\scripts\docker.ps1 web-up      # start in background
+.\scripts\docker.ps1 web-down    # stop services
+.\scripts\docker.ps1 web-logs    # tail logs
+```
+
+### Architecture notes
+
+- `iva/api/` is a standalone FastAPI package; it never imports `iva.ui` or PySide6.
+- All scientific calculations run server-side inside the existing `iva` Python package.
+- Arrays sent to the browser are down-sampled server-side to 2000 points maximum.
+- CORS origins are configured via `IVA_API_CORS_ORIGINS` environment variable.
+- All web-generated files land under `out/web/` (gitignored).
+
 ## Windows helper scripts
 
 The recommended Windows 11 entrypoint is `scripts/iva.ps1`. It works with

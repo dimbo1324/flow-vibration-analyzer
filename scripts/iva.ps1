@@ -34,7 +34,7 @@ param(
     [ValidateSet(
         "help", "setup", "run", "smoke", "lint", "test", "quality",
         "check", "diagnose", "clean", "clean-logs", "demo",
-        "build-check", "build", "all"
+        "build-check", "build", "all", "web"
     )]
     [string]$Command = "help",
 
@@ -104,6 +104,7 @@ function Show-Help {
     Write-Host "  build-check   Проверка окружения сборки (без сборки)"
     Write-Host "  build         Полная сборка приложения и установщика"
     Write-Host "  all           Безопасная цепочка: smoke, quality, check, demo, build-check"
+    Write-Host "  web           Запустить веб-интерфейс (FastAPI + React) через Docker Compose"
     Write-Host ""
     Write-Host "Совет: перед разрушительной очисткой используйте 'clean -DryRun'." -ForegroundColor Yellow
 }
@@ -175,5 +176,6 @@ switch ($Command) {
         Write-IvaStatus "OK" "Цепочка 'all' успешно завершена."
         exit 0
     }
+    "web"         { Invoke-Script "docker.ps1" @{ Command = "web-up" }; exit $LASTEXITCODE }
     default       { Show-Help; exit 1 }
 }
